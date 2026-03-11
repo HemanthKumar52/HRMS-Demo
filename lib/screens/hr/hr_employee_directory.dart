@@ -98,9 +98,27 @@ class _HrEmployeeDirectoryState extends State<HrEmployeeDirectory> {
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
               ),
               const Spacer(),
-              Icon(Icons.download_rounded, size: 18, color: AppColors.primary),
-              const SizedBox(width: 4),
-              Text('Export', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
+              GestureDetector(
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Exporting employee data...'),
+                      backgroundColor: AppColors.primary,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.download_rounded, size: 18, color: AppColors.primary),
+                    const SizedBox(width: 4),
+                    Text('Export', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                  ],
+                ),
+              ),
             ],
           ),
         ),

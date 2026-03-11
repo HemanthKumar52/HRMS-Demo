@@ -384,19 +384,32 @@ class _BulkActionBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: isDark ? 0.15 : 0.08),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(width: 8),
-          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
-        ],
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$label initiated'),
+            backgroundColor: color,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: isDark ? 0.15 : 0.08),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(width: 8),
+            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
+          ],
+        ),
       ),
     );
   }

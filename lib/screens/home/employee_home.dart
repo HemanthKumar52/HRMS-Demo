@@ -750,26 +750,39 @@ class _QuickAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return NeuCard(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$label action opened'),
+            backgroundColor: color,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      },
+      child: NeuCard(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 22),
             ),
-            child: Icon(icon, color: color, size: 22),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-            textAlign: TextAlign.center,
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

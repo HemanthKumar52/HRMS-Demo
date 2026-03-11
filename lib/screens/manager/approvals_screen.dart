@@ -65,7 +65,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen>
               ],
             ),
           ),
-        ),
+        ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
         const SizedBox(height: 8),
 
         // Tab Views
@@ -383,7 +383,10 @@ class _LeaveTab extends StatelessWidget {
         final req = _sampleLeaveApprovals[index];
         return Padding(
           padding: const EdgeInsets.only(bottom: 14),
-          child: _ApprovalCard(request: req),
+          child: _ApprovalCard(request: req)
+              .animate()
+              .fadeIn(duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms)
+              .slideY(begin: 0.06, end: 0, duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOut),
         );
       },
     );
@@ -504,7 +507,17 @@ class _ApprovalCard extends StatelessWidget {
                 child: SizedBox(
                   height: 42,
                   child: ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${request.employeeName}\'s request approved'),
+                          backgroundColor: AppColors.success,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    },
                     icon: const Icon(Icons.check, size: 18),
                     label: const Text('Approve',
                         style: TextStyle(fontWeight: FontWeight.w600)),
@@ -524,7 +537,17 @@ class _ApprovalCard extends StatelessWidget {
                 child: SizedBox(
                   height: 42,
                   child: ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${request.employeeName}\'s request rejected'),
+                          backgroundColor: AppColors.danger,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    },
                     icon: const Icon(Icons.close, size: 18),
                     label: const Text('Reject',
                         style: TextStyle(fontWeight: FontWeight.w600)),
@@ -562,7 +585,10 @@ class _ClaimsTab extends StatelessWidget {
         final claim = _sampleClaims[index];
         return Padding(
           padding: const EdgeInsets.only(bottom: 14),
-          child: _ClaimCard(claim: claim),
+          child: _ClaimCard(claim: claim)
+              .animate()
+              .fadeIn(duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms)
+              .slideY(begin: 0.06, end: 0, duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOut),
         );
       },
     );
@@ -630,7 +656,7 @@ class _ClaimCard extends StatelessWidget {
           // Amount row
           Row(
             children: [
-              const Icon(Icons.attach_money, size: 16, color: AppColors.success),
+              const Icon(Icons.currency_rupee, size: 16, color: AppColors.success),
               const SizedBox(width: 4),
               Text(
                 claim.amount,
@@ -690,7 +716,17 @@ class _ClaimCard extends StatelessWidget {
                 child: SizedBox(
                   height: 42,
                   child: ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${claim.employeeName}\'s request approved'),
+                          backgroundColor: AppColors.success,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    },
                     icon: const Icon(Icons.check, size: 18),
                     label: const Text('Approve',
                         style: TextStyle(fontWeight: FontWeight.w600)),
@@ -710,7 +746,17 @@ class _ClaimCard extends StatelessWidget {
                 child: SizedBox(
                   height: 42,
                   child: ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${claim.employeeName}\'s request rejected'),
+                          backgroundColor: AppColors.danger,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    },
                     icon: const Icon(Icons.close, size: 18),
                     label: const Text('Reject',
                         style: TextStyle(fontWeight: FontWeight.w600)),
@@ -748,7 +794,10 @@ class _TicketsTab extends StatelessWidget {
         final ticket = _sampleTickets[index];
         return Padding(
           padding: const EdgeInsets.only(bottom: 14),
-          child: _TicketCard(ticket: ticket),
+          child: _TicketCard(ticket: ticket)
+              .animate()
+              .fadeIn(duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms)
+              .slideY(begin: 0.06, end: 0, duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOut),
         );
       },
     );
@@ -879,21 +928,51 @@ class _TicketCard extends StatelessWidget {
                 icon: Icons.person_add_alt,
                 label: 'Assign',
                 color: AppColors.primary,
-                onTap: () {},
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Ticket assign initiated'),
+                      backgroundColor: AppColors.primary,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
               ),
               const SizedBox(width: 8),
               _TicketActionButton(
                 icon: Icons.check_circle_outline,
                 label: 'Resolve',
                 color: AppColors.success,
-                onTap: () {},
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Ticket resolve initiated'),
+                      backgroundColor: AppColors.success,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
               ),
               const SizedBox(width: 8),
               _TicketActionButton(
                 icon: Icons.arrow_upward,
                 label: 'Escalate',
                 color: AppColors.orange,
-                onTap: () {},
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Ticket escalate initiated'),
+                      backgroundColor: AppColors.orange,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -964,7 +1043,10 @@ class _WorkTypeTab extends StatelessWidget {
         final req = _sampleWorkType[index];
         return Padding(
           padding: const EdgeInsets.only(bottom: 14),
-          child: _WorkTypeCard(request: req),
+          child: _WorkTypeCard(request: req)
+              .animate()
+              .fadeIn(duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms)
+              .slideY(begin: 0.06, end: 0, duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOut),
         );
       },
     );
@@ -1106,7 +1188,17 @@ class _WorkTypeCard extends StatelessWidget {
                 child: SizedBox(
                   height: 42,
                   child: ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${request.employeeName}\'s request approved'),
+                          backgroundColor: AppColors.success,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    },
                     icon: const Icon(Icons.check, size: 18),
                     label: const Text('Approve',
                         style: TextStyle(fontWeight: FontWeight.w600)),
@@ -1126,7 +1218,17 @@ class _WorkTypeCard extends StatelessWidget {
                 child: SizedBox(
                   height: 42,
                   child: ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${request.employeeName}\'s request rejected'),
+                          backgroundColor: AppColors.danger,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    },
                     icon: const Icon(Icons.close, size: 18),
                     label: const Text('Reject',
                         style: TextStyle(fontWeight: FontWeight.w600)),
@@ -1164,7 +1266,10 @@ class _RegularizationTab extends StatelessWidget {
         final req = _sampleRegularization[index];
         return Padding(
           padding: const EdgeInsets.only(bottom: 14),
-          child: _RegularizationCard(request: req),
+          child: _RegularizationCard(request: req)
+              .animate()
+              .fadeIn(duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms)
+              .slideY(begin: 0.06, end: 0, duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOut),
         );
       },
     );
@@ -1409,7 +1514,17 @@ class _RegularizationCard extends StatelessWidget {
                 child: SizedBox(
                   height: 42,
                   child: ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${request.employeeName}\'s request approved'),
+                          backgroundColor: AppColors.success,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    },
                     icon: const Icon(Icons.check, size: 18),
                     label: const Text('Approve',
                         style: TextStyle(fontWeight: FontWeight.w600)),
@@ -1429,7 +1544,17 @@ class _RegularizationCard extends StatelessWidget {
                 child: SizedBox(
                   height: 42,
                   child: ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${request.employeeName}\'s request rejected'),
+                          backgroundColor: AppColors.danger,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    },
                     icon: const Icon(Icons.close, size: 18),
                     label: const Text('Reject',
                         style: TextStyle(fontWeight: FontWeight.w600)),
