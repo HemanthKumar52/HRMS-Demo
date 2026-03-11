@@ -51,9 +51,14 @@ class _ManagerHomeState extends State<ManagerHome> {
           const SizedBox(height: 4),
         ],
         Expanded(
-          child: _isMyView
-              ? _buildMyView(theme, isDark)
-              : _buildTabContent(theme, isDark),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            child: _isMyView
+                ? _buildMyView(theme, isDark)
+                : _buildTabContent(theme, isDark),
+          ),
         ),
       ],
     );
@@ -571,21 +576,34 @@ class _ManagerHomeState extends State<ManagerHome> {
   }
 
   Widget _buildMyQuickAction(IconData icon, String label, Color color, bool isDark) {
-    return NeuCard(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 22),
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$label action opened'),
+            backgroundColor: color,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 1),
           ),
-          const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500), textAlign: TextAlign.center),
-        ],
+        );
+      },
+      child: NeuCard(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(height: 8),
+            Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500), textAlign: TextAlign.center),
+          ],
+        ),
       ),
     );
   }
@@ -826,18 +844,23 @@ class _ManagerHomeState extends State<ManagerHome> {
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        SizedBox(
-                          width: 100,
-                          height: 100,
-                          child: CircularProgressIndicator(
-                            value: 0.92,
-                            strokeWidth: 10,
-                            backgroundColor: isDark
-                                ? Colors.white.withValues(alpha: 0.08)
-                                : const Color(0xFFD0D4DC),
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                                AppColors.success),
-                            strokeCap: StrokeCap.round,
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0, end: 0.92),
+                          duration: const Duration(milliseconds: 1200),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, value, _) => SizedBox(
+                            width: 100,
+                            height: 100,
+                            child: CircularProgressIndicator(
+                              value: value,
+                              strokeWidth: 10,
+                              backgroundColor: isDark
+                                  ? Colors.white.withValues(alpha: 0.08)
+                                  : const Color(0xFFD0D4DC),
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                  AppColors.success),
+                              strokeCap: StrokeCap.round,
+                            ),
                           ),
                         ),
                         Text(
@@ -857,14 +880,19 @@ class _ManagerHomeState extends State<ManagerHome> {
                 const SizedBox(height: 20),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(
-                    value: 0.92,
-                    minHeight: 8,
-                    backgroundColor: isDark
-                        ? Colors.white.withValues(alpha: 0.08)
-                        : const Color(0xFFD0D4DC),
-                    valueColor:
-                        const AlwaysStoppedAnimation<Color>(AppColors.success),
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: 0.92),
+                    duration: const Duration(milliseconds: 1200),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, value, _) => LinearProgressIndicator(
+                      value: value,
+                      minHeight: 8,
+                      backgroundColor: isDark
+                          ? Colors.white.withValues(alpha: 0.08)
+                          : const Color(0xFFD0D4DC),
+                      valueColor:
+                          const AlwaysStoppedAnimation<Color>(AppColors.success),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -1332,43 +1360,56 @@ class _ManagerHomeState extends State<ManagerHome> {
 
   Widget _buildQuickActionItem(
       IconData icon, String label, Color color, bool isDark) {
-    return Column(
-      children: [
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : const Color(0xFFE4E8EE),
-            shape: BoxShape.circle,
-            boxShadow: isDark
-                ? null
-                : [
-                    BoxShadow(
-                      color: const Color(0xFFBEC3CE).withValues(alpha: 0.5),
-                      offset: const Offset(4, 4),
-                      blurRadius: 8,
-                    ),
-                    const BoxShadow(
-                      color: Color(0xFFFDFFFF),
-                      offset: Offset(-4, -4),
-                      blurRadius: 8,
-                    ),
-                  ],
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$label action opened'),
+            backgroundColor: color,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 1),
           ),
-          child: Icon(icon, color: color, size: 26),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+        );
+      },
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : const Color(0xFFE4E8EE),
+              shape: BoxShape.circle,
+              boxShadow: isDark
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: const Color(0xFFBEC3CE).withValues(alpha: 0.5),
+                        offset: const Offset(4, 4),
+                        blurRadius: 8,
+                      ),
+                      const BoxShadow(
+                        color: Color(0xFFFDFFFF),
+                        offset: Offset(-4, -4),
+                        blurRadius: 8,
+                      ),
+                    ],
+            ),
+            child: Icon(icon, color: color, size: 26),
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1727,50 +1768,6 @@ class _TeamMember {
 
   _TeamMember(
       this.name, this.initials, this.designation, this.status, this.statusColor);
-}
-
-// ---------------------------------------------------------------------------
-// Neomorphic Icon Button
-// ---------------------------------------------------------------------------
-class _NeuIconButton extends StatelessWidget {
-  final IconData icon;
-  final bool isDark;
-  final Color color;
-
-  const _NeuIconButton({
-    required this.icon,
-    required this.isDark,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.08)
-            : const Color(0xFFE4E8EE),
-        shape: BoxShape.circle,
-        boxShadow: isDark
-            ? null
-            : [
-                BoxShadow(
-                  color: const Color(0xFFBEC3CE).withValues(alpha: 0.5),
-                  offset: const Offset(3, 3),
-                  blurRadius: 6,
-                ),
-                const BoxShadow(
-                  color: Color(0xFFFDFFFF),
-                  offset: Offset(-3, -3),
-                  blurRadius: 6,
-                ),
-              ],
-      ),
-      child: Icon(icon, color: color, size: 20),
-    );
-  }
 }
 
 // ---------------------------------------------------------------------------
