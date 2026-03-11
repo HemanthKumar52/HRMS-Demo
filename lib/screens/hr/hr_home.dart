@@ -16,12 +16,13 @@ class HrHome extends StatefulWidget {
 }
 
 class _HrHomeState extends State<HrHome> {
-  bool _isMyView = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final provider = context.watch<AppProvider>();
+    final myView = provider.isMyView;
 
     return Column(
       children: [
@@ -39,7 +40,7 @@ class _HrHomeState extends State<HrHome> {
             duration: const Duration(milliseconds: 300),
             switchInCurve: Curves.easeOut,
             switchOutCurve: Curves.easeIn,
-            child: _isMyView
+            child: myView
                 ? _buildMyView(theme, isDark)
                 : _buildHrDashboard(theme, isDark),
           ),
@@ -49,18 +50,20 @@ class _HrHomeState extends State<HrHome> {
   }
 
   Widget _buildViewToggle(bool isDark) {
+    final provider = context.watch<AppProvider>();
+    final isMyView = provider.isMyView;
     return NeuCard(
       padding: const EdgeInsets.all(4),
       child: Row(
         children: [
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => _isMyView = false),
+              onTap: () => provider.setMyView(false),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: !_isMyView ? AppColors.primary : Colors.transparent,
+                  color: !isMyView ? AppColors.primary : Colors.transparent,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -69,7 +72,7 @@ class _HrHomeState extends State<HrHome> {
                     Icon(
                       Icons.admin_panel_settings_rounded,
                       size: 18,
-                      color: !_isMyView
+                      color: !isMyView
                           ? Colors.white
                           : isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
                     ),
@@ -77,7 +80,7 @@ class _HrHomeState extends State<HrHome> {
                     Text(
                       'HR Dashboard',
                       style: TextStyle(
-                        color: !_isMyView
+                        color: !isMyView
                             ? Colors.white
                             : isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
                         fontWeight: FontWeight.w600,
@@ -91,12 +94,12 @@ class _HrHomeState extends State<HrHome> {
           ),
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => _isMyView = true),
+              onTap: () => provider.setMyView(true),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: _isMyView ? AppColors.primary : Colors.transparent,
+                  color: isMyView ? AppColors.primary : Colors.transparent,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -105,7 +108,7 @@ class _HrHomeState extends State<HrHome> {
                     Icon(
                       Icons.person_rounded,
                       size: 18,
-                      color: _isMyView
+                      color: isMyView
                           ? Colors.white
                           : isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
                     ),
@@ -113,7 +116,7 @@ class _HrHomeState extends State<HrHome> {
                     Text(
                       'My View',
                       style: TextStyle(
-                        color: _isMyView
+                        color: isMyView
                             ? Colors.white
                             : isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
                         fontWeight: FontWeight.w600,

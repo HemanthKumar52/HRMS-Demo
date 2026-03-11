@@ -12,6 +12,7 @@ class AppProvider extends ChangeNotifier {
   bool _isPunchedIn = false;
   DateTime? _punchInTime;
   int _bottomNavIndex = 0;
+  bool _isMyView = false;
 
   // Dynamic Island
   bool _showDynamicIsland = false;
@@ -28,6 +29,7 @@ class AppProvider extends ChangeNotifier {
   bool get isPunchedIn => _isPunchedIn;
   DateTime? get punchInTime => _punchInTime;
   int get bottomNavIndex => _bottomNavIndex;
+  bool get isMyView => _isMyView;
   bool get showDynamicIsland => _showDynamicIsland;
   String get dynamicIslandMessage => _dynamicIslandMessage;
   IconData get dynamicIslandIcon => _dynamicIslandIcon;
@@ -36,7 +38,16 @@ class AppProvider extends ChangeNotifier {
   void setRole(UserRole role) {
     _role = role;
     _bottomNavIndex = 0;
+    _isMyView = false;
     notifyListeners();
+  }
+
+  void setMyView(bool value) {
+    if (_isMyView != value) {
+      _isMyView = value;
+      _bottomNavIndex = 0;
+      notifyListeners();
+    }
   }
 
   void login() {
@@ -52,6 +63,7 @@ class AppProvider extends ChangeNotifier {
   void logout() {
     _isLoggedIn = false;
     _bottomNavIndex = 0;
+    _isMyView = false;
     notifyListeners();
   }
 

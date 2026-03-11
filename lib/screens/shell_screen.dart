@@ -33,19 +33,35 @@ class ShellScreen extends StatelessWidget {
       const PayslipScreen(),
     ];
 
-    final managerScreens = [
-      const ManagerHome(),
-      const TeamDirectoryScreen(),
-      const ApprovalsScreen(),
-      const AnalyticsScreen(),
-    ];
+    final isMyView = provider.isMyView;
 
-    final hrScreens = [
-      const HrHome(),
-      const HrEmployeeDirectory(),
-      const HrAttendanceDashboard(),
-      const HrClaimsOverview(),
-    ];
+    final managerScreens = isMyView
+        ? <Widget>[
+            const ManagerHome(),
+            const RequestsScreen(),
+            const AttendanceScreen(),
+            const PayslipScreen(),
+          ]
+        : <Widget>[
+            const ManagerHome(),
+            const TeamDirectoryScreen(),
+            const ApprovalsScreen(),
+            const AnalyticsScreen(),
+          ];
+
+    final hrScreens = isMyView
+        ? <Widget>[
+            const HrHome(),
+            const RequestsScreen(),
+            const AttendanceScreen(),
+            const PayslipScreen(),
+          ]
+        : <Widget>[
+            const HrHome(),
+            const HrEmployeeDirectory(),
+            const HrAttendanceDashboard(),
+            const HrClaimsOverview(),
+          ];
 
     final screens = role == UserRole.hr
         ? hrScreens
@@ -69,11 +85,13 @@ class ShellScreen extends StatelessWidget {
                   ),
             ),
             Text(
-              role == UserRole.hr
-                  ? 'HR ADMINISTRATION'
-                  : role == UserRole.manager
-                      ? 'ENTERPRISE ADMIN'
-                      : 'EMPLOYEE PORTAL',
+              isMyView && role != UserRole.employee
+                  ? 'EMPLOYEE PORTAL'
+                  : role == UserRole.hr
+                      ? 'HR ADMINISTRATION'
+                      : role == UserRole.manager
+                          ? 'ENTERPRISE ADMIN'
+                          : 'EMPLOYEE PORTAL',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,

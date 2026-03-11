@@ -16,13 +16,14 @@ class ManagerHome extends StatefulWidget {
 
 class _ManagerHomeState extends State<ManagerHome> {
   int _selectedTab = 0;
-  bool _isMyView = false; // false = Manager View, true = My View (employee)
   final List<String> _tabs = ['Home', 'Team', 'Attendance', 'Leave'];
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final provider = context.watch<AppProvider>();
+    final myView = provider.isMyView;
 
     return Column(
       children: [
@@ -35,7 +36,7 @@ class _ManagerHomeState extends State<ManagerHome> {
               .slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
         ),
         const SizedBox(height: 8),
-        if (!_isMyView) ...[
+        if (!myView) ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
             child: _buildTabBar(isDark)
@@ -55,7 +56,7 @@ class _ManagerHomeState extends State<ManagerHome> {
             duration: const Duration(milliseconds: 300),
             switchInCurve: Curves.easeOut,
             switchOutCurve: Curves.easeIn,
-            child: _isMyView
+            child: myView
                 ? _buildMyView(theme, isDark)
                 : _buildTabContent(theme, isDark),
           ),
@@ -65,18 +66,20 @@ class _ManagerHomeState extends State<ManagerHome> {
   }
 
   Widget _buildViewToggle(bool isDark) {
+    final provider = context.watch<AppProvider>();
+    final isMyView = provider.isMyView;
     return NeuCard(
       padding: const EdgeInsets.all(4),
       child: Row(
         children: [
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => _isMyView = false),
+              onTap: () => provider.setMyView(false),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: !_isMyView ? AppColors.primary : Colors.transparent,
+                  color: !isMyView ? AppColors.primary : Colors.transparent,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -85,7 +88,7 @@ class _ManagerHomeState extends State<ManagerHome> {
                     Icon(
                       Icons.admin_panel_settings_rounded,
                       size: 18,
-                      color: !_isMyView
+                      color: !isMyView
                           ? Colors.white
                           : isDark
                               ? AppColors.darkSubtext
@@ -95,7 +98,7 @@ class _ManagerHomeState extends State<ManagerHome> {
                     Text(
                       'Manager View',
                       style: TextStyle(
-                        color: !_isMyView
+                        color: !isMyView
                             ? Colors.white
                             : isDark
                                 ? AppColors.darkSubtext
@@ -111,12 +114,12 @@ class _ManagerHomeState extends State<ManagerHome> {
           ),
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => _isMyView = true),
+              onTap: () => provider.setMyView(true),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: _isMyView ? AppColors.primary : Colors.transparent,
+                  color: isMyView ? AppColors.primary : Colors.transparent,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -125,7 +128,7 @@ class _ManagerHomeState extends State<ManagerHome> {
                     Icon(
                       Icons.person_rounded,
                       size: 18,
-                      color: _isMyView
+                      color: isMyView
                           ? Colors.white
                           : isDark
                               ? AppColors.darkSubtext
@@ -135,7 +138,7 @@ class _ManagerHomeState extends State<ManagerHome> {
                     Text(
                       'My View',
                       style: TextStyle(
-                        color: _isMyView
+                        color: isMyView
                             ? Colors.white
                             : isDark
                                 ? AppColors.darkSubtext
