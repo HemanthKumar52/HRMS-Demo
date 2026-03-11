@@ -556,24 +556,37 @@ class _AnnouncementItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: Colors.grey),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w500)),
-              Text(subtitle,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-            ],
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(title),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 1),
           ),
-        ),
-        const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
-      ],
+        );
+      },
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.grey),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w500)),
+                Text(subtitle,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+        ],
+      ),
     );
   }
 }

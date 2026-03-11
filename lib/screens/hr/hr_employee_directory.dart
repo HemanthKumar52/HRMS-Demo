@@ -207,47 +207,60 @@ class _EmployeeCard extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final statusColor = _statusColor();
 
-    return NeuCard(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-            child: Text(
-              employee.initials,
-              style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: 14),
-            ),
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${employee.name} - ${employee.designation}'),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 1),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        );
+      },
+      child: NeuCard(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+              child: Text(
+                employee.initials,
+                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: 14),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(employee.name, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? AppColors.darkText : AppColors.lightText)),
+                  const SizedBox(height: 2),
+                  Text('${employee.designation} • ${employee.department}', style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+                  const SizedBox(height: 2),
+                  Text(employee.empId, style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(employee.name, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? AppColors.darkText : AppColors.lightText)),
-                const SizedBox(height: 2),
-                Text('${employee.designation} • ${employee.department}', style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
-                const SizedBox(height: 2),
-                Text(employee.empId, style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w500)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(employee.status, style: TextStyle(color: statusColor, fontWeight: FontWeight.w600, fontSize: 10)),
+                ),
+                const SizedBox(height: 6),
+                Icon(Icons.chevron_right_rounded, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext, size: 20),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(employee.status, style: TextStyle(color: statusColor, fontWeight: FontWeight.w600, fontSize: 10)),
-              ),
-              const SizedBox(height: 6),
-              Icon(Icons.chevron_right_rounded, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext, size: 20),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
