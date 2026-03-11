@@ -310,8 +310,10 @@ class _ClaimCard extends StatelessWidget {
             children: [
               Icon(Icons.calendar_today, size: 12, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
               const SizedBox(width: 4),
-              Text(claim.date, style: TextStyle(fontSize: 11, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
-              const SizedBox(width: 14),
+              Flexible(
+                child: Text(claim.date, style: TextStyle(fontSize: 11, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext), overflow: TextOverflow.ellipsis),
+              ),
+              const SizedBox(width: 10),
               Icon(
                 claim.hasReceipt ? Icons.receipt_long : Icons.receipt_long_outlined,
                 size: 12,
@@ -319,17 +321,33 @@ class _ClaimCard extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                claim.hasReceipt ? 'Receipt attached' : 'No receipt',
+                claim.hasReceipt ? 'Receipt' : 'No receipt',
                 style: TextStyle(fontSize: 11, color: claim.hasReceipt ? AppColors.success : AppColors.danger, fontWeight: FontWeight.w500),
               ),
-              if (showActions) ...[
-                const Spacer(),
-                _ActionBtn(icon: Icons.close, color: AppColors.danger, label: 'Reject'),
-                const SizedBox(width: 8),
-                _ActionBtn(icon: Icons.check, color: AppColors.success, label: 'Approve'),
-              ],
             ],
           ),
+          if (showActions) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _ActionBtn(icon: Icons.close, color: AppColors.danger, label: 'Reject', onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('${claim.employeeName}\'s claim rejected'), backgroundColor: AppColors.danger, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                    );
+                  }),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _ActionBtn(icon: Icons.check, color: AppColors.success, label: 'Approve', onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('${claim.employeeName}\'s claim approved'), backgroundColor: AppColors.success, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                    );
+                  }),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -343,24 +361,29 @@ class _ActionBtn extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String label;
+  final VoidCallback? onTap;
 
-  const _ActionBtn({required this.icon, required this.color, required this.label});
+  const _ActionBtn({required this.icon, required this.color, required this.label, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 14),
-          const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 11)),
-        ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 14),
+            const SizedBox(width: 4),
+            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 11)),
+          ],
+        ),
       ),
     );
   }

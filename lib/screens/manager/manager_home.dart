@@ -1502,13 +1502,18 @@ class _ManagerHomeState extends State<ManagerHome> {
         const SizedBox(height: 8),
         ClipRRect(
           borderRadius: BorderRadius.circular(6),
-          child: LinearProgressIndicator(
-            value: pct,
-            minHeight: 8,
-            backgroundColor: isDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : const Color(0xFFD0D4DC),
-            valueColor: AlwaysStoppedAnimation<Color>(color),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: pct),
+            duration: const Duration(milliseconds: 1200),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, _) => LinearProgressIndicator(
+              value: value,
+              minHeight: 8,
+              backgroundColor: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : const Color(0xFFD0D4DC),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
           ),
         ),
       ],
@@ -1679,13 +1684,18 @@ class _ManagerHomeState extends State<ManagerHome> {
               const SizedBox(height: 4),
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: remaining / total,
-                  minHeight: 6,
-                  backgroundColor: isDark
-                      ? Colors.white.withValues(alpha: 0.08)
-                      : const Color(0xFFD0D4DC),
-                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: remaining / total),
+                  duration: const Duration(milliseconds: 1200),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, value, _) => LinearProgressIndicator(
+                    value: value,
+                    minHeight: 6,
+                    backgroundColor: isDark
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : const Color(0xFFD0D4DC),
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                  ),
                 ),
               ),
             ],
