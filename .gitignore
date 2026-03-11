@@ -11,6 +11,8 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+.env
+.env.*
 
 # IntelliJ related
 *.iml
@@ -18,10 +20,9 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# Editor / local workspace settings
+.vscode/
+.claude/
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -44,6 +45,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-
-#Ignore vscode AI rules
-.github\instructions\codacy.instructions.md
+# Local AI/copilot instructions not needed in project source control
+.github/instructions/codacy.instructions.md
