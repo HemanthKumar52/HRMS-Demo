@@ -306,7 +306,7 @@ class _ManagerHomeState extends State<ManagerHome> {
                       children: [
                         Text('Net Pay', style: theme.textTheme.bodySmall),
                         const SizedBox(height: 4),
-                        Text('\$8,450', style: theme.textTheme.headlineMedium?.copyWith(
+                        Text('₹65,400', style: theme.textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.w800, color: AppColors.success)),
                       ],
                     ),
@@ -315,7 +315,7 @@ class _ManagerHomeState extends State<ManagerHome> {
                       children: [
                         Text('Gross', style: theme.textTheme.bodySmall),
                         const SizedBox(height: 4),
-                        Text('\$12,000', style: theme.textTheme.titleMedium?.copyWith(
+                        Text('₹92,000', style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600)),
                       ],
                     ),
@@ -339,7 +339,7 @@ class _ManagerHomeState extends State<ManagerHome> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text('Deductions: \$3,550', style: theme.textTheme.bodySmall),
+                Text('Deductions: ₹26,600', style: theme.textTheme.bodySmall),
               ],
             ),
           ).animate().fadeIn(duration: 400.ms, delay: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 400.ms, curve: Curves.easeOut),

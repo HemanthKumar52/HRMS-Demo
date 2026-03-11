@@ -39,11 +39,11 @@ class _HrClaimsOverviewState extends State<HrClaimsOverview> with SingleTickerPr
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
           child: Row(
             children: [
-              Expanded(child: _ClaimStatCard(label: 'Pending', value: '23', amount: '\$12,450', color: AppColors.warning)),
+              Expanded(child: _ClaimStatCard(label: 'Pending', value: '23', amount: '₹9,58,000', color: AppColors.warning)),
               const SizedBox(width: 10),
-              Expanded(child: _ClaimStatCard(label: 'Approved', value: '156', amount: '\$85,200', color: AppColors.success)),
+              Expanded(child: _ClaimStatCard(label: 'Approved', value: '156', amount: '₹65,42,000', color: AppColors.success)),
               const SizedBox(width: 10),
-              Expanded(child: _ClaimStatCard(label: 'Disbursed', value: '142', amount: '\$78,900', color: AppColors.primary)),
+              Expanded(child: _ClaimStatCard(label: 'Disbursed', value: '142', amount: '₹60,78,000', color: AppColors.primary)),
             ],
           ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
         ),
@@ -179,24 +179,24 @@ class _ClaimItem {
 }
 
 const _pendingClaims = [
-  _ClaimItem(employeeName: 'Arjun Patel', initials: 'AP', empId: 'EMP-001', category: 'Travel', description: 'Client visit - Mumbai', amount: '\$450', date: 'Mar 8, 2026'),
-  _ClaimItem(employeeName: 'Priya Sharma', initials: 'PS', empId: 'EMP-002', category: 'Medical', description: 'Annual health checkup', amount: '\$280', date: 'Mar 7, 2026'),
-  _ClaimItem(employeeName: 'Rahul Verma', initials: 'RV', empId: 'EMP-003', category: 'Equipment', description: 'Laptop repair', amount: '\$180', date: 'Mar 6, 2026', hasReceipt: false),
-  _ClaimItem(employeeName: 'Sneha Gupta', initials: 'SG', empId: 'EMP-004', category: 'Travel', description: 'Conference registration', amount: '\$350', date: 'Mar 5, 2026'),
-  _ClaimItem(employeeName: 'Neha Singh', initials: 'NS', empId: 'EMP-006', category: 'Other', description: 'Client dinner', amount: '\$120', date: 'Mar 4, 2026'),
+  _ClaimItem(employeeName: 'Arjun Patel', initials: 'AP', empId: 'EMP-001', category: 'Travel', description: 'Client visit - Mumbai', amount: '₹34,500', date: 'Mar 8, 2026'),
+  _ClaimItem(employeeName: 'Priya Sharma', initials: 'PS', empId: 'EMP-002', category: 'Medical', description: 'Annual health checkup', amount: '₹21,500', date: 'Mar 7, 2026'),
+  _ClaimItem(employeeName: 'Rahul Verma', initials: 'RV', empId: 'EMP-003', category: 'Equipment', description: 'Laptop repair', amount: '₹13,800', date: 'Mar 6, 2026', hasReceipt: false),
+  _ClaimItem(employeeName: 'Sneha Gupta', initials: 'SG', empId: 'EMP-004', category: 'Travel', description: 'Conference registration', amount: '₹26,800', date: 'Mar 5, 2026'),
+  _ClaimItem(employeeName: 'Neha Singh', initials: 'NS', empId: 'EMP-006', category: 'Other', description: 'Client dinner', amount: '₹9,200', date: 'Mar 4, 2026'),
 ];
 
 const _approvedClaims = [
-  _ClaimItem(employeeName: 'Vikram Singh', initials: 'VS', empId: 'EMP-009', category: 'Travel', description: 'Team outing transport', amount: '\$200', date: 'Mar 3, 2026'),
-  _ClaimItem(employeeName: 'Karan Mehta', initials: 'KM', empId: 'EMP-007', category: 'Medical', description: 'Eye checkup', amount: '\$150', date: 'Mar 2, 2026'),
-  _ClaimItem(employeeName: 'Amit Kumar', initials: 'AK', empId: 'EMP-005', category: 'Equipment', description: 'Monitor purchase', amount: '\$420', date: 'Mar 1, 2026'),
-  _ClaimItem(employeeName: 'Meera Nair', initials: 'MN', empId: 'EMP-012', category: 'Travel', description: 'Airport taxi', amount: '\$85', date: 'Feb 28, 2026'),
+  _ClaimItem(employeeName: 'Vikram Singh', initials: 'VS', empId: 'EMP-009', category: 'Travel', description: 'Team outing transport', amount: '₹15,400', date: 'Mar 3, 2026'),
+  _ClaimItem(employeeName: 'Karan Mehta', initials: 'KM', empId: 'EMP-007', category: 'Medical', description: 'Eye checkup', amount: '₹11,500', date: 'Mar 2, 2026'),
+  _ClaimItem(employeeName: 'Amit Kumar', initials: 'AK', empId: 'EMP-005', category: 'Equipment', description: 'Monitor purchase', amount: '₹32,200', date: 'Mar 1, 2026'),
+  _ClaimItem(employeeName: 'Meera Nair', initials: 'MN', empId: 'EMP-012', category: 'Travel', description: 'Airport taxi', amount: '₹6,500', date: 'Feb 28, 2026'),
 ];
 
 const _disbursedClaims = [
-  _ClaimItem(employeeName: 'Deepak Shah', initials: 'DS', empId: 'EMP-015', category: 'Travel', description: 'Delhi site visit', amount: '\$680', date: 'Feb 25, 2026'),
-  _ClaimItem(employeeName: 'Ravi Menon', initials: 'RM', empId: 'EMP-013', category: 'Medical', description: 'Dental treatment', amount: '\$320', date: 'Feb 22, 2026'),
-  _ClaimItem(employeeName: 'Anita Desai', initials: 'AD', empId: 'EMP-008', category: 'Other', description: 'Training materials', amount: '\$95', date: 'Feb 20, 2026'),
+  _ClaimItem(employeeName: 'Deepak Shah', initials: 'DS', empId: 'EMP-015', category: 'Travel', description: 'Delhi site visit', amount: '₹52,200', date: 'Feb 25, 2026'),
+  _ClaimItem(employeeName: 'Ravi Menon', initials: 'RM', empId: 'EMP-013', category: 'Medical', description: 'Dental treatment', amount: '₹24,500', date: 'Feb 22, 2026'),
+  _ClaimItem(employeeName: 'Anita Desai', initials: 'AD', empId: 'EMP-008', category: 'Other', description: 'Training materials', amount: '₹7,300', date: 'Feb 20, 2026'),
 ];
 
 // ---------------------------------------------------------------------------

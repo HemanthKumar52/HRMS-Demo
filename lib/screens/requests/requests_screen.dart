@@ -40,7 +40,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
       'id': 'REQ-002',
       'type': 'Claims',
       'title': 'Travel Reimbursement',
-      'subtitle': 'Amount: \$450.00',
+      'subtitle': 'Amount: ₹34,500',
       'status': 'Approved',
       'icon': Icons.receipt_long_rounded,
       'color': AppColors.success,

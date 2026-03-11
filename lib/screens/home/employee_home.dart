@@ -324,7 +324,7 @@ class EmployeeHome extends StatelessWidget {
                       icon: Icons.receipt_long,
                       color: AppColors.orange,
                       title: 'Expense Submitted',
-                      subtitle: 'Travel reimbursement - \$450',
+                      subtitle: 'Travel reimbursement - ₹34,500',
                       time: 'Yesterday',
                     ),
                     Divider(

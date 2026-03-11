@@ -563,7 +563,7 @@ class _HrHomeState extends State<HrHome> {
                       children: [
                         Text('Net Pay', style: theme.textTheme.bodySmall),
                         const SizedBox(height: 4),
-                        Text('\$9,200', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800, color: AppColors.success)),
+                        Text('₹72,000', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800, color: AppColors.success)),
                       ],
                     ),
                     Column(
@@ -571,7 +571,7 @@ class _HrHomeState extends State<HrHome> {
                       children: [
                         Text('Gross', style: theme.textTheme.bodySmall),
                         const SizedBox(height: 4),
-                        Text('\$14,000', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                        Text('₹1,05,000', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ],
