@@ -798,8 +798,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           children: [
             TweenAnimationBuilder<int>(
               tween: IntTween(begin: 0, end: count),
-              duration: const Duration(milliseconds: 1200),
-              curve: Curves.easeOutCubic,
+              duration: const Duration(milliseconds: 3500),
+              curve: Curves.easeOutExpo,
               builder: (context, value, _) => Text(
                 '$value',
                 style: tt.headlineMedium?.copyWith(

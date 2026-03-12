@@ -637,8 +637,8 @@ class _StatMini extends StatelessWidget {
           const SizedBox(height: 8),
           TweenAnimationBuilder<int>(
             tween: IntTween(begin: 0, end: _numericValue),
-            duration: const Duration(milliseconds: 1200),
-            curve: Curves.easeOutCubic,
+            duration: const Duration(milliseconds: 3500),
+            curve: Curves.easeOutExpo,
             builder: (context, val, _) => Text(_formatValue(val), style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: color)),
           ),
           const SizedBox(height: 2),

@@ -320,8 +320,8 @@ class _SummaryCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 TweenAnimationBuilder<int>(
                   tween: IntTween(begin: 0, end: _numericValue),
-                  duration: const Duration(milliseconds: 1200),
-                  curve: Curves.easeOutCubic,
+                  duration: const Duration(milliseconds: 3500),
+                  curve: Curves.easeOutExpo,
                   builder: (context, val, _) => Text(_formatValue(val), style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: color)),
                 ),
               ],

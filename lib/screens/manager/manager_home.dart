@@ -208,8 +208,8 @@ class _ManagerHomeState extends State<ManagerHome> {
                       const SizedBox(height: 4),
                       TweenAnimationBuilder<int>(
                         tween: IntTween(begin: 0, end: 14),
-                        duration: const Duration(milliseconds: 1200),
-                        curve: Curves.easeOutCubic,
+                        duration: const Duration(milliseconds: 3500),
+                        curve: Curves.easeOutExpo,
                         builder: (context, value, _) => Text('$value', style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700, color: AppColors.primary)),
                       ),
@@ -237,8 +237,8 @@ class _ManagerHomeState extends State<ManagerHome> {
                       const SizedBox(height: 4),
                       TweenAnimationBuilder<int>(
                         tween: IntTween(begin: 0, end: 98),
-                        duration: const Duration(milliseconds: 1200),
-                        curve: Curves.easeOutCubic,
+                        duration: const Duration(milliseconds: 3500),
+                        curve: Curves.easeOutExpo,
                         builder: (context, value, _) => Text('$value%', style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700, color: AppColors.success)),
                       ),
@@ -1513,8 +1513,8 @@ class _ManagerHomeState extends State<ManagerHome> {
           children: [
             TweenAnimationBuilder<int>(
               tween: IntTween(begin: 0, end: numVal),
-              duration: const Duration(milliseconds: 1200),
-              curve: Curves.easeOutCubic,
+              duration: const Duration(milliseconds: 3500),
+              curve: Curves.easeOutExpo,
               builder: (context, val, _) => Text(
                 _formatNum(val),
                 style: TextStyle(
@@ -1858,8 +1858,8 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 16),
           TweenAnimationBuilder<int>(
             tween: IntTween(begin: 0, end: _numericValue),
-            duration: const Duration(milliseconds: 1200),
-            curve: Curves.easeOutCubic,
+            duration: const Duration(milliseconds: 3500),
+            curve: Curves.easeOutExpo,
             builder: (context, val, _) => Text(
               _formatValue(val),
               style: TextStyle(

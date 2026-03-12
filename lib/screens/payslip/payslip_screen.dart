@@ -453,8 +453,8 @@ class _PayslipScreenState extends State<PayslipScreen> {
           children: [
             TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: amount),
-              duration: const Duration(milliseconds: 1200),
-              curve: Curves.easeOutCubic,
+              duration: const Duration(milliseconds: 3500),
+              curve: Curves.easeOutExpo,
               builder: (context, value, _) => Text(
                 _currencyFormat.format(value),
                 style: tt.titleMedium?.copyWith(

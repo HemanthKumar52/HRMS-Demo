@@ -60,8 +60,8 @@ class EmployeeHome extends StatelessWidget {
                           const SizedBox(height: 4),
                           TweenAnimationBuilder<int>(
                             tween: IntTween(begin: 0, end: 12),
-                            duration: const Duration(milliseconds: 1200),
-                            curve: Curves.easeOutCubic,
+                            duration: const Duration(milliseconds: 3500),
+                            curve: Curves.easeOutExpo,
                             builder: (context, value, _) => Text('$value',
                                 style: theme.textTheme.titleLarge?.copyWith(
                                     fontWeight: FontWeight.w700,
@@ -94,8 +94,8 @@ class EmployeeHome extends StatelessWidget {
                           const SizedBox(height: 4),
                           TweenAnimationBuilder<int>(
                             tween: IntTween(begin: 0, end: 96),
-                            duration: const Duration(milliseconds: 1200),
-                            curve: Curves.easeOutCubic,
+                            duration: const Duration(milliseconds: 3500),
+                            curve: Curves.easeOutExpo,
                             builder: (context, value, _) => Text('$value%',
                                 style: theme.textTheme.titleLarge?.copyWith(
                                     fontWeight: FontWeight.w700,
@@ -398,8 +398,8 @@ class _LeaveTypeChip extends StatelessWidget {
           children: [
             TweenAnimationBuilder<int>(
               tween: IntTween(begin: 0, end: remaining),
-              duration: const Duration(milliseconds: 1200),
-              curve: Curves.easeOutCubic,
+              duration: const Duration(milliseconds: 3500),
+              curve: Curves.easeOutExpo,
               builder: (context, value, _) => Text(
                 '$value',
                 style: TextStyle(
