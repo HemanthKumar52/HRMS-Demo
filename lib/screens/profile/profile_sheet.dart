@@ -87,7 +87,15 @@ class _ProfileSheet extends StatelessWidget {
                       right: 0,
                       child: GestureDetector(
                         onTap: () {
-                          // TODO: Image picker
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text('Image picker coming soon'),
+                              backgroundColor: AppColors.primary,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              duration: const Duration(seconds: 1),
+                            ),
+                          );
                         },
                         child: Container(
                           padding: const EdgeInsets.all(6),

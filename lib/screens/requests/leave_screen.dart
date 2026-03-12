@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/status_chip.dart';
@@ -184,6 +185,8 @@ class _LeaveScreenState extends State<LeaveScreen> {
                 final color = balance['color'] as Color;
 
                 return NeuCard(
+                  padding: const EdgeInsets.all(14),).animate().fadeIn(duration: 400.ms, delay: (index * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (index * 80).ms, curve: Curves.easeOut);
+                return NeuCard(
                   padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,11 +218,16 @@ class _LeaveScreenState extends State<LeaveScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  '$remaining',
-                                  style: textTheme.headlineMedium?.copyWith(
-                                    color: color,
-                                    fontWeight: FontWeight.w700,
+                                TweenAnimationBuilder<int>(
+                                  tween: IntTween(begin: 0, end: remaining),
+                                  duration: const Duration(milliseconds: 3500),
+                                  curve: Curves.easeOutExpo,
+                                  builder: (context, val, _) => Text(
+                                    '$val',
+                                    style: textTheme.headlineMedium?.copyWith(
+                                      color: color,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ),
                                 Text(

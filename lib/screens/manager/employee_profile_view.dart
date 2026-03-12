@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/status_chip.dart';
@@ -41,19 +42,19 @@ class EmployeeProfileView extends StatelessWidget {
               avatarColor: avatarColor,
               jobTitle: jobTitle,
               department: department,
-            ),
+            ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
             const SizedBox(height: 20),
 
             // Attendance Summary
-            _AttendanceSummarySection(),
+            _AttendanceSummarySection().animate().fadeIn(duration: 400.ms, delay: 80.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 80.ms, curve: Curves.easeOut),
             const SizedBox(height: 16),
 
             // Leave History
-            _LeaveHistorySection(),
+            _LeaveHistorySection().animate().fadeIn(duration: 400.ms, delay: 160.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 160.ms, curve: Curves.easeOut),
             const SizedBox(height: 16),
 
             // Performance Notes
-            _PerformanceNotesSection(),
+            _PerformanceNotesSection().animate().fadeIn(duration: 400.ms, delay: 240.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 240.ms, curve: Curves.easeOut),
           ],
         ),
       ),
@@ -226,25 +227,35 @@ class _AttendanceSummarySection extends StatelessWidget {
             children: [
               Text('Attendance Rate', style: theme.textTheme.bodySmall),
               const Spacer(),
-              Text(
-                '91%',
-                style: const TextStyle(
-                  color: AppColors.success,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
+              TweenAnimationBuilder<int>(
+                tween: IntTween(begin: 0, end: 91),
+                duration: const Duration(milliseconds: 3500),
+                curve: Curves.easeOutExpo,
+                builder: (context, value, _) => Text(
+                  '$value%',
+                  style: const TextStyle(
+                    color: AppColors.success,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: 0.91,
-              minHeight: 8,
-              backgroundColor: AppColors.success.withValues(alpha: 0.12),
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(AppColors.success),
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: 0.91),
+            duration: const Duration(milliseconds: 3500),
+            curve: Curves.easeOutExpo,
+            builder: (context, value, _) => ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: value,
+                minHeight: 8,
+                backgroundColor: AppColors.success.withValues(alpha: 0.12),
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(AppColors.success),
+              ),
             ),
           ),
         ],
@@ -274,12 +285,17 @@ class _StatTile extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: color,
+          TweenAnimationBuilder<int>(
+            tween: IntTween(begin: 0, end: int.tryParse(value) ?? 0),
+            duration: const Duration(milliseconds: 3500),
+            curve: Curves.easeOutExpo,
+            builder: (context, val, _) => Text(
+              '$val',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
           ),
           const SizedBox(height: 2),
