@@ -243,7 +243,18 @@ class ShellScreen extends StatelessWidget {
                       style: theme.textTheme.titleLarge),
                   const Spacer(),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('All notifications marked as read'),
+                          backgroundColor: AppColors.primary,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    },
                     child: const Text('Mark all read',
                         style: TextStyle(color: AppColors.primary)),
                   ),

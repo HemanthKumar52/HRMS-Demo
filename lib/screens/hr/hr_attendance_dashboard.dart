@@ -288,6 +288,15 @@ class _SummaryCard extends StatelessWidget {
     required this.icon,
   });
 
+  int get _numericValue => int.tryParse(value.replaceAll(',', '')) ?? 0;
+
+  String _formatValue(int v) {
+    if (v >= 1000) {
+      return '${(v ~/ 1000)},${(v % 1000).toString().padLeft(3, '0')}';
+    }
+    return '$v';
+  }
+
   @override
   Widget build(BuildContext context) {
     return NeuCard(
@@ -309,7 +318,12 @@ class _SummaryCard extends StatelessWidget {
               children: [
                 Text(label, style: TextStyle(fontSize: 12, color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkSubtext : AppColors.lightSubtext)),
                 const SizedBox(height: 2),
-                Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: color)),
+                TweenAnimationBuilder<int>(
+                  tween: IntTween(begin: 0, end: _numericValue),
+                  duration: const Duration(milliseconds: 1200),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, val, _) => Text(_formatValue(val), style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: color)),
+                ),
               ],
             ),
           ),

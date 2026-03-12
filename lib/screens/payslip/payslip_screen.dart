@@ -363,7 +363,17 @@ class _PayslipScreenState extends State<PayslipScreen> {
                   child: SizedBox(
                     height: 52,
                     child: ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Opening ${_months[_selectedMonthIndex]} $_selectedYear payslip...'),
+                            backgroundColor: AppColors.primary,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            duration: const Duration(seconds: 1),
+                          ),
+                        );
+                      },
                       icon: const Icon(Icons.visibility_rounded, size: 20),
                       label: const Text('View Payslip'),
                       style: ElevatedButton.styleFrom(
@@ -386,7 +396,17 @@ class _PayslipScreenState extends State<PayslipScreen> {
                   child: SizedBox(
                     height: 52,
                     child: OutlinedButton.icon(
-                      onPressed: () {},
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Downloading ${_months[_selectedMonthIndex]} $_selectedYear payslip PDF...'),
+                            backgroundColor: AppColors.success,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            duration: const Duration(seconds: 1),
+                          ),
+                        );
+                      },
                       icon: const Icon(Icons.download_rounded, size: 20),
                       label: const Text('Download PDF'),
                       style: OutlinedButton.styleFrom(
@@ -431,15 +451,20 @@ class _PayslipScreenState extends State<PayslipScreen> {
         ),
         child: Column(
           children: [
-            Text(
-              _currencyFormat.format(amount),
-              style: tt.titleMedium?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: amount),
+              duration: const Duration(milliseconds: 1200),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, _) => Text(
+                _currencyFormat.format(value),
+                style: tt.titleMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
             Text(

@@ -58,10 +58,15 @@ class EmployeeHome extends StatelessWidget {
                           Text('Leave Balance',
                               style: theme.textTheme.bodySmall),
                           const SizedBox(height: 4),
-                          Text('12',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary)),
+                          TweenAnimationBuilder<int>(
+                            tween: IntTween(begin: 0, end: 12),
+                            duration: const Duration(milliseconds: 1200),
+                            curve: Curves.easeOutCubic,
+                            builder: (context, value, _) => Text('$value',
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primary)),
+                          ),
                           Text('Days remaining',
                               style: theme.textTheme.bodySmall),
                         ],
@@ -87,10 +92,15 @@ class EmployeeHome extends StatelessWidget {
                           Text('Attendance',
                               style: theme.textTheme.bodySmall),
                           const SizedBox(height: 4),
-                          Text('96%',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.success)),
+                          TweenAnimationBuilder<int>(
+                            tween: IntTween(begin: 0, end: 96),
+                            duration: const Duration(milliseconds: 1200),
+                            curve: Curves.easeOutCubic,
+                            builder: (context, value, _) => Text('$value%',
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.success)),
+                          ),
                           Text('This month',
                               style: theme.textTheme.bodySmall),
                         ],
@@ -386,12 +396,17 @@ class _LeaveTypeChip extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Text(
-              '$remaining',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: color,
+            TweenAnimationBuilder<int>(
+              tween: IntTween(begin: 0, end: remaining),
+              duration: const Duration(milliseconds: 1200),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, _) => Text(
+                '$value',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
               ),
             ),
             const SizedBox(height: 2),

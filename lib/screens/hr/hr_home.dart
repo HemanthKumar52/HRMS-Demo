@@ -617,6 +617,15 @@ class _StatMini extends StatelessWidget {
     required this.icon,
   });
 
+  int get _numericValue => int.tryParse(value.replaceAll(',', '')) ?? 0;
+
+  String _formatValue(int v) {
+    if (v >= 1000) {
+      return '${(v ~/ 1000)},${(v % 1000).toString().padLeft(3, '0')}';
+    }
+    return '$v';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -626,7 +635,12 @@ class _StatMini extends StatelessWidget {
         children: [
           Icon(icon, color: color, size: 22),
           const SizedBox(height: 8),
-          Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: color)),
+          TweenAnimationBuilder<int>(
+            tween: IntTween(begin: 0, end: _numericValue),
+            duration: const Duration(milliseconds: 1200),
+            curve: Curves.easeOutCubic,
+            builder: (context, val, _) => Text(_formatValue(val), style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: color)),
+          ),
           const SizedBox(height: 2),
           Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext), textAlign: TextAlign.center),
         ],

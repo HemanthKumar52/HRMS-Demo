@@ -206,8 +206,13 @@ class _ManagerHomeState extends State<ManagerHome> {
                       const SizedBox(height: 12),
                       Text('Leave Balance', style: theme.textTheme.bodySmall),
                       const SizedBox(height: 4),
-                      Text('14', style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700, color: AppColors.primary)),
+                      TweenAnimationBuilder<int>(
+                        tween: IntTween(begin: 0, end: 14),
+                        duration: const Duration(milliseconds: 1200),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, value, _) => Text('$value', style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700, color: AppColors.primary)),
+                      ),
                       Text('Days remaining', style: theme.textTheme.bodySmall),
                     ],
                   ),
@@ -230,8 +235,13 @@ class _ManagerHomeState extends State<ManagerHome> {
                       const SizedBox(height: 12),
                       Text('Attendance', style: theme.textTheme.bodySmall),
                       const SizedBox(height: 4),
-                      Text('98%', style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700, color: AppColors.success)),
+                      TweenAnimationBuilder<int>(
+                        tween: IntTween(begin: 0, end: 98),
+                        duration: const Duration(milliseconds: 1200),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, value, _) => Text('$value%', style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700, color: AppColors.success)),
+                      ),
                       Text('This month', style: theme.textTheme.bodySmall),
                     ],
                   ),
@@ -1795,6 +1805,15 @@ class _StatCard extends StatelessWidget {
     required this.trendColor,
   });
 
+  int get _numericValue => int.tryParse(value.replaceAll(',', '')) ?? 0;
+
+  String _formatValue(int v) {
+    if (v >= 1000) {
+      return '${(v ~/ 1000)},${(v % 1000).toString().padLeft(3, '0')}';
+    }
+    return '$v';
+  }
+
   @override
   Widget build(BuildContext context) {
     return NeuCard(
@@ -1824,16 +1843,21 @@ class _StatCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? AppColors.darkText
-                  : AppColors.lightText,
+          TweenAnimationBuilder<int>(
+            tween: IntTween(begin: 0, end: _numericValue),
+            duration: const Duration(milliseconds: 1200),
+            curve: Curves.easeOutCubic,
+            builder: (context, val, _) => Text(
+              _formatValue(val),
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.w700,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? AppColors.darkText
+                    : AppColors.lightText,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
-            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           Text(

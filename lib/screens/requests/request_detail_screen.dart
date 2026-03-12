@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/status_chip.dart';
@@ -68,7 +69,17 @@ class RequestDetailScreen extends StatelessWidget {
           if (status == 'Pending')
             IconButton(
               icon: const Icon(Icons.edit_rounded),
-              onPressed: () {},
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Edit request feature coming soon'),
+                    backgroundColor: AppColors.primary,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              },
             ),
         ],
       ),
@@ -119,7 +130,7 @@ class RequestDetailScreen extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
+            ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
 
             const SizedBox(height: 16),
 
@@ -175,7 +186,7 @@ class RequestDetailScreen extends StatelessWidget {
                   ],
                 ],
               ),
-            ),
+            ).animate().fadeIn(duration: 400.ms, delay: 80.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 80.ms, curve: Curves.easeOut),
 
             const SizedBox(height: 16),
 
@@ -295,7 +306,7 @@ class RequestDetailScreen extends StatelessWidget {
                   }),
                 ],
               ),
-            ),
+            ).animate().fadeIn(duration: 400.ms, delay: 160.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 160.ms, curve: Curves.easeOut),
 
             // Cancel button for pending requests
             if (status == 'Pending') ...[
