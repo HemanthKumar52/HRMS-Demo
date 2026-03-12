@@ -1496,19 +1496,32 @@ class _ManagerHomeState extends State<ManagerHome> {
   // ATTENDANCE TAB HELPERS
   // ===========================================================================
 
+  String _formatNum(int v) {
+    if (v >= 1000) {
+      return '${(v ~/ 1000)},${(v % 1000).toString().padLeft(3, '0')}';
+    }
+    return '$v';
+  }
+
   Widget _buildAttendanceMini(
       String label, String value, Color color, bool isDark) {
+    final numVal = int.tryParse(value.replaceAll(',', '')) ?? 0;
     return Expanded(
       child: NeuCard(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         child: Column(
           children: [
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: color,
+            TweenAnimationBuilder<int>(
+              tween: IntTween(begin: 0, end: numVal),
+              duration: const Duration(milliseconds: 1200),
+              curve: Curves.easeOutCubic,
+              builder: (context, val, _) => Text(
+                _formatNum(val),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
               ),
             ),
             const SizedBox(height: 4),
