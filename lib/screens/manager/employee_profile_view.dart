@@ -199,23 +199,23 @@ class _AttendanceSummarySection extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Row(
-            children: const [
-              Expanded(
+            children: [
+              const Expanded(
                 child: _StatTile(
                     label: 'Present', value: '21', color: AppColors.success),
               ),
-              SizedBox(width: 10),
-              Expanded(
+              const SizedBox(width: 10),
+              const Expanded(
                 child: _StatTile(
                     label: 'Absent', value: '2', color: AppColors.danger),
               ),
-              SizedBox(width: 10),
-              Expanded(
+              const SizedBox(width: 10),
+              const Expanded(
                 child: _StatTile(
                     label: 'Late', value: '3', color: AppColors.warning),
               ),
-              SizedBox(width: 10),
-              Expanded(
+              const SizedBox(width: 10),
+              const Expanded(
                 child: _StatTile(
                     label: 'Leave', value: '1', color: AppColors.secondary),
               ),

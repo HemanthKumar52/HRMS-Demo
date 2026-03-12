@@ -185,8 +185,6 @@ class _LeaveScreenState extends State<LeaveScreen> {
                 final color = balance['color'] as Color;
 
                 return NeuCard(
-                  padding: const EdgeInsets.all(14),).animate().fadeIn(duration: 400.ms, delay: (index * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (index * 80).ms, curve: Curves.easeOut);
-                return NeuCard(
                   padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,37 +237,42 @@ class _LeaveScreenState extends State<LeaveScreen> {
                               ],
                             ),
                           ),
-                          SizedBox(
-                            width: 40,
-                            height: 40,
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                CircularProgressIndicator(
-                                  value: progress,
-                                  strokeWidth: 4,
-                                  backgroundColor:
-                                      color.withValues(alpha: 0.15),
-                                  valueColor:
-                                      AlwaysStoppedAnimation<Color>(color),
-                                  strokeCap: StrokeCap.round,
-                                ),
-                                Text(
-                                  '${(progress * 100).toInt()}%',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w700,
-                                    color: color,
+                          TweenAnimationBuilder<double>(
+                            tween: Tween<double>(begin: 0, end: progress),
+                            duration: const Duration(milliseconds: 3500),
+                            curve: Curves.easeOutExpo,
+                            builder: (context, animVal, _) => SizedBox(
+                              width: 40,
+                              height: 40,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  CircularProgressIndicator(
+                                    value: animVal,
+                                    strokeWidth: 4,
+                                    backgroundColor:
+                                        color.withValues(alpha: 0.15),
+                                    valueColor:
+                                        AlwaysStoppedAnimation<Color>(color),
+                                    strokeCap: StrokeCap.round,
                                   ),
-                                ),
-                              ],
+                                  Text(
+                                    '${(animVal * 100).toInt()}%',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                      color: color,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ],
                   ),
-                );
+                ).animate().fadeIn(duration: 400.ms, delay: (index * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (index * 80).ms, curve: Curves.easeOut);
               },
             ),
 
@@ -278,7 +281,9 @@ class _LeaveScreenState extends State<LeaveScreen> {
             // Leave History Section
             Text('Leave History', style: textTheme.titleLarge),
             const SizedBox(height: 14),
-            ..._leaveHistory.map((leave) {
+            ..._leaveHistory.asMap().entries.map((entry) {
+              final leaveIndex = entry.key;
+              final leave = entry.value;
               final color = _leaveTypeColor(leave['type'] as String);
               final timeline =
                   leave['timeline'] as List<Map<String, dynamic>>;
@@ -403,7 +408,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
                       ),
                     ],
                   ),
-                ),
+                ).animate().fadeIn(duration: 400.ms, delay: (leaveIndex * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (leaveIndex * 80).ms, curve: Curves.easeOut),
               );
             }),
           ],

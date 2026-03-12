@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
@@ -156,7 +157,7 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
+            ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
             const SizedBox(height: 24),
 
             // Work Info section
@@ -196,7 +197,7 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
+            ).animate().fadeIn(duration: 400.ms, delay: 100.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 100.ms, curve: Curves.easeOut),
           ],
         ),
       ),

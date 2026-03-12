@@ -58,7 +58,7 @@ class _TeamDirectoryScreenState extends State<TeamDirectoryScreen> {
                     : null,
               ),
             ),
-          ),
+          ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
         ),
         const SizedBox(height: 8),
 
@@ -72,7 +72,7 @@ class _TeamDirectoryScreenState extends State<TeamDirectoryScreen> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: _TeamSection(team: team),
-              );
+              ).animate().fadeIn(duration: 400.ms, delay: (index * 100).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (index * 100).ms, curve: Curves.easeOut);
             },
           ),
         ),

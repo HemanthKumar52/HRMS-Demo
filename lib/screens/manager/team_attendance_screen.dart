@@ -41,13 +41,13 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
                 ),
               ],
             ),
-          ),
+          ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
           const SizedBox(height: 20),
 
           // Attendance Summary Donut Chart
           Text('Attendance Summary', style: theme.textTheme.titleMedium),
           const SizedBox(height: 12),
-          const _AttendanceDonutChart(),
+          const _AttendanceDonutChart().animate().fadeIn(duration: 400.ms, delay: 80.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 80.ms, curve: Curves.easeOut),
           const SizedBox(height: 24),
 
           // Today's Team List
@@ -58,7 +58,7 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: _TeamMemberRow(member: member),
-            );
+            ).animate().fadeIn(duration: 400.ms, delay: (160 + index * 60).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (160 + index * 60).ms, curve: Curves.easeOut);
           }),
         ],
       ),
