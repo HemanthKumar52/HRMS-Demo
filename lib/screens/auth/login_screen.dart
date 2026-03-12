@@ -18,7 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
-  UserRole _selectedRole = UserRole.employee;
+  String? _errorText;
 
   @override
   void dispose() {
@@ -28,12 +28,44 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _login() async {
-    setState(() => _isLoading = true);
+    final username = _usernameController.text.trim().toLowerCase();
+    final password = _passwordController.text;
+
+    if (username.isEmpty || password.isEmpty) {
+      setState(() => _errorText = 'Please enter username and password');
+      return;
+    }
+
+    // Determine role from username
+    UserRole? role;
+    if (username == 'employee') {
+      role = UserRole.employee;
+    } else if (username == 'manager') {
+      role = UserRole.manager;
+    } else if (username == 'hr') {
+      role = UserRole.hr;
+    }
+
+    if (role == null) {
+      setState(() => _errorText = 'Invalid username. Use: employee, manager, or hr');
+      return;
+    }
+
+    if (password != '12345') {
+      setState(() => _errorText = 'Incorrect password');
+      return;
+    }
+
+    setState(() {
+      _errorText = null;
+      _isLoading = true;
+    });
+
     await Future.delayed(const Duration(milliseconds: 800));
     if (!mounted) return;
 
     final provider = context.read<AppProvider>();
-    provider.setRole(_selectedRole);
+    provider.setRole(role);
     provider.login();
 
     Navigator.pushReplacement(
@@ -116,58 +148,30 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Role toggle
-                        Container(
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.black.withValues(alpha: 0.2)
-                                : AppColors.lightBg,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.all(4),
-                          child: Row(
-                            children: UserRole.values.map((role) {
-                              final isSelected = _selectedRole == role;
-                              return Expanded(
-                                child: GestureDetector(
-                                  onTap: () =>
-                                      setState(() => _selectedRole = role),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 10),
-                                    decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? AppColors.primary
-                                          : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        role == UserRole.employee
-                                            ? 'Employee'
-                                            : role == UserRole.manager
-                                                ? 'Manager'
-                                                : 'HR',
-                                        style: TextStyle(
-                                          color: isSelected
-                                              ? Colors.white
-                                              : Theme.of(context)
-                                                  .textTheme
-                                                  .bodyMedium
-                                                  ?.color,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ),
+                        // Error message
+                        if (_errorText != null) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: AppColors.danger.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.error_outline, color: AppColors.danger, size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _errorText!,
+                                    style: TextStyle(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.w500),
                                   ),
                                 ),
-                              );
-                            }).toList(),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 20),
+                          const SizedBox(height: 16),
+                        ],
 
                         // Username
                         _buildInput(
