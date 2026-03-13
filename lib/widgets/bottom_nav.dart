@@ -10,35 +10,15 @@ class FloatingBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AppProvider>();
-    final isManager = provider.role == UserRole.manager;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isHr = provider.role == UserRole.hr;
-    final isMyView = provider.isMyView && (isManager || isHr);
 
-    final employeeItems = [
-      _NavItem(Icons.home_rounded, 'Home'),
-      _NavItem(Icons.description_outlined, 'Request'),
+    // Unified nav items for all roles
+    final items = [
+      _NavItem(Icons.dashboard_rounded, 'Dashboard'),
+      _NavItem(Icons.description_outlined, 'Requests'),
       _NavItem(Icons.access_time_rounded, 'Attendance'),
-      _NavItem(Icons.receipt_long_rounded, 'Payslip'),
+      _NavItem(Icons.receipt_long_rounded, 'Payroll'),
     ];
-
-    final items = isMyView
-        ? employeeItems
-        : isHr
-            ? [
-                _NavItem(Icons.dashboard_rounded, 'Dashboard'),
-                _NavItem(Icons.people_alt_rounded, 'Employees'),
-                _NavItem(Icons.schedule_rounded, 'Attendance'),
-                _NavItem(Icons.receipt_long_rounded, 'Claims'),
-              ]
-            : isManager
-                ? [
-                    _NavItem(Icons.grid_view_rounded, 'Dashboard'),
-                    _NavItem(Icons.description_outlined, 'Directory'),
-                    _NavItem(Icons.fact_check_rounded, 'Approvals'),
-                    _NavItem(Icons.analytics_outlined, 'Analytics'),
-                  ]
-                : employeeItems;
 
     return Positioned(
       bottom: 16,

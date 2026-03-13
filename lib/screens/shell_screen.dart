@@ -4,18 +4,10 @@ import '../providers/app_provider.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/dynamic_island.dart';
 import '../theme/app_theme.dart';
-import 'home/employee_home.dart';
+import 'dashboard/dashboard_screen.dart';
 import 'requests/requests_screen.dart';
 import 'attendance/attendance_screen.dart';
 import 'payslip/payslip_screen.dart';
-import 'manager/manager_home.dart';
-import 'manager/approvals_screen.dart';
-import 'manager/team_directory_screen.dart';
-import 'manager/analytics_screen.dart';
-import 'hr/hr_home.dart';
-import 'hr/hr_employee_directory.dart';
-import 'hr/hr_attendance_dashboard.dart';
-import 'hr/hr_claims_overview.dart';
 import 'profile/profile_sheet.dart';
 
 class ShellScreen extends StatelessWidget {
@@ -24,52 +16,15 @@ class ShellScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AppProvider>();
-    final role = provider.role;
-
-    final employeeScreens = [
-      const EmployeeHome(),
-      const RequestsScreen(),
-      const AttendanceScreen(),
-      const PayslipScreen(),
-    ];
-
-    final isMyView = provider.isMyView;
-
-    final managerScreens = isMyView
-        ? <Widget>[
-            const ManagerHome(),
-            const RequestsScreen(),
-            const AttendanceScreen(),
-            const PayslipScreen(),
-          ]
-        : <Widget>[
-            const ManagerHome(),
-            const TeamDirectoryScreen(),
-            const ApprovalsScreen(),
-            const AnalyticsScreen(),
-          ];
-
-    final hrScreens = isMyView
-        ? <Widget>[
-            const HrHome(),
-            const RequestsScreen(),
-            const AttendanceScreen(),
-            const PayslipScreen(),
-          ]
-        : <Widget>[
-            const HrHome(),
-            const HrEmployeeDirectory(),
-            const HrAttendanceDashboard(),
-            const HrClaimsOverview(),
-          ];
-
-    final screens = role == UserRole.hr
-        ? hrScreens
-        : role == UserRole.manager
-            ? managerScreens
-            : employeeScreens;
-
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Unified screens for all roles
+    const screens = <Widget>[
+      DashboardScreen(),
+      RequestsScreen(),
+      AttendanceScreen(),
+      PayslipScreen(),
+    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -85,13 +40,11 @@ class ShellScreen extends StatelessWidget {
                   ),
             ),
             Text(
-              isMyView && role != UserRole.employee
-                  ? 'EMPLOYEE PORTAL'
-                  : role == UserRole.hr
-                      ? 'HR ADMINISTRATION'
-                      : role == UserRole.manager
-                          ? 'ENTERPRISE ADMIN'
-                          : 'EMPLOYEE PORTAL',
+              provider.role == UserRole.hr
+                  ? 'HR PORTAL'
+                  : provider.role == UserRole.manager
+                      ? 'MANAGER PORTAL'
+                      : 'EMPLOYEE PORTAL',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
@@ -239,8 +192,7 @@ class ShellScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
-                  Text('Notifications',
-                      style: theme.textTheme.titleLarge),
+                  Text('Notifications', style: theme.textTheme.titleLarge),
                   const Spacer(),
                   TextButton(
                     onPressed: () {
@@ -255,8 +207,7 @@ class ShellScreen extends StatelessWidget {
                         ),
                       );
                     },
-                    child: const Text('Mark all read',
-                        style: TextStyle(color: AppColors.primary)),
+                    child: const Text('Mark all read', style: TextStyle(color: AppColors.primary)),
                   ),
                 ],
               ),
@@ -338,17 +289,11 @@ class _NotifItem extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14)),
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                 const SizedBox(height: 2),
-                Text(subtitle,
-                    style: TextStyle(
-                        color: Colors.grey[500], fontSize: 13)),
+                Text(subtitle, style: TextStyle(color: Colors.grey[500], fontSize: 13)),
                 const SizedBox(height: 4),
-                Text(time,
-                    style: TextStyle(
-                        color: Colors.grey[400], fontSize: 11)),
+                Text(time, style: TextStyle(color: Colors.grey[400], fontSize: 11)),
               ],
             ),
           ),
