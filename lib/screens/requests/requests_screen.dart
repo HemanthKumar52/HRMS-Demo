@@ -1,6 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
+import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/status_chip.dart';
@@ -24,6 +26,52 @@ class _RequestsScreenState extends State<RequestsScreen> {
     'Shift Requests',
     'Work Type Requests',
     'Attendance Requests',
+  ];
+
+  // Request types for the "Requests" tab
+  final List<Map<String, dynamic>> _requestTypes = [
+    {
+      'type': 'Leave',
+      'title': 'Apply Leave',
+      'subtitle': 'Request time off from work',
+      'icon': Icons.event_busy_rounded,
+      'color': AppColors.primary,
+    },
+    {
+      'type': 'Claims',
+      'title': 'Submit Claim',
+      'subtitle': 'Expense reimbursement',
+      'icon': Icons.receipt_long_rounded,
+      'color': AppColors.success,
+    },
+    {
+      'type': 'Tickets',
+      'title': 'Raise Ticket',
+      'subtitle': 'Report an issue or request',
+      'icon': Icons.confirmation_number_rounded,
+      'color': AppColors.orange,
+    },
+    {
+      'type': 'Shift',
+      'title': 'Shift Change',
+      'subtitle': 'Request shift modification',
+      'icon': Icons.swap_horiz_rounded,
+      'color': AppColors.secondary,
+    },
+    {
+      'type': 'Work Type',
+      'title': 'Work Type Request',
+      'subtitle': 'WFH / Office / Hybrid',
+      'icon': Icons.home_work_rounded,
+      'color': AppColors.pink,
+    },
+    {
+      'type': 'Attendance',
+      'title': 'Attendance Request',
+      'subtitle': 'Correct check-in/out time',
+      'icon': Icons.fingerprint_rounded,
+      'color': AppColors.warning,
+    },
   ];
 
   final List<Map<String, dynamic>> _requests = [
@@ -108,92 +156,21 @@ class _RequestsScreenState extends State<RequestsScreen> {
     }
   }
 
-  void _onFabTap(BuildContext context) {
-    switch (_activeFilter) {
-      case 'Leave':
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const ApplyLeaveScreen()));
-        break;
-      case 'Claims':
-        Navigator.push(context, MaterialPageRoute(builder: (_) => _ApplyRequestScreen(type: 'Claim', icon: Icons.receipt, color: AppColors.success)));
-        break;
-      case 'Tickets':
-        Navigator.push(context, MaterialPageRoute(builder: (_) => _ApplyRequestScreen(type: 'Ticket', icon: Icons.confirmation_num, color: AppColors.orange)));
-        break;
-      case 'Shift Requests':
-        Navigator.push(context, MaterialPageRoute(builder: (_) => _ApplyRequestScreen(type: 'Shift Change', icon: Icons.swap_horiz, color: AppColors.secondary)));
-        break;
-      case 'Work Type Requests':
-        Navigator.push(context, MaterialPageRoute(builder: (_) => _ApplyRequestScreen(type: 'Work Type', icon: Icons.work, color: AppColors.pink)));
-        break;
-      case 'Attendance Requests':
-        Navigator.push(context, MaterialPageRoute(builder: (_) => _ApplyRequestScreen(type: 'Attendance Request', icon: Icons.fingerprint, color: AppColors.warning)));
-        break;
-      default:
-        _showQuickActionSheet(context);
-    }
-  }
-
-  void _showQuickActionSheet(BuildContext context) {
-    final theme = Theme.of(context);
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) => Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(ctx).size.height * 0.55,
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-        decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(
-                  color: Colors.grey[400],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Text('Select Request Type', style: theme.textTheme.titleLarge),
-              const SizedBox(height: 4),
-              Text('Choose a category to apply', style: theme.textTheme.bodySmall),
-              const SizedBox(height: 16),
-              _FABOption(icon: Icons.event_busy, label: 'Apply Leave', subtitle: 'Request time off', color: AppColors.primary, onTap: () {
-                Navigator.pop(ctx);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const ApplyLeaveScreen()));
-              }),
-              _FABOption(icon: Icons.receipt, label: 'Submit Claim', subtitle: 'Expense reimbursement', color: AppColors.success, onTap: () {
-                Navigator.pop(ctx);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => _ApplyRequestScreen(type: 'Claim', icon: Icons.receipt, color: AppColors.success)));
-              }),
-              _FABOption(icon: Icons.confirmation_num, label: 'Raise Ticket', subtitle: 'Report an issue', color: AppColors.orange, onTap: () {
-                Navigator.pop(ctx);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => _ApplyRequestScreen(type: 'Ticket', icon: Icons.confirmation_num, color: AppColors.orange)));
-              }),
-              _FABOption(icon: Icons.swap_horiz, label: 'Shift Change', subtitle: 'Request shift change', color: AppColors.secondary, onTap: () {
-                Navigator.pop(ctx);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => _ApplyRequestScreen(type: 'Shift Change', icon: Icons.swap_horiz, color: AppColors.secondary)));
-              }),
-              _FABOption(icon: Icons.work, label: 'Work Type', subtitle: 'WFH / Office / Hybrid', color: AppColors.pink, onTap: () {
-                Navigator.pop(ctx);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => _ApplyRequestScreen(type: 'Work Type', icon: Icons.work, color: AppColors.pink)));
-              }),
-              _FABOption(icon: Icons.fingerprint, label: 'Attendance Request', subtitle: 'Correct check-in/out', color: AppColors.warning, onTap: () {
-                Navigator.pop(ctx);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => _ApplyRequestScreen(type: 'Attendance Request', icon: Icons.fingerprint, color: AppColors.warning)));
-              }),
-            ],
+  void _onRequestTypeTap(Map<String, dynamic> type) {
+    if (type['type'] == 'Leave') {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const ApplyLeaveScreen()));
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => _ApplyRequestScreen(
+            type: type['title'] as String,
+            icon: type['icon'] as IconData,
+            color: type['color'] as Color,
           ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   void _showFilterSheet() {
@@ -216,20 +193,13 @@ class _RequestsScreenState extends State<RequestsScreen> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.color
-                        ?.withValues(alpha: 0.3),
+                    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
-              Text(
-                'Filter Requests',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              Text('Filter Requests', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 16),
               Wrap(
                 spacing: 10,
@@ -243,17 +213,12 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
-                        color: isActive
-                            ? AppColors.primary
-                            : AppColors.primary.withValues(alpha: 0.08),
+                        color: isActive ? AppColors.primary : AppColors.primary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: isActive
-                              ? AppColors.primary
-                              : AppColors.primary.withValues(alpha: 0.2),
+                          color: isActive ? AppColors.primary : AppColors.primary.withValues(alpha: 0.2),
                           width: 1,
                         ),
                       ),
@@ -280,156 +245,240 @@ class _RequestsScreenState extends State<RequestsScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final provider = context.watch<AppProvider>();
+    final chipIndex = provider.requestsTabIndex;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('My Requests'),
+        title: const Text('Requests'),
         actions: [
-          IconButton(
-            icon: Badge(
-              isLabelVisible: _activeFilter != 'All',
-              smallSize: 8,
-              backgroundColor: AppColors.primary,
-              child: const Icon(Icons.filter_list_rounded),
+          if (chipIndex == 1)
+            IconButton(
+              icon: Badge(
+                isLabelVisible: _activeFilter != 'All',
+                smallSize: 8,
+                backgroundColor: AppColors.primary,
+                child: const Icon(Icons.filter_list_rounded),
+              ),
+              onPressed: _showFilterSheet,
             ),
-            onPressed: _showFilterSheet,
-          ),
         ],
-      ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 80),
-        child: FloatingActionButton(
-          heroTag: 'requestFab',
-          onPressed: () => _onFabTap(context),
-          backgroundColor: AppColors.primary,
-          elevation: 6,
-          child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
-        ),
       ),
       body: Column(
         children: [
-          // Active filter indicator
-          if (_activeFilter != 'All')
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Row(
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _activeFilter,
-                          style: const TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
+          // Chip-style toggle: Requests / Requested
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE4E8EE),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: const Color(0xFFBEC3CE).withValues(alpha: 0.4),
+                          offset: const Offset(3, 3),
+                          blurRadius: 6,
                         ),
-                        const SizedBox(width: 6),
-                        GestureDetector(
-                          onTap: () => setState(() => _activeFilter = 'All'),
-                          child: const Icon(Icons.close_rounded,
-                              size: 16, color: AppColors.primary),
+                        const BoxShadow(
+                          color: Color(0xFFFDFFFF),
+                          offset: Offset(-3, -3),
+                          blurRadius: 6,
                         ),
                       ],
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '${_filteredRequests.length} results',
-                    style: textTheme.bodySmall,
-                  ),
+              ),
+              child: Row(
+                children: [
+                  _buildChipButton('Requests', Icons.add_circle_outline_rounded, 0, chipIndex, isDark, provider),
+                  const SizedBox(width: 4),
+                  _buildChipButton('Requested', Icons.history_rounded, 1, chipIndex, isDark, provider),
                 ],
               ),
             ),
+          ),
 
-          // Request list
+          // Content based on selected chip
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-              itemCount: _filteredRequests.length,
-              itemBuilder: (context, index) {
-                final request = _filteredRequests[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: NeuCard(
-                    onTap: () {
-                      Navigator.pushNamed(context, '/request-detail',
-                          arguments: request);
-                    },
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: (request['color'] as Color)
-                                .withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Icon(
-                            request['icon'] as IconData,
-                            color: request['color'] as Color,
-                            size: 22,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      request['title'] as String,
-                                      style: textTheme.titleMedium,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  _buildStatusChip(
-                                      request['status'] as String),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                request['subtitle'] as String,
-                                style: textTheme.bodySmall,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                request['id'] as String,
-                                style: textTheme.bodySmall?.copyWith(
-                                  fontSize: 11,
-                                  color: AppColors.primary.withValues(alpha: 0.6),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          color: textTheme.bodyMedium?.color,
-                          size: 20,
-                        ),
-                      ],
-                    ),
-                  ).animate().fadeIn(duration: 350.ms, delay: (index * 60).ms).slideX(begin: 0.05, end: 0, duration: 350.ms, delay: (index * 60).ms, curve: Curves.easeOut),
-                );
-              },
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              child: chipIndex == 0
+                  ? _buildRequestTypesView(textTheme, isDark)
+                  : _buildRequestedView(textTheme, isDark),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildChipButton(String label, IconData icon, int index, int activeIndex, bool isDark, AppProvider provider) {
+    final isActive = activeIndex == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => provider.setRequestsTabIndex(index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: isActive ? Colors.white : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isActive ? Colors.white : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── "Requests" tab: shows request type categories ──────────────
+  Widget _buildRequestTypesView(TextTheme textTheme, bool isDark) {
+    return ListView.builder(
+      key: const ValueKey('requests-types'),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+      itemCount: _requestTypes.length,
+      itemBuilder: (context, index) {
+        final type = _requestTypes[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: NeuCard(
+            onTap: () => _onRequestTypeTap(type),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: (type['color'] as Color).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(type['icon'] as IconData, color: type['color'] as Color, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(type['title'] as String, style: textTheme.titleMedium),
+                      const SizedBox(height: 2),
+                      Text(type['subtitle'] as String, style: textTheme.bodySmall),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext, size: 22),
+              ],
+            ),
+          ).animate().fadeIn(duration: 350.ms, delay: (index * 60).ms).slideX(begin: 0.05, end: 0, duration: 350.ms, delay: (index * 60).ms, curve: Curves.easeOut),
+        );
+      },
+    );
+  }
+
+  // ─── "Requested" tab: shows submitted requests and their status ─
+  Widget _buildRequestedView(TextTheme textTheme, bool isDark) {
+    return Column(
+      key: const ValueKey('requested-list'),
+      children: [
+        // Active filter indicator
+        if (_activeFilter != 'All')
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_activeFilter, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13)),
+                      const SizedBox(width: 6),
+                      GestureDetector(
+                        onTap: () => setState(() => _activeFilter = 'All'),
+                        child: const Icon(Icons.close_rounded, size: 16, color: AppColors.primary),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                Text('${_filteredRequests.length} results', style: textTheme.bodySmall),
+              ],
+            ),
+          ),
+
+        // Request list
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+            itemCount: _filteredRequests.length,
+            itemBuilder: (context, index) {
+              final request = _filteredRequests[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: NeuCard(
+                  onTap: () {
+                    Navigator.pushNamed(context, '/request-detail', arguments: request);
+                  },
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: (request['color'] as Color).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(request['icon'] as IconData, color: request['color'] as Color, size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(child: Text(request['title'] as String, style: textTheme.titleMedium, overflow: TextOverflow.ellipsis)),
+                                _buildStatusChip(request['status'] as String),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(request['subtitle'] as String, style: textTheme.bodySmall),
+                            const SizedBox(height: 2),
+                            Text(request['id'] as String, style: textTheme.bodySmall?.copyWith(fontSize: 11, color: AppColors.primary.withValues(alpha: 0.6))),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(Icons.chevron_right_rounded, color: textTheme.bodyMedium?.color, size: 20),
+                    ],
+                  ),
+                ).animate().fadeIn(duration: 350.ms, delay: (index * 60).ms).slideX(begin: 0.05, end: 0, duration: 350.ms, delay: (index * 60).ms, curve: Curves.easeOut),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
@@ -477,15 +526,12 @@ class _FABOption extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(label,
-                          style: theme.textTheme.bodyLarge
-                              ?.copyWith(fontWeight: FontWeight.w600)),
+                      Text(label, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
                       Text(subtitle, style: theme.textTheme.bodySmall),
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_right_rounded,
-                    color: Colors.grey[400], size: 20),
+                Icon(Icons.chevron_right_rounded, color: Colors.grey[400], size: 20),
               ],
             ),
           ),
@@ -503,7 +549,7 @@ class _ApplyRequestScreen extends StatefulWidget {
   final IconData icon;
   final Color color;
 
-  _ApplyRequestScreen({
+  const _ApplyRequestScreen({
     required this.type,
     required this.icon,
     required this.color,
@@ -602,7 +648,6 @@ class _ApplyRequestScreenState extends State<_ApplyRequestScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               NeuCard(
                 padding: const EdgeInsets.all(20),
                 child: Row(
@@ -620,15 +665,9 @@ class _ApplyRequestScreenState extends State<_ApplyRequestScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'New ${widget.type}',
-                            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                          ),
+                          Text('New ${widget.type}', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                           const SizedBox(height: 4),
-                          Text(
-                            'Fill in the details below to submit your request',
-                            style: theme.textTheme.bodySmall,
-                          ),
+                          Text('Fill in the details below to submit your request', style: theme.textTheme.bodySmall),
                         ],
                       ),
                     ),
@@ -636,8 +675,6 @@ class _ApplyRequestScreenState extends State<_ApplyRequestScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // Title field
               Text('Title', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               NeuCard(
@@ -653,8 +690,6 @@ class _ApplyRequestScreenState extends State<_ApplyRequestScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // Date selection
               Text('Date', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               Row(
@@ -667,23 +702,12 @@ class _ApplyRequestScreenState extends State<_ApplyRequestScreen> {
                         children: [
                           Icon(Icons.calendar_today, size: 16, color: widget.color),
                           const SizedBox(width: 8),
-                          Text(
-                            _formatDate(_startDate),
-                            style: TextStyle(
-                              color: _startDate != null
-                                  ? (isDark ? AppColors.darkText : AppColors.lightText)
-                                  : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
-                              fontSize: 13,
-                            ),
-                          ),
+                          Text(_formatDate(_startDate), style: TextStyle(color: _startDate != null ? (isDark ? AppColors.darkText : AppColors.lightText) : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext), fontSize: 13)),
                         ],
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: Text('to', style: theme.textTheme.bodySmall),
-                  ),
+                  Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: Text('to', style: theme.textTheme.bodySmall)),
                   Expanded(
                     child: NeuCard(
                       onTap: () => _pickDate(false),
@@ -692,15 +716,7 @@ class _ApplyRequestScreenState extends State<_ApplyRequestScreen> {
                         children: [
                           Icon(Icons.calendar_today, size: 16, color: widget.color),
                           const SizedBox(width: 8),
-                          Text(
-                            _formatDate(_endDate),
-                            style: TextStyle(
-                              color: _endDate != null
-                                  ? (isDark ? AppColors.darkText : AppColors.lightText)
-                                  : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
-                              fontSize: 13,
-                            ),
-                          ),
+                          Text(_formatDate(_endDate), style: TextStyle(color: _endDate != null ? (isDark ? AppColors.darkText : AppColors.lightText) : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext), fontSize: 13)),
                         ],
                       ),
                     ),
@@ -708,8 +724,6 @@ class _ApplyRequestScreenState extends State<_ApplyRequestScreen> {
                 ],
               ),
               const SizedBox(height: 20),
-
-              // Description
               Text('Description', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               NeuCard(
@@ -726,8 +740,6 @@ class _ApplyRequestScreenState extends State<_ApplyRequestScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-
-              // Submit button
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -736,21 +748,12 @@ class _ApplyRequestScreenState extends State<_ApplyRequestScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: widget.color,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     elevation: 0,
                   ),
                   child: _isSubmitting
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                        )
-                      : Text(
-                          'Submit ${widget.type}',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                        ),
+                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                      : Text('Submit ${widget.type}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
