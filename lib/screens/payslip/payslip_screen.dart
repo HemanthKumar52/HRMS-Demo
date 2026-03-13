@@ -13,8 +13,10 @@ class PayslipScreen extends StatefulWidget {
 }
 
 class _PayslipScreenState extends State<PayslipScreen> {
-  int _selectedMonthIndex = 2; // March (0-indexed from Jan)
-  int _touchedPieSectionIndex = -1;
+  int _selectedMonthIndex = 2;
+  int _touchedEarningsIndex = -1;
+  int _touchedDeductionsIndex = -1;
+  int _touchedTotalIndex = -1;
   final int _selectedYear = 2026;
 
   final List<String> _months = [
@@ -22,22 +24,21 @@ class _PayslipScreenState extends State<PayslipScreen> {
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
 
-  // Mock salary data
   final double _grossSalary = 85000;
   final double _totalDeductions = 18350;
 
   final List<_SalaryItem> _earnings = [
-    _SalaryItem('Basic Pay', 42500),
-    _SalaryItem('HRA', 17000),
-    _SalaryItem('DA', 12750),
-    _SalaryItem('Special Allowance', 12750),
+    _SalaryItem('Basic', 42500, AppColors.primary),
+    _SalaryItem('HRA', 17000, AppColors.success),
+    _SalaryItem('DA', 12750, AppColors.orange),
+    _SalaryItem('Special Allowance', 12750, AppColors.secondary),
   ];
 
   final List<_SalaryItem> _deductions = [
-    _SalaryItem('Provident Fund', 5100),
-    _SalaryItem('ESI', 637),
-    _SalaryItem('Professional Tax', 200),
-    _SalaryItem('Income Tax', 12413),
+    _SalaryItem('Provident Fund', 5100, AppColors.primary),
+    _SalaryItem('ESI', 637, AppColors.warning),
+    _SalaryItem('Professional Tax', 200, AppColors.secondary),
+    _SalaryItem('Income Tax', 12413, AppColors.danger),
   ];
 
   double get _netPay => _grossSalary - _totalDeductions;
@@ -77,31 +78,16 @@ class _PayslipScreenState extends State<PayslipScreen> {
                       onTap: () => setState(() => _selectedMonthIndex = index),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 18, vertical: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                         decoration: BoxDecoration(
-                          color: selected
-                              ? AppColors.primary
-                              : (isDark
-                                  ? Colors.white.withValues(alpha: 0.06)
-                                  : Colors.grey.shade100),
+                          color: selected ? AppColors.primary : (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade100),
                           borderRadius: BorderRadius.circular(14),
-                          border: selected
-                              ? null
-                              : Border.all(
-                                  color: isDark
-                                      ? Colors.white.withValues(alpha: 0.08)
-                                      : Colors.grey.shade200,
-                                ),
+                          border: selected ? null : Border.all(color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.shade200),
                         ),
                         child: Text(
                           '${_months[index]} $_selectedYear',
                           style: TextStyle(
-                            color: selected
-                                ? Colors.white
-                                : (isDark
-                                    ? Colors.white60
-                                    : Colors.grey.shade600),
+                            color: selected ? Colors.white : (isDark ? Colors.white60 : Colors.grey.shade600),
                             fontWeight: FontWeight.w600,
                             fontSize: 13,
                           ),
@@ -111,7 +97,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
                   );
                 },
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: (0 * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (0 * 80).ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
 
             const SizedBox(height: 20),
 
@@ -121,8 +107,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.account_balance_wallet_rounded,
-                          color: AppColors.primary, size: 20),
+                      const Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary, size: 20),
                       const SizedBox(width: 8),
                       Text('Salary Summary', style: tt.titleLarge),
                     ],
@@ -130,56 +115,34 @@ class _PayslipScreenState extends State<PayslipScreen> {
                   const SizedBox(height: 20),
                   Row(
                     children: [
-                      _buildSalaryHighlight(
-                        label: 'Gross Salary',
-                        amount: _grossSalary,
-                        color: AppColors.success,
-                        bgColor: AppColors.pastelGreen,
-                        tt: tt,
-                        isDark: isDark,
-                      ),
+                      _buildSalaryHighlight(label: 'Gross Salary', amount: _grossSalary, color: AppColors.success, bgColor: AppColors.pastelGreen, tt: tt, isDark: isDark),
                       const SizedBox(width: 10),
-                      _buildSalaryHighlight(
-                        label: 'Deductions',
-                        amount: _totalDeductions,
-                        color: AppColors.danger,
-                        bgColor: AppColors.pastelRed,
-                        tt: tt,
-                        isDark: isDark,
-                      ),
+                      _buildSalaryHighlight(label: 'Deductions', amount: _totalDeductions, color: AppColors.danger, bgColor: AppColors.pastelRed, tt: tt, isDark: isDark),
                       const SizedBox(width: 10),
-                      _buildSalaryHighlight(
-                        label: 'Net Pay',
-                        amount: _netPay,
-                        color: AppColors.primary,
-                        bgColor: AppColors.pastelBlue,
-                        tt: tt,
-                        isDark: isDark,
-                      ),
+                      _buildSalaryHighlight(label: 'Net Pay', amount: _netPay, color: AppColors.primary, bgColor: AppColors.pastelBlue, tt: tt, isDark: isDark),
                     ],
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: (1 * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (1 * 80).ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 400.ms, delay: 80.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 80.ms, curve: Curves.easeOut),
 
             const SizedBox(height: 16),
 
-            // --- Donut Chart ---
+            // --- 1. Earnings Graph ---
             NeuCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.pie_chart_rounded,
-                          color: AppColors.secondary, size: 20),
+                      const Icon(Icons.trending_up_rounded, color: AppColors.success, size: 20),
                       const SizedBox(width: 8),
-                      Text('Earnings vs Deductions', style: tt.titleLarge),
+                      Text('Earnings Breakdown', style: tt.titleLarge),
                     ],
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
-                    height: 180,
+                    height: 200,
                     child: Row(
                       children: [
                         Expanded(
@@ -189,78 +152,218 @@ class _PayslipScreenState extends State<PayslipScreen> {
                                 touchCallback: (FlTouchEvent event, pieTouchResponse) {
                                   setState(() {
                                     if (!event.isInterestedForInteractions || pieTouchResponse == null || pieTouchResponse.touchedSection == null) {
-                                      _touchedPieSectionIndex = -1;
+                                      _touchedEarningsIndex = -1;
                                       return;
                                     }
-                                    _touchedPieSectionIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                                    _touchedEarningsIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
                                   });
                                 },
                               ),
                               sectionsSpace: 3,
-                              centerSpaceRadius: 40,
-                              sections: [
-                                PieChartSectionData(
-                                  value: _grossSalary,
-                                  color: AppColors.success,
-                                  title:
-                                      '${((_grossSalary / (_grossSalary + _totalDeductions)) * 100).toStringAsFixed(0)}%',
-                                  titleStyle: const TextStyle(
-                                    fontSize: 12,
+                              centerSpaceRadius: 36,
+                              sections: List.generate(_earnings.length, (i) {
+                                final item = _earnings[i];
+                                final isTouched = i == _touchedEarningsIndex;
+                                return PieChartSectionData(
+                                  value: item.amount,
+                                  color: item.color,
+                                  title: isTouched ? '${item.label}\n${_currencyFormat.format(item.amount)}' : '${(item.amount / _grossSalary * 100).toStringAsFixed(0)}%',
+                                  titleStyle: TextStyle(
+                                    fontSize: isTouched ? 11 : 10,
                                     fontWeight: FontWeight.w700,
                                     color: Colors.white,
                                   ),
-                                  radius: _touchedPieSectionIndex == 0 ? 55.0 : 45.0,
-                                ),
-                                PieChartSectionData(
-                                  value: _totalDeductions,
-                                  color: AppColors.danger,
-                                  title:
-                                      '${((_totalDeductions / (_grossSalary + _totalDeductions)) * 100).toStringAsFixed(0)}%',
-                                  titleStyle: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                  ),
-                                  radius: _touchedPieSectionIndex == 1 ? 55.0 : 45.0,
-                                ),
-                              ],
+                                  radius: isTouched ? 60.0 : 48.0,
+                                  titlePositionPercentageOffset: isTouched ? 0.55 : 0.5,
+                                );
+                              }),
                             ),
-                            duration: const Duration(milliseconds: 800),
+                            duration: const Duration(milliseconds: 400),
                             curve: Curves.easeInOutCubic,
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildChartLegend(
-                                'Earnings', AppColors.success, tt),
-                            const SizedBox(height: 12),
-                            _buildChartLegend(
-                                'Deductions', AppColors.danger, tt),
-                          ],
+                          children: _earnings.map((e) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: _buildChartLegend(e.label, e.color, tt),
+                          )).toList(),
                         ),
                       ],
                     ),
                   ),
+                  if (_touchedEarningsIndex >= 0 && _touchedEarningsIndex < _earnings.length) ...[
+                    const SizedBox(height: 12),
+                    _buildTouchedValueBanner(_earnings[_touchedEarningsIndex], isDark),
+                  ],
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: (2 * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (2 * 80).ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 400.ms, delay: 160.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 160.ms, curve: Curves.easeOut),
 
             const SizedBox(height: 16),
 
-            // --- Earnings Breakdown ---
+            // --- 2. Deductions Graph ---
             NeuCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.trending_up_rounded,
-                          color: AppColors.success, size: 20),
+                      const Icon(Icons.trending_down_rounded, color: AppColors.danger, size: 20),
                       const SizedBox(width: 8),
-                      Text('Earnings', style: tt.titleLarge),
+                      Text('Deductions Breakdown', style: tt.titleLarge),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 200,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: PieChart(
+                            PieChartData(
+                              pieTouchData: PieTouchData(
+                                touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                                  setState(() {
+                                    if (!event.isInterestedForInteractions || pieTouchResponse == null || pieTouchResponse.touchedSection == null) {
+                                      _touchedDeductionsIndex = -1;
+                                      return;
+                                    }
+                                    _touchedDeductionsIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                                  });
+                                },
+                              ),
+                              sectionsSpace: 3,
+                              centerSpaceRadius: 36,
+                              sections: List.generate(_deductions.length, (i) {
+                                final item = _deductions[i];
+                                final isTouched = i == _touchedDeductionsIndex;
+                                return PieChartSectionData(
+                                  value: item.amount,
+                                  color: item.color,
+                                  title: isTouched ? '${item.label}\n${_currencyFormat.format(item.amount)}' : '${(item.amount / _totalDeductions * 100).toStringAsFixed(0)}%',
+                                  titleStyle: TextStyle(
+                                    fontSize: isTouched ? 11 : 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                  radius: isTouched ? 60.0 : 48.0,
+                                  titlePositionPercentageOffset: isTouched ? 0.55 : 0.5,
+                                );
+                              }),
+                            ),
+                            duration: const Duration(milliseconds: 400),
+                            curve: Curves.easeInOutCubic,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: _deductions.map((e) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: _buildChartLegend(e.label, e.color, tt),
+                          )).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_touchedDeductionsIndex >= 0 && _touchedDeductionsIndex < _deductions.length) ...[
+                    const SizedBox(height: 12),
+                    _buildTouchedValueBanner(_deductions[_touchedDeductionsIndex], isDark),
+                  ],
+                ],
+              ),
+            ).animate().fadeIn(duration: 400.ms, delay: 240.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 240.ms, curve: Curves.easeOut),
+
+            const SizedBox(height: 16),
+
+            // --- 3. Total Salary Breakdown Graph ---
+            NeuCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.pie_chart_rounded, color: AppColors.secondary, size: 20),
+                      const SizedBox(width: 8),
+                      Text('Total Salary Breakdown', style: tt.titleLarge),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 220,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: PieChart(
+                            PieChartData(
+                              pieTouchData: PieTouchData(
+                                touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                                  setState(() {
+                                    if (!event.isInterestedForInteractions || pieTouchResponse == null || pieTouchResponse.touchedSection == null) {
+                                      _touchedTotalIndex = -1;
+                                      return;
+                                    }
+                                    _touchedTotalIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                                  });
+                                },
+                              ),
+                              sectionsSpace: 2,
+                              centerSpaceRadius: 40,
+                              sections: _buildTotalBreakdownSections(),
+                            ),
+                            duration: const Duration(milliseconds: 400),
+                            curve: Curves.easeInOutCubic,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ..._earnings.map((e) => Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: _buildChartLegend(e.label, e.color, tt),
+                            )),
+                            const SizedBox(height: 4),
+                            ..._deductions.map((e) => Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: _buildChartLegend(e.label, e.color.withValues(alpha: 0.6), tt),
+                            )),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_touchedTotalIndex >= 0) ...[
+                    const SizedBox(height: 12),
+                    Builder(builder: (context) {
+                      final allItems = [..._earnings, ..._deductions];
+                      if (_touchedTotalIndex < allItems.length) {
+                        return _buildTouchedValueBanner(allItems[_touchedTotalIndex], isDark);
+                      }
+                      return const SizedBox.shrink();
+                    }),
+                  ],
+                ],
+              ),
+            ).animate().fadeIn(duration: 400.ms, delay: 320.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 320.ms, curve: Curves.easeOut),
+
+            const SizedBox(height: 16),
+
+            // --- Earnings Line Items ---
+            NeuCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.list_alt_rounded, color: AppColors.success, size: 20),
+                      const SizedBox(width: 8),
+                      Text('Earnings Detail', style: tt.titleLarge),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -269,15 +372,8 @@ class _PayslipScreenState extends State<PayslipScreen> {
                     final isLast = i == _earnings.length - 1;
                     return Column(
                       children: [
-                        _buildLineItem(item.label, item.amount, tt,
-                            AppColors.success, isDark),
-                        if (!isLast)
-                          Divider(
-                            height: 20,
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.06)
-                                : Colors.grey.shade100,
-                          ),
+                        _buildLineItem(item.label, item.amount, tt, item.color, isDark),
+                        if (!isLast) Divider(height: 20, color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade100),
                       ],
                     );
                   }),
@@ -285,35 +381,26 @@ class _PayslipScreenState extends State<PayslipScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Total Earnings',
-                          style: tt.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700)),
-                      Text(
-                        _currencyFormat.format(_grossSalary),
-                        style: tt.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.success,
-                        ),
-                      ),
+                      Text('Total Earnings', style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      Text(_currencyFormat.format(_grossSalary), style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.success)),
                     ],
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: (3 * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (3 * 80).ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 400.ms, delay: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 400.ms, curve: Curves.easeOut),
 
             const SizedBox(height: 16),
 
-            // --- Deductions Breakdown ---
+            // --- Deductions Line Items ---
             NeuCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.trending_down_rounded,
-                          color: AppColors.danger, size: 20),
+                      const Icon(Icons.list_alt_rounded, color: AppColors.danger, size: 20),
                       const SizedBox(width: 8),
-                      Text('Deductions', style: tt.titleLarge),
+                      Text('Deductions Detail', style: tt.titleLarge),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -322,15 +409,8 @@ class _PayslipScreenState extends State<PayslipScreen> {
                     final isLast = i == _deductions.length - 1;
                     return Column(
                       children: [
-                        _buildLineItem(item.label, item.amount, tt,
-                            AppColors.danger, isDark),
-                        if (!isLast)
-                          Divider(
-                            height: 20,
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.06)
-                                : Colors.grey.shade100,
-                          ),
+                        _buildLineItem(item.label, item.amount, tt, item.color, isDark),
+                        if (!isLast) Divider(height: 20, color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade100),
                       ],
                     );
                   }),
@@ -338,21 +418,13 @@ class _PayslipScreenState extends State<PayslipScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Total Deductions',
-                          style: tt.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700)),
-                      Text(
-                        _currencyFormat.format(_totalDeductions),
-                        style: tt.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.danger,
-                        ),
-                      ),
+                      Text('Total Deductions', style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      Text(_currencyFormat.format(_totalDeductions), style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.danger)),
                     ],
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: (4 * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (4 * 80).ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 400.ms, delay: 480.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 480.ms, curve: Curves.easeOut),
 
             const SizedBox(height: 20),
 
@@ -379,13 +451,8 @@ class _PayslipScreenState extends State<PayslipScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        textStyle: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                         elevation: 0,
                       ),
                     ),
@@ -411,25 +478,74 @@ class _PayslipScreenState extends State<PayslipScreen> {
                       label: const Text('Download PDF'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primary,
-                        side: const BorderSide(
-                            color: AppColors.primary, width: 1.5),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        textStyle: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                        ),
+                        side: const BorderSide(color: AppColors.primary, width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                       ),
                     ),
                   ),
                 ),
               ],
-            ).animate().fadeIn(duration: 400.ms, delay: (5 * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (5 * 80).ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 400.ms, delay: 560.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 560.ms, curve: Curves.easeOut),
 
             const SizedBox(height: 100),
           ],
         ),
+      ),
+    );
+  }
+
+  List<PieChartSectionData> _buildTotalBreakdownSections() {
+    final allItems = [..._earnings, ..._deductions];
+    final total = _grossSalary + _totalDeductions;
+
+    return List.generate(allItems.length, (i) {
+      final item = allItems[i];
+      final isTouched = i == _touchedTotalIndex;
+      final isDeduction = i >= _earnings.length;
+
+      return PieChartSectionData(
+        value: item.amount,
+        color: isDeduction ? item.color.withValues(alpha: 0.6) : item.color,
+        title: isTouched
+            ? '${item.label}\n${_currencyFormat.format(item.amount)}'
+            : '${(item.amount / total * 100).toStringAsFixed(0)}%',
+        titleStyle: TextStyle(
+          fontSize: isTouched ? 10 : 9,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+        radius: isTouched ? 58.0 : 45.0,
+        titlePositionPercentageOffset: isTouched ? 0.55 : 0.5,
+      );
+    });
+  }
+
+  Widget _buildTouchedValueBanner(_SalaryItem item, bool isDark) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: item.color.withValues(alpha: isDark ? 0.15 : 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: item.color.withValues(alpha: 0.3), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 28,
+            decoration: BoxDecoration(color: item.color, borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(item.label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? AppColors.darkText : AppColors.lightText)),
+          ),
+          Text(
+            _currencyFormat.format(item.amount),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: item.color),
+          ),
+        ],
       ),
     );
   }
@@ -457,42 +573,34 @@ class _PayslipScreenState extends State<PayslipScreen> {
               curve: Curves.easeOutExpo,
               builder: (context, value, _) => Text(
                 _currencyFormat.format(value),
-                style: tt.titleMedium?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                ),
+                style: tt.titleMedium?.copyWith(color: color, fontWeight: FontWeight.w700, fontSize: 15),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              label,
-              style: tt.bodySmall?.copyWith(
-                color: color.withValues(alpha: 0.8),
-                fontWeight: FontWeight.w500,
-              ),
-              textAlign: TextAlign.center,
-            ),
+            Text(label, style: tt.bodySmall?.copyWith(color: color.withValues(alpha: 0.8), fontWeight: FontWeight.w500), textAlign: TextAlign.center),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLineItem(
-      String label, double amount, TextTheme tt, Color accentColor, bool isDark) {
+  Widget _buildLineItem(String label, double amount, TextTheme tt, Color accentColor, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: tt.bodyLarge),
-          Text(
-            _currencyFormat.format(amount),
-            style: tt.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 4, height: 16, decoration: BoxDecoration(color: accentColor, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(width: 10),
+              Text(label, style: tt.bodyLarge),
+            ],
           ),
+          Text(_currencyFormat.format(amount), style: tt.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -502,16 +610,9 @@ class _PayslipScreenState extends State<PayslipScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(4),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(label, style: tt.bodyMedium),
+        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3))),
+        const SizedBox(width: 6),
+        Text(label, style: tt.bodySmall?.copyWith(fontSize: 11)),
       ],
     );
   }
@@ -520,5 +621,6 @@ class _PayslipScreenState extends State<PayslipScreen> {
 class _SalaryItem {
   final String label;
   final double amount;
-  const _SalaryItem(this.label, this.amount);
+  final Color color;
+  const _SalaryItem(this.label, this.amount, this.color);
 }

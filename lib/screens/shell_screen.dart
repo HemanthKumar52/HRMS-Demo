@@ -216,6 +216,15 @@ class ShellScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  // Alerts
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text('Alerts', style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.danger,
+                      letterSpacing: 0.5,
+                    )),
+                  ),
                   _NotifItem(
                     icon: Icons.check_circle,
                     color: AppColors.success,
@@ -224,11 +233,20 @@ class ShellScreen extends StatelessWidget {
                     time: '2 min ago',
                   ),
                   _NotifItem(
-                    icon: Icons.campaign,
-                    color: AppColors.orange,
-                    title: 'New Announcement',
-                    subtitle: 'Company Town Hall scheduled for March 15',
-                    time: '1 hour ago',
+                    icon: Icons.warning_amber_rounded,
+                    color: AppColors.warning,
+                    title: 'Low Leave Balance',
+                    subtitle: 'You have only 2 casual leaves remaining',
+                    time: '30 min ago',
+                  ),
+                  // Updates
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12, top: 4),
+                    child: Text('Updates', style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                      letterSpacing: 0.5,
+                    )),
                   ),
                   _NotifItem(
                     icon: Icons.schedule,
@@ -243,6 +261,36 @@ class ShellScreen extends StatelessWidget {
                     title: 'Payslip Available',
                     subtitle: 'Your February payslip is ready to view',
                     time: 'Yesterday',
+                  ),
+                  // Announcements
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12, top: 4),
+                    child: Text('Announcements', style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.orange,
+                      letterSpacing: 0.5,
+                    )),
+                  ),
+                  _NotifItem(
+                    icon: Icons.campaign,
+                    color: AppColors.orange,
+                    title: 'Company Town Hall',
+                    subtitle: 'Scheduled for March 15, 2026 at 3:00 PM',
+                    time: '1 hour ago',
+                  ),
+                  _NotifItem(
+                    icon: Icons.policy_rounded,
+                    color: AppColors.primary,
+                    title: 'New Leave Policy Update',
+                    subtitle: 'Effective from April 1, 2026',
+                    time: '2 days ago',
+                  ),
+                  _NotifItem(
+                    icon: Icons.assessment_rounded,
+                    color: AppColors.secondary,
+                    title: 'Quarterly Review Deadline',
+                    subtitle: 'Submit reviews by March 25, 2026',
+                    time: '3 days ago',
                   ),
                 ],
               ),
