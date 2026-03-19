@@ -154,8 +154,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       Icon(Icons.today_rounded,
                           color: AppColors.primary, size: 20),
                       const SizedBox(width: 8),
-                      Text('Today\'s Punch Status', style: tt.titleLarge),
-                      const Spacer(),
+                      Expanded(
+                        child: Text('Today\'s Punch Status', style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                      ),
+                      const SizedBox(width: 8),
                       _buildStatusBadge(currentStatus, isDark),
                     ],
                   ),
@@ -1099,14 +1101,17 @@ class _ClockInCard extends StatelessWidget {
                 children: [
                   Icon(Icons.more_horiz, size: 18, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
                   const SizedBox(width: 6),
-                  Text(
-                    isPunchedIn
-                        ? 'Clocked in at ${DateFormat('hh:mm a').format(punchTime!)}'
-                        : 'Synced with Password',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
-                      fontWeight: FontWeight.w500,
+                  Flexible(
+                    child: Text(
+                      isPunchedIn
+                          ? 'Clocked in at ${DateFormat('hh:mm a').format(punchTime!)}'
+                          : 'Synced with Password',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],

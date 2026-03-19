@@ -663,8 +663,50 @@ class _RequestsScreenState extends State<RequestsScreen> {
     );
   }
 
+  Color _typeTagColor(String type) {
+    switch (type) {
+      case 'Leave':
+        return AppColors.primary;
+      case 'Claims':
+        return AppColors.success;
+      case 'Tickets':
+        return AppColors.orange;
+      case 'Shift Requests':
+        return AppColors.pink;
+      case 'Work Type Requests':
+        return AppColors.secondary;
+      case 'Attendance Requests':
+        return AppColors.warning;
+      case 'Asset Requests':
+        return AppColors.neonPurple;
+      default:
+        return AppColors.primary;
+    }
+  }
+
+  Widget _buildTypeTag(String type) {
+    final color = _typeTagColor(type);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.25), width: 0.5),
+      ),
+      child: Text(
+        type,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
   // ─── Shared request list tile ───────────────────────────────────
   Widget _buildRequestListTile(Map<String, dynamic> request, TextTheme textTheme, bool isDark, int index, {required bool showEmployee}) {
+    final type = request['type'] as String? ?? '';
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: NeuCard(
@@ -693,26 +735,27 @@ class _RequestsScreenState extends State<RequestsScreen> {
                       _buildStatusChip(request['status'] as String),
                     ],
                   ),
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      _buildTypeTag(type),
+                      if (request['appliedDate'] != null) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          (request['appliedDate'] as String).split(',').first,
+                          style: textTheme.bodySmall?.copyWith(fontSize: 10, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+                        ),
+                      ],
+                    ],
+                  ),
                   if (showEmployee && request['employeeName'] != null) ...[
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
                     Row(
                       children: [
                         Icon(Icons.person_outline_rounded, size: 13, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
                         const SizedBox(width: 4),
                         Text(request['employeeName'] as String, style: textTheme.bodySmall?.copyWith(fontSize: 12)),
-                        const Spacer(),
-                        if (request['appliedDate'] != null)
-                          Text(
-                            (request['appliedDate'] as String).split(',').first,
-                            style: textTheme.bodySmall?.copyWith(fontSize: 10, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
-                          ),
                       ],
-                    ),
-                  ] else if (request['appliedDate'] != null) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      'Applied: ${(request['appliedDate'] as String).split(',').first}',
-                      style: textTheme.bodySmall?.copyWith(fontSize: 11, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
                     ),
                   ],
                 ],
@@ -780,18 +823,25 @@ class _RequestsScreenState extends State<RequestsScreen> {
                                       _buildStatusChip(request['status'] as String),
                                     ],
                                   ),
-                                  const SizedBox(height: 3),
+                                  const SizedBox(height: 5),
+                                  Row(
+                                    children: [
+                                      _buildTypeTag(request['type'] as String? ?? ''),
+                                      if (request['appliedDate'] != null) ...[
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          (request['appliedDate'] as String).split(',').first,
+                                          style: textTheme.bodySmall?.copyWith(fontSize: 10, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
                                   Row(
                                     children: [
                                       Icon(Icons.person_outline_rounded, size: 13, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
                                       const SizedBox(width: 4),
                                       Text(request['requestedBy'] as String, style: textTheme.bodySmall?.copyWith(fontSize: 12)),
-                                      const Spacer(),
-                                      if (request['appliedDate'] != null)
-                                        Text(
-                                          (request['appliedDate'] as String).split(',').first,
-                                          style: textTheme.bodySmall?.copyWith(fontSize: 10, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
-                                        ),
                                     ],
                                   ),
                                 ],
