@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/status_chip.dart';
@@ -50,6 +51,7 @@ class _AssignedDetailScreenState extends State<AssignedDetailScreen> {
         widget.request['status'] = 'Accepted';
         _isProcessing = false;
       });
+      NotificationService.instance.showRequestAssigned(_request['type'] as String? ?? 'Request');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: const Text('Request accepted'),
         backgroundColor: AppColors.success,
@@ -164,6 +166,10 @@ class _AssignedDetailScreenState extends State<AssignedDetailScreen> {
                   const SizedBox(height: 14),
                   _DetailRow(icon: Icons.person_outline_rounded, label: 'Requested By', value: _request['requestedBy'] as String),
                   const SizedBox(height: 12),
+                  if (_request['appliedDate'] != null) ...[
+                    _DetailRow(icon: Icons.calendar_today_rounded, label: 'Applied Date', value: _request['appliedDate'] as String),
+                    const SizedBox(height: 12),
+                  ],
                   _DetailRow(icon: Icons.category_rounded, label: 'Type', value: _request['type'] as String),
                   if (_request['deadline'] != null) ...[
                     const SizedBox(height: 12),
@@ -199,13 +205,29 @@ class _AssignedDetailScreenState extends State<AssignedDetailScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.info_outline_rounded, size: 18, color: AppColors.danger),
-                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.danger.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.info_outline_rounded, size: 18, color: AppColors.danger),
+                        ),
+                        const SizedBox(width: 10),
                         Text('Rejection Reason', style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.danger)),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    Text(_request['rejectionReason'] as String, style: textTheme.bodyLarge?.copyWith(height: 1.5)),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.danger.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.danger.withValues(alpha: 0.15)),
+                      ),
+                      child: Text(_request['rejectionReason'] as String, style: textTheme.bodyLarge?.copyWith(height: 1.5)),
+                    ),
                   ],
                 ),
               ).animate().fadeIn(duration: 400.ms, delay: 160.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 160.ms, curve: Curves.easeOut),
