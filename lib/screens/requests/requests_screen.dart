@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
@@ -14,7 +13,6 @@ import 'shift_change_screen.dart';
 import 'work_type_request_screen.dart';
 import 'attendance_request_screen.dart';
 import 'asset_request_screen.dart';
-import 'assigned_detail_screen.dart';
 import 'request_detail_screen.dart';
 import '../../widgets/ppulse_footer.dart';
 
@@ -208,43 +206,6 @@ class _RequestsScreenState extends State<RequestsScreen> {
     },
   ];
 
-  // Assigned: requests from others needing approval/action
-  final List<Map<String, dynamic>> _assignedRequests = [
-    {
-      'id': 'ASG-001', 'type': 'Tickets', 'title': 'API Gateway Timeout',
-      'description': 'In Project Apollo, the API gateway is timing out on /payments endpoint. Needs urgent fix before release deadline.',
-      'deadline': 'Mar 20, 2026', 'status': 'Pending',
-      'icon': Icons.confirmation_number_rounded, 'color': AppColors.orange,
-      'requestedBy': 'Kavita Nair', 'priority': 'High',
-      'appliedDate': '16 Mar 2026, 02:00 PM',
-    },
-    {
-      'id': 'ASG-002', 'type': 'Work Type Requests', 'title': 'Remote Work Request',
-      'description': 'Requesting WFH from Apr 1 to Apr 5, 2026. General Shift.',
-      'deadline': 'Apr 1 - Apr 5, 2026', 'status': 'Pending',
-      'icon': Icons.home_work_rounded, 'color': AppColors.secondary,
-      'requestedBy': 'Rohan Gupta', 'priority': 'Medium',
-      'appliedDate': '15 Mar 2026, 10:30 AM',
-    },
-    {
-      'id': 'ASG-003', 'type': 'Leave', 'title': 'Sick Leave',
-      'description': 'Medical appointment and recovery. 3 days leave requested.',
-      'deadline': 'Mar 19 - Mar 21, 2026', 'status': 'Pending',
-      'icon': Icons.local_hospital_rounded, 'color': AppColors.danger,
-      'requestedBy': 'Arun Mehta', 'priority': 'Medium',
-      'appliedDate': '17 Mar 2026, 07:30 AM',
-    },
-    {
-      'id': 'ASG-004', 'type': 'Shift Requests', 'title': 'Evening Shift Change',
-      'description': 'Requesting Afternoon Shift (2:00 PM - 10:00 PM) for Mar 26, 2026.',
-      'deadline': 'Mar 26, 2026', 'status': 'Rejected',
-      'icon': Icons.swap_horiz_rounded, 'color': AppColors.pink,
-      'requestedBy': 'Tanvi Shah', 'priority': 'Low',
-      'rejectionReason': 'Shift already at full capacity for this date.',
-      'appliedDate': '14 Mar 2026, 04:00 PM',
-    },
-  ];
-
   List<Map<String, dynamic>> get _filteredRequests {
     if (_activeFilter == 'All') return _requests;
     return _requests.where((r) => r['type'] == _activeFilter).toList();
@@ -258,11 +219,6 @@ class _RequestsScreenState extends State<RequestsScreen> {
   List<Map<String, dynamic>> get _filteredMyRequests {
     if (_activeFilter == 'All') return _myRequests;
     return _myRequests.where((r) => r['type'] == _activeFilter).toList();
-  }
-
-  List<Map<String, dynamic>> get _filteredAssignedRequests {
-    if (_activeFilter == 'All') return _assignedRequests;
-    return _assignedRequests.where((r) => r['type'] == _activeFilter).toList();
   }
 
   StatusChip _buildStatusChip(String status) {
@@ -381,11 +337,11 @@ class _RequestsScreenState extends State<RequestsScreen> {
     final isManagerOrHr = provider.role == UserRole.manager || provider.role == UserRole.hr;
 
     // Tab order differs based on role
-    // Manager/HR: Requested (0) | Assigned (1) | My Requests (2) | Requests (3)
-    // Employee:   Requested (0) | Assigned (1) | Requests (2)
+    // Manager/HR: Requested (0) | My Requests (1) | Requests (2)
+    // Employee:   Requested (0) | Requests (1)
     final tabTitles = isManagerOrHr
-        ? ['Requested', 'Assigned', 'My Requests', 'Requests']
-        : ['Requested', 'Assigned', 'Requests'];
+        ? ['Requested', 'My Requests', 'Requests']
+        : ['Requested', 'Requests'];
 
     final safeIndex = chipIndex.clamp(0, tabTitles.length - 1);
 
@@ -423,18 +379,14 @@ class _RequestsScreenState extends State<RequestsScreen> {
                   ? [
                       _buildTab('Requested', Icons.history_rounded, 0, safeIndex, isDark, provider, count: _employeeRequests.length),
                       const SizedBox(width: 10),
-                      _buildTab('Assigned', Icons.assignment_ind_rounded, 1, safeIndex, isDark, provider, count: _assignedRequests.where((r) => r['status'] == 'Pending').length),
+                      _buildTab('My Requests', Icons.person_outline_rounded, 1, safeIndex, isDark, provider, count: _myRequests.length),
                       const SizedBox(width: 10),
-                      _buildTab('My Requests', Icons.person_outline_rounded, 2, safeIndex, isDark, provider, count: _myRequests.length),
-                      const SizedBox(width: 10),
-                      _buildTab('Requests', Icons.add_circle_outline_rounded, 3, safeIndex, isDark, provider),
+                      _buildTab('Requests', Icons.add_circle_outline_rounded, 2, safeIndex, isDark, provider),
                     ]
                   : [
                       _buildTab('Requested', Icons.history_rounded, 0, safeIndex, isDark, provider, count: _requests.length),
                       const SizedBox(width: 10),
-                      _buildTab('Assigned', Icons.assignment_ind_rounded, 1, safeIndex, isDark, provider, count: _assignedRequests.where((r) => r['status'] == 'Pending').length),
-                      const SizedBox(width: 10),
-                      _buildTab('Requests', Icons.add_circle_outline_rounded, 2, safeIndex, isDark, provider),
+                      _buildTab('Requests', Icons.add_circle_outline_rounded, 1, safeIndex, isDark, provider),
                     ],
             ),
           ),
@@ -459,10 +411,8 @@ class _RequestsScreenState extends State<RequestsScreen> {
         case 0:
           return _buildEmployeeRequestsView(textTheme, isDark);
         case 1:
-          return _buildAssignedView(textTheme, isDark);
-        case 2:
           return _buildMyRequestsView(textTheme, isDark);
-        case 3:
+        case 2:
           return _buildRequestTypesView(textTheme, isDark);
         default:
           return _buildEmployeeRequestsView(textTheme, isDark);
@@ -472,8 +422,6 @@ class _RequestsScreenState extends State<RequestsScreen> {
         case 0:
           return _buildRequestedView(textTheme, isDark);
         case 1:
-          return _buildAssignedView(textTheme, isDark);
-        case 2:
           return _buildRequestTypesView(textTheme, isDark);
         default:
           return _buildRequestedView(textTheme, isDark);
@@ -766,97 +714,6 @@ class _RequestsScreenState extends State<RequestsScreen> {
           ],
         ),
       ).animate().fadeIn(duration: 350.ms, delay: (index * 60).ms).slideX(begin: 0.05, end: 0, duration: 350.ms, delay: (index * 60).ms, curve: Curves.easeOut),
-    );
-  }
-
-  // ─── "Assigned" tab: shows requests assigned for approval/action ─
-  Widget _buildAssignedView(TextTheme textTheme, bool isDark) {
-    final filtered = _filteredAssignedRequests;
-    return Column(
-      key: const ValueKey('assigned-list'),
-      children: [
-        if (_activeFilter != 'All')
-          _buildFilterIndicator(textTheme, '${filtered.length} results'),
-        Expanded(
-          child: filtered.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.assignment_rounded, size: 56, color: isDark ? AppColors.darkSubtext.withValues(alpha: 0.4) : AppColors.lightSubtext.withValues(alpha: 0.4)),
-                      const SizedBox(height: 12),
-                      Text('No assigned requests', style: textTheme.bodyMedium?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-                  itemCount: filtered.length + 1,
-                  itemBuilder: (context, index) {
-                    if (index == filtered.length) return const PPulseFooter();
-                    final request = filtered[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: NeuCard(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => AssignedDetailScreen(request: request)),
-                        ).then((_) => setState(() {})),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 42, height: 42,
-                              decoration: BoxDecoration(
-                                color: (request['color'] as Color).withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(request['icon'] as IconData, color: request['color'] as Color, size: 20),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(child: Text(request['title'] as String, style: textTheme.titleMedium, overflow: TextOverflow.ellipsis)),
-                                      _buildStatusChip(request['status'] as String),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Row(
-                                    children: [
-                                      _buildTypeTag(request['type'] as String? ?? ''),
-                                      if (request['appliedDate'] != null) ...[
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          (request['appliedDate'] as String).split(',').first,
-                                          style: textTheme.bodySmall?.copyWith(fontSize: 10, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Icon(Icons.person_outline_rounded, size: 13, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
-                                      const SizedBox(width: 4),
-                                      Text(request['requestedBy'] as String, style: textTheme.bodySmall?.copyWith(fontSize: 12)),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(Icons.chevron_right_rounded, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext, size: 20),
-                          ],
-                        ),
-                      ).animate().fadeIn(duration: 350.ms, delay: (index * 60).ms).slideX(begin: 0.05, end: 0, duration: 350.ms, delay: (index * 60).ms, curve: Curves.easeOut),
-                    );
-                  },
-                ),
-        ),
-      ],
     );
   }
 
