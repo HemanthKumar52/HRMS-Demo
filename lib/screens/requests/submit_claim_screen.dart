@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/form_fields.dart';
 import '../../widgets/neu_card.dart';
@@ -55,6 +56,7 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       showSuccessSnackbar(context, 'Claim submitted successfully');
+      NotificationService.instance.showRequestApplied('Claim');
       Navigator.pop(context);
     });
   }

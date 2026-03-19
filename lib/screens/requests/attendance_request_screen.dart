@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/form_fields.dart';
 import '../../widgets/neu_card.dart';
@@ -86,6 +87,7 @@ class _AttendanceRequestScreenState extends State<AttendanceRequestScreen> {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       showSuccessSnackbar(context, 'Attendance request submitted');
+      NotificationService.instance.showRequestApplied('Attendance');
       Navigator.pop(context);
     });
   }

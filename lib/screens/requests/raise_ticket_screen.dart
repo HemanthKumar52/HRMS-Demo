@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/form_fields.dart';
 
@@ -65,6 +66,7 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       showSuccessSnackbar(context, 'Ticket raised successfully');
+      NotificationService.instance.showRequestApplied('Ticket');
       Navigator.pop(context);
     });
   }

@@ -5,9 +5,11 @@ import 'providers/theme_provider.dart';
 import 'providers/app_provider.dart';
 import 'screens/splash/splash_screen.dart';
 import 'screens/requests/request_detail_screen.dart';
+import 'services/notification_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.instance.init();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

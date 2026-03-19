@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/form_fields.dart';
 
@@ -48,6 +49,7 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       showSuccessSnackbar(context, 'Asset request submitted');
+      NotificationService.instance.showRequestApplied('Asset');
       Navigator.pop(context);
     });
   }

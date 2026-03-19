@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/notification_service.dart';
 import '../../widgets/form_fields.dart';
 
 class ApplyLeaveScreen extends StatefulWidget {
@@ -57,6 +58,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       showSuccessSnackbar(context, 'Leave request submitted successfully');
+      NotificationService.instance.showRequestApplied('Leave');
       Navigator.pop(context);
     });
   }

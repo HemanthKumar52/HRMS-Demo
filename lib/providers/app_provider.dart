@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
 
 enum UserRole { employee, manager, hr }
 
@@ -66,12 +67,14 @@ class AppProvider extends ChangeNotifier {
         Icons.login,
         const Color(0xFF34D399),
       );
+      NotificationService.instance.showPunchIn();
     } else {
       triggerDynamicIsland(
         'Punched Out Successfully',
         Icons.logout,
         const Color(0xFFFF8C42),
       );
+      NotificationService.instance.showPunchOut();
       _punchInTime = null;
     }
     notifyListeners();

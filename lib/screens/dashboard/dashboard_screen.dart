@@ -6,6 +6,12 @@ import 'package:intl/intl.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
+import '../requests/apply_leave_screen.dart';
+import '../requests/submit_claim_screen.dart';
+import '../requests/raise_ticket_screen.dart';
+import '../requests/shift_change_screen.dart';
+import '../requests/work_type_request_screen.dart';
+import '../requests/attendance_request_screen.dart';
 
 
 class DashboardScreen extends StatelessWidget {
@@ -63,12 +69,30 @@ class DashboardScreen extends StatelessWidget {
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
             children: [
-              _QuickAction(icon: Icons.event_busy, label: 'Leave', color: AppColors.primary),
-              _QuickAction(icon: Icons.receipt, label: 'Claims', color: AppColors.success),
-              _QuickAction(icon: Icons.confirmation_num, label: 'Tickets', color: AppColors.orange),
-              _QuickAction(icon: Icons.swap_horiz, label: 'Shift', color: AppColors.secondary),
-              _QuickAction(icon: Icons.work, label: 'Work Type', color: AppColors.pink),
-              _QuickAction(icon: Icons.access_time, label: 'Attendance', color: AppColors.primaryDark),
+              _QuickAction(
+                icon: Icons.event_busy, label: 'Leave', color: AppColors.primary,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ApplyLeaveScreen())),
+              ),
+              _QuickAction(
+                icon: Icons.receipt, label: 'Claims', color: AppColors.success,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubmitClaimScreen())),
+              ),
+              _QuickAction(
+                icon: Icons.confirmation_num, label: 'Tickets', color: AppColors.orange,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RaiseTicketScreen())),
+              ),
+              _QuickAction(
+                icon: Icons.swap_horiz, label: 'Shift', color: AppColors.secondary,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ShiftChangeScreen())),
+              ),
+              _QuickAction(
+                icon: Icons.work, label: 'Work Type', color: AppColors.pink,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WorkTypeRequestScreen())),
+              ),
+              _QuickAction(
+                icon: Icons.access_time, label: 'Attendance', color: AppColors.primaryDark,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AttendanceRequestScreen())),
+              ),
             ],
           )
               .animate()
@@ -995,16 +1019,13 @@ class _QuickAction extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
-  const _QuickAction({required this.icon, required this.label, required this.color});
+  final VoidCallback? onTap;
+  const _QuickAction({required this.icon, required this.label, required this.color, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$label action opened'), backgroundColor: color, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), duration: const Duration(seconds: 1)),
-        );
-      },
+      onTap: onTap,
       child: NeuCard(
         padding: const EdgeInsets.all(12),
         child: Column(

@@ -34,24 +34,19 @@ class ShellScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'PPulse HRMS',
-              style: Theme.of(context).appBarTheme.titleTextStyle?.copyWith(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
+              'Good ${_getGreeting()},',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+              ),
             ),
             Text(
-              provider.role == UserRole.hr
-                  ? 'HR PORTAL'
-                  : provider.role == UserRole.manager
-                      ? 'MANAGER PORTAL'
-                      : 'EMPLOYEE PORTAL',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
-                letterSpacing: 0.8,
-              ),
+              provider.userName.split(' ').first,
+              style: Theme.of(context).appBarTheme.titleTextStyle?.copyWith(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
             ),
           ],
         ),
@@ -163,6 +158,13 @@ class ShellScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Morning';
+    if (hour < 17) return 'Afternoon';
+    return 'Evening';
   }
 
   void _showNotifications(BuildContext context) {
