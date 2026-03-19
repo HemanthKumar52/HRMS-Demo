@@ -16,6 +16,7 @@ import 'attendance_request_screen.dart';
 import 'asset_request_screen.dart';
 import 'assigned_detail_screen.dart';
 import 'request_detail_screen.dart';
+import '../../widgets/ppulse_footer.dart';
 
 class RequestsScreen extends StatefulWidget {
   const RequestsScreen({super.key});
@@ -550,8 +551,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-            itemCount: filtered.length,
+            itemCount: filtered.length + 1,
             itemBuilder: (context, index) {
+              if (index == filtered.length) return const PPulseFooter();
               final type = filtered[index];
               return Padding(
                 padding: const EdgeInsets.only(bottom: 10),
@@ -592,8 +594,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-            itemCount: filtered.length,
+            itemCount: filtered.length + 1,
             itemBuilder: (context, index) {
+              if (index == filtered.length) return const PPulseFooter();
               final request = filtered[index];
               return _buildRequestListTile(request, textTheme, isDark, index, showEmployee: false);
             },
@@ -614,8 +617,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-            itemCount: filtered.length,
+            itemCount: filtered.length + 1,
             itemBuilder: (context, index) {
+              if (index == filtered.length) return const PPulseFooter();
               final request = filtered[index];
               return _buildRequestListTile(request, textTheme, isDark, index, showEmployee: true);
             },
@@ -647,8 +651,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
                 )
               : ListView.builder(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-                  itemCount: filtered.length,
+                  itemCount: filtered.length + 1,
                   itemBuilder: (context, index) {
+                    if (index == filtered.length) return const PPulseFooter();
                     final request = filtered[index];
                     return _buildRequestListTile(request, textTheme, isDark, index, showEmployee: false);
                   },
@@ -743,8 +748,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
                 )
               : ListView.builder(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-                  itemCount: filtered.length,
+                  itemCount: filtered.length + 1,
                   itemBuilder: (context, index) {
+                    if (index == filtered.length) return const PPulseFooter();
                     final request = filtered[index];
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
