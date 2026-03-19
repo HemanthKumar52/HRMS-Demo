@@ -13,8 +13,8 @@ class StatusChip extends StatelessWidget {
     this.icon,
   });
 
-  factory StatusChip.approved() => const StatusChip(
-        label: 'Approved',
+  factory StatusChip.accepted() => const StatusChip(
+        label: 'Accepted',
         color: AppColors.success,
         icon: Icons.check_circle,
       );

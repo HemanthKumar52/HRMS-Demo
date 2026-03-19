@@ -16,6 +16,7 @@ dependencies:
   flutter_animate: ^4.5.2
   percent_indicator: ^4.2.3
   intl: ^0.19.0
+  pdfx: ^2.6.0
 
 dev_dependencies:
   flutter_test:
@@ -24,3 +25,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/sample.pdf

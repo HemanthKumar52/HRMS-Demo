@@ -53,13 +53,14 @@ class FloatingBottomNav extends StatelessWidget {
                 ],
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: List.generate(items.length, (index) {
             final isActive = provider.bottomNavIndex == index;
-            return _NavButton(
-              item: items[index],
-              isActive: isActive,
-              onTap: () => provider.setBottomNavIndex(index),
+            return Expanded(
+              child: _NavButton(
+                item: items[index],
+                isActive: isActive,
+                onTap: () => provider.setBottomNavIndex(index),
+              ),
             );
           }),
         ),
@@ -132,34 +133,35 @@ class _NavButtonState extends State<_NavButton>
       behavior: HitTestBehavior.opaque,
       child: ScaleTransition(
         scale: _bounceAnimation,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
           decoration: widget.isActive
               ? BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(16),
                 )
               : null,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                widget.item.icon,
-                color: widget.isActive ? AppColors.primary : Colors.grey,
-                size: 24,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                widget.item.label,
-                style: TextStyle(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  widget.item.icon,
                   color: widget.isActive ? AppColors.primary : Colors.grey,
-                  fontSize: 11,
-                  fontWeight:
-                      widget.isActive ? FontWeight.w600 : FontWeight.w400,
+                  size: 24,
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  widget.item.label,
+                  style: TextStyle(
+                    color: widget.isActive ? AppColors.primary : Colors.grey,
+                    fontSize: 11,
+                    fontWeight:
+                        widget.isActive ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

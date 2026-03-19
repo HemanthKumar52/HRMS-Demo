@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'payslip_viewer_screen.dart';
 
 class PayslipScreen extends StatefulWidget {
   const PayslipScreen({super.key});
@@ -17,12 +18,34 @@ class _PayslipScreenState extends State<PayslipScreen> {
   int _touchedEarningsIndex = -1;
   int _touchedDeductionsIndex = -1;
   int _touchedTotalIndex = -1;
-  final int _selectedYear = 2026;
+  int _selectedYear = 2026;
 
   final List<String> _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
   ];
+
+  void _goToPreviousMonth() {
+    setState(() {
+      if (_selectedMonthIndex == 0) {
+        _selectedMonthIndex = 11;
+        _selectedYear--;
+      } else {
+        _selectedMonthIndex--;
+      }
+    });
+  }
+
+  void _goToNextMonth() {
+    setState(() {
+      if (_selectedMonthIndex == 11) {
+        _selectedMonthIndex = 0;
+        _selectedYear++;
+      } else {
+        _selectedMonthIndex++;
+      }
+    });
+  }
 
   final double _grossSalary = 85000;
   final double _totalDeductions = 18350;
@@ -55,76 +78,102 @@ class _PayslipScreenState extends State<PayslipScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Payslip'),
-        centerTitle: true,
-      ),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // --- Month/Year Selector ---
-            SizedBox(
-              height: 44,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _months.length,
-                itemBuilder: (context, index) {
-                  final selected = index == _selectedMonthIndex;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: GestureDetector(
-                      onTap: () => setState(() => _selectedMonthIndex = index),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: selected ? AppColors.primary : (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade100),
-                          borderRadius: BorderRadius.circular(14),
-                          border: selected ? null : Border.all(color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.shade200),
-                        ),
-                        child: Text(
-                          '${_months[index]} $_selectedYear',
-                          style: TextStyle(
-                            color: selected ? Colors.white : (isDark ? Colors.white60 : Colors.grey.shade600),
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
+            NeuCard(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left_rounded),
+                    onPressed: _goToPreviousMonth,
+                  ),
+                  Text(
+                    '${_months[_selectedMonthIndex]} $_selectedYear',
+                    style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right_rounded),
+                    onPressed: _goToNextMonth,
+                  ),
+                ],
               ),
             ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
-            // --- Salary Summary ---
-            NeuCard(
+            // --- Total Earnings Card ---
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF3B5FE5), Color(0xFF5B7FF9)],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF3B5FE5).withValues(alpha: 0.3),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary, size: 20),
-                      const SizedBox(width: 8),
-                      Text('Salary Summary', style: tt.titleLarge),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Total Earnings', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 6),
+                            TweenAnimationBuilder<double>(
+                              tween: Tween(begin: 0, end: _grossSalary),
+                              duration: const Duration(milliseconds: 3500),
+                              curve: Curves.easeOutExpo,
+                              builder: (context, value, _) => Text(
+                                _currencyFormat.format(value),
+                                style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(Icons.account_balance_wallet_rounded, color: Colors.white, size: 22),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
                   Row(
                     children: [
-                      _buildSalaryHighlight(label: 'Gross Salary', amount: _grossSalary, color: AppColors.success, bgColor: AppColors.pastelGreen, tt: tt, isDark: isDark),
-                      const SizedBox(width: 10),
-                      _buildSalaryHighlight(label: 'Deductions', amount: _totalDeductions, color: AppColors.danger, bgColor: AppColors.pastelRed, tt: tt, isDark: isDark),
-                      const SizedBox(width: 10),
-                      _buildSalaryHighlight(label: 'Net Pay', amount: _netPay, color: AppColors.primary, bgColor: AppColors.pastelBlue, tt: tt, isDark: isDark),
+                      _buildEarningsSubItem('Gross Salary', _grossSalary),
+                      const SizedBox(width: 16),
+                      _buildEarningsSubItem('Net Pay', _netPay),
+                      const SizedBox(width: 16),
+                      _buildEarningsSubItem('Deductions', _totalDeductions),
                     ],
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: 80.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 80.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 400.ms, delay: 40.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 40.ms, curve: Curves.easeOut),
 
             const SizedBox(height: 16),
 
@@ -436,13 +485,13 @@ class _PayslipScreenState extends State<PayslipScreen> {
                     height: 52,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Opening ${_months[_selectedMonthIndex]} $_selectedYear payslip...'),
-                            backgroundColor: AppColors.primary,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            duration: const Duration(seconds: 1),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PayslipViewerScreen(
+                              month: _months[_selectedMonthIndex],
+                              year: _selectedYear,
+                            ),
                           ),
                         );
                       },
@@ -550,42 +599,6 @@ class _PayslipScreenState extends State<PayslipScreen> {
     );
   }
 
-  Widget _buildSalaryHighlight({
-    required String label,
-    required double amount,
-    required Color color,
-    required Color bgColor,
-    required TextTheme tt,
-    required bool isDark,
-  }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-        decoration: BoxDecoration(
-          color: isDark ? color.withValues(alpha: 0.12) : bgColor,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(
-          children: [
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: amount),
-              duration: const Duration(milliseconds: 3500),
-              curve: Curves.easeOutExpo,
-              builder: (context, value, _) => Text(
-                _currencyFormat.format(value),
-                style: tt.titleMedium?.copyWith(color: color, fontWeight: FontWeight.w700, fontSize: 15),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(label, style: tt.bodySmall?.copyWith(color: color.withValues(alpha: 0.8), fontWeight: FontWeight.w500), textAlign: TextAlign.center),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildLineItem(String label, double amount, TextTheme tt, Color accentColor, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -601,6 +614,22 @@ class _PayslipScreenState extends State<PayslipScreen> {
             ],
           ),
           Text(_currencyFormat.format(amount), style: tt.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEarningsSubItem(String label, double amount) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w500)),
+          const SizedBox(height: 4),
+          Text(
+            '${_currencyFormat.format(amount)}/mo',
+            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+          ),
         ],
       ),
     );

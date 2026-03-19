@@ -5,14 +5,9 @@
 *.swp
 .DS_Store
 .atom/
-.build/
-.buildlog/
 .history
 .svn/
-.swiftpm/
 migrate_working_dir/
-.env
-.env.*
 
 # IntelliJ related
 *.iml
@@ -23,16 +18,57 @@ migrate_working_dir/
 # Editor / local workspace settings
 .vscode/
 .claude/
+.gemini/
 
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
 /build/
 /coverage/
+
+# Android related
+**/android/local.properties
+**/android/key.properties
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+**/*.keystore
+**/*.jks
+
+# iOS/macOS related
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/ephemeral/
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/Runner/GoogleService-Info.plist
+**/ios/.symlinks/
+**/ios/Pods/
+**/ios/DerivedData/
+*.mode1v3
+*.mode2v3
+*.moved-aside
+*.pbxuser
+*.perspectivev3
+Icon?
+
+# Windows related
+Thumbs.db
+**/windows/flutter/ephemeral/
+**/windows/flutter/generated_plugins.cmake
+
+# Linux related
+**/linux/flutter/ephemeral/
+
+# macOS related
+**/macos/flutter/ephemeral/
 
 # Symbolication related
 app.*.symbols
@@ -40,10 +76,11 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# Credentials and secrets
+.env
+.env.*
 
-# Local AI/copilot instructions not needed in project source control
-.github/instructions/codacy.instructions.md
+# Temporary or junk files in root
+/*.pptx
+/*.pdf
+!/assets/

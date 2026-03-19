@@ -12,7 +12,7 @@ class AppProvider extends ChangeNotifier {
   bool _isPunchedIn = false;
   DateTime? _punchInTime;
   int _bottomNavIndex = 0;
-  int _requestsTabIndex = 0; // 0 = Requests, 1 = Requested
+  int _requestsTabIndex = 0; // 0 = Requested, 1 = Assigned, 2 = Requests
 
   // Dynamic Island
   bool _showDynamicIsland = false;
@@ -89,7 +89,7 @@ class AppProvider extends ChangeNotifier {
 
   void navigateToRequested() {
     _bottomNavIndex = 1;
-    _requestsTabIndex = 1;
+    _requestsTabIndex = 0;
     notifyListeners();
   }
 

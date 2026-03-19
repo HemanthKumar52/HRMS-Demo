@@ -28,14 +28,15 @@ class ShellScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 64,
+        toolbarHeight: 52,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'PPulse HRMS',
               style: Theme.of(context).appBarTheme.titleTextStyle?.copyWith(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
             ),
@@ -46,7 +47,7 @@ class ShellScreen extends StatelessWidget {
                       ? 'MANAGER PORTAL'
                       : 'EMPLOYEE PORTAL',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: FontWeight.w500,
                 color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
                 letterSpacing: 0.8,
@@ -61,8 +62,8 @@ class ShellScreen extends StatelessWidget {
             child: GestureDetector(
               onTap: () => _showNotifications(context),
               child: Container(
-                width: 42,
-                height: 42,
+                width: 38,
+                height: 38,
                 decoration: isDark
                     ? null
                     : BoxDecoration(
@@ -112,8 +113,8 @@ class ShellScreen extends StatelessWidget {
             child: GestureDetector(
               onTap: () => showProfileSheet(context),
               child: Container(
-                width: 42,
-                height: 42,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: const LinearGradient(

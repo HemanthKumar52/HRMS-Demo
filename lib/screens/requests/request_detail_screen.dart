@@ -11,8 +11,8 @@ class RequestDetailScreen extends StatelessWidget {
 
   StatusChip _buildStatusChip(String status) {
     switch (status) {
-      case 'Approved':
-        return StatusChip.approved();
+      case 'Accepted':
+        return StatusChip.accepted();
       case 'Rejected':
         return StatusChip.rejected();
       default:
@@ -22,7 +22,7 @@ class RequestDetailScreen extends StatelessWidget {
 
   Color _statusColor(String status) {
     switch (status) {
-      case 'Approved':
+      case 'Accepted':
         return AppColors.success;
       case 'Rejected':
         return AppColors.danger;

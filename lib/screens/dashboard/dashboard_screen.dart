@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
-import '../home/face_verification_dialog.dart';
+
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -720,87 +720,151 @@ class _HrAnalyticsSection extends StatelessWidget {
 // SHARED WIDGETS
 // =============================================================================
 
-class _AttendanceTimerCard extends StatelessWidget {
+class _AttendanceTimerCard extends StatefulWidget {
   final AppProvider provider;
   const _AttendanceTimerCard({required this.provider});
 
   @override
+  State<_AttendanceTimerCard> createState() => _AttendanceTimerCardState();
+}
+
+class _AttendanceTimerCardState extends State<_AttendanceTimerCard> {
+  late Stream<DateTime> _clockStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _clockStream = Stream.periodic(const Duration(seconds: 1), (_) => DateTime.now());
+  }
+
+  String _formatDuration(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60);
+    return '${h}h ${m.toString().padLeft(2, '0')}m';
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isPunchedIn = provider.isPunchedIn;
+    final isDark = theme.brightness == Brightness.dark;
+    final isPunchedIn = widget.provider.isPunchedIn;
+    final punchTime = widget.provider.punchInTime;
 
     return NeuCard(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          Row(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: StreamBuilder<DateTime>(
+        stream: _clockStream,
+        builder: (context, snapshot) {
+          final now = snapshot.data ?? DateTime.now();
+          final worked = isPunchedIn && punchTime != null
+              ? now.difference(punchTime)
+              : Duration.zero;
+          final workedText = _formatDuration(worked);
+          // Progress out of 9h target
+          final progress = isPunchedIn
+              ? (worked.inMinutes / 540).clamp(0.0, 1.0)
+              : 0.0;
+
+          return Column(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isPunchedIn ? AppColors.pastelGreen : AppColors.pastelRed,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  isPunchedIn ? Icons.timer : Icons.timer_off,
-                  color: isPunchedIn ? AppColors.success : AppColors.danger,
-                  size: 20,
+              Text('Attendance', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text(
+                DateFormat('hh:mm:ss a, dd MMM yyyy').format(now),
+                style: theme.textTheme.bodySmall?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+              ),
+              const SizedBox(height: 24),
+
+              // Circular progress ring
+              SizedBox(
+                width: 180,
+                height: 180,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 180,
+                      height: 180,
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: progress),
+                        duration: const Duration(milliseconds: 800),
+                        curve: Curves.easeOut,
+                        builder: (context, value, _) => CircularProgressIndicator(
+                          value: value,
+                          strokeWidth: 12,
+                          strokeCap: StrokeCap.round,
+                          backgroundColor: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.shade200,
+                          valueColor: AlwaysStoppedAnimation<Color>(isPunchedIn ? AppColors.success : Colors.grey.shade300),
+                        ),
+                      ),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Total Hours', style: theme.textTheme.bodySmall?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+                        const SizedBox(height: 4),
+                        Text(
+                          workedText,
+                          style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Attendance', style: theme.textTheme.titleMedium),
-                  Text(DateFormat('EEEE, MMM d').format(DateTime.now()), style: theme.textTheme.bodySmall),
-                ],
-              ),
-              const Spacer(),
+              const SizedBox(height: 20),
+
+              // Production chip
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isPunchedIn ? AppColors.success.withValues(alpha: 0.12) : AppColors.danger.withValues(alpha: 0.12),
+                  color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  isPunchedIn ? 'Active' : 'Inactive',
-                  style: TextStyle(color: isPunchedIn ? AppColors.success : AppColors.danger, fontWeight: FontWeight.w600, fontSize: 12),
+                  'Production : $workedText',
+                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // Punch in time
+              if (isPunchedIn && punchTime != null)
+                Text(
+                  'Punch In at ${DateFormat('hh:mm a').format(punchTime)}',
+                  style: theme.textTheme.bodySmall?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+                ),
+              if (!isPunchedIn)
+                Text(
+                  'Not punched in yet',
+                  style: theme.textTheme.bodySmall?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+                ),
+              const SizedBox(height: 20),
+
+              // Punch button – navigates to Attendance tab
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () {
+                    // Navigate to Attendance tab (index 2)
+                    widget.provider.setBottomNavIndex(2);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isPunchedIn ? AppColors.danger : AppColors.orange,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    isPunchedIn ? 'Punch Out' : 'Punch In',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 20),
-          if (isPunchedIn && provider.punchInTime != null) ...[
-            Text(
-              DateFormat('hh:mm a').format(provider.punchInTime!),
-              style: theme.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary),
-            ),
-            const SizedBox(height: 4),
-            Text('Punched in at', style: theme.textTheme.bodySmall),
-            const SizedBox(height: 16),
-          ],
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                if (!isPunchedIn) {
-                  showDialog(context: context, builder: (_) => const FaceVerificationDialog());
-                } else {
-                  provider.togglePunch();
-                }
-              },
-              icon: Icon(isPunchedIn ? Icons.logout : Icons.login),
-              label: Text(isPunchedIn ? 'Punch Out' : 'Punch In', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isPunchedIn ? AppColors.danger : AppColors.success,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
-              ),
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
