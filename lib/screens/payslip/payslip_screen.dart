@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
+import '../../widgets/ppulse_footer.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'payslip_viewer_screen.dart';
 
@@ -537,7 +538,8 @@ class _PayslipScreenState extends State<PayslipScreen> {
               ],
             ).animate().fadeIn(duration: 400.ms, delay: 560.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 560.ms, curve: Curves.easeOut),
 
-            const SizedBox(height: 100),
+            const PPulseFooter(),
+            const SizedBox(height: 80),
           ],
         ),
       ),

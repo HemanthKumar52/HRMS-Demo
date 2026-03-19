@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
+import '../../widgets/ppulse_footer.dart';
 import '../requests/apply_leave_screen.dart';
 import '../requests/submit_claim_screen.dart';
 import '../requests/raise_ticket_screen.dart';
@@ -312,6 +313,8 @@ class DashboardScreen extends StatelessWidget {
           if (role == UserRole.hr) ...[
             _HrAnalyticsSection(isDark: isDark),
           ],
+
+          const PPulseFooter(),
         ],
       ),
     );

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
+import '../../widgets/ppulse_footer.dart';
 import '../home/face_verification_dialog.dart';
 
 class AttendanceScreen extends StatefulWidget {
@@ -566,7 +567,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ),
             ).animate().fadeIn(duration: 400.ms, delay: 480.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 480.ms, curve: Curves.easeOut),
 
-            const SizedBox(height: 100),
+            const PPulseFooter(),
+            const SizedBox(height: 80),
           ],
         ),
       ),
