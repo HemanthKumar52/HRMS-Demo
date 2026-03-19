@@ -413,40 +413,28 @@ class _RequestsScreenState extends State<RequestsScreen> {
             ),
           ),
 
-          // Chip-style toggle
-          Padding(
+          // Scrollable tab bar
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE4E8EE),
-                borderRadius: BorderRadius.circular(50),
-                boxShadow: isDark
-                    ? null
-                    : [
-                        BoxShadow(color: const Color(0xFFBEC3CE).withValues(alpha: 0.4), offset: const Offset(3, 3), blurRadius: 6),
-                        const BoxShadow(color: Color(0xFFFDFFFF), offset: Offset(-3, -3), blurRadius: 6),
-                      ],
-              ),
-              child: Row(
-                children: isManagerOrHr
-                    ? [
-                        _buildChipButton('Requested', Icons.history_rounded, 0, safeIndex, isDark, provider, count: _employeeRequests.length),
-                        const SizedBox(width: 3),
-                        _buildChipButton('Assigned', Icons.assignment_ind_rounded, 1, safeIndex, isDark, provider, count: _assignedRequests.where((r) => r['status'] == 'Pending').length),
-                        const SizedBox(width: 3),
-                        _buildChipButton('My Req', Icons.person_outline_rounded, 2, safeIndex, isDark, provider, count: _myRequests.length),
-                        const SizedBox(width: 3),
-                        _buildChipButton('Requests', Icons.add_circle_outline_rounded, 3, safeIndex, isDark, provider),
-                      ]
-                    : [
-                        _buildChipButton('Requested', Icons.history_rounded, 0, safeIndex, isDark, provider, count: _requests.length),
-                        const SizedBox(width: 4),
-                        _buildChipButton('Assigned', Icons.assignment_ind_rounded, 1, safeIndex, isDark, provider, count: _assignedRequests.where((r) => r['status'] == 'Pending').length),
-                        const SizedBox(width: 4),
-                        _buildChipButton('Requests', Icons.add_circle_outline_rounded, 2, safeIndex, isDark, provider),
-                      ],
-              ),
+            child: Row(
+              children: isManagerOrHr
+                  ? [
+                      _buildTab('Requested', Icons.history_rounded, 0, safeIndex, isDark, provider, count: _employeeRequests.length),
+                      const SizedBox(width: 10),
+                      _buildTab('Assigned', Icons.assignment_ind_rounded, 1, safeIndex, isDark, provider, count: _assignedRequests.where((r) => r['status'] == 'Pending').length),
+                      const SizedBox(width: 10),
+                      _buildTab('My Requests', Icons.person_outline_rounded, 2, safeIndex, isDark, provider, count: _myRequests.length),
+                      const SizedBox(width: 10),
+                      _buildTab('Requests', Icons.add_circle_outline_rounded, 3, safeIndex, isDark, provider),
+                    ]
+                  : [
+                      _buildTab('Requested', Icons.history_rounded, 0, safeIndex, isDark, provider, count: _requests.length),
+                      const SizedBox(width: 10),
+                      _buildTab('Assigned', Icons.assignment_ind_rounded, 1, safeIndex, isDark, provider, count: _assignedRequests.where((r) => r['status'] == 'Pending').length),
+                      const SizedBox(width: 10),
+                      _buildTab('Requests', Icons.add_circle_outline_rounded, 2, safeIndex, isDark, provider),
+                    ],
             ),
           ),
 
@@ -492,36 +480,57 @@ class _RequestsScreenState extends State<RequestsScreen> {
     }
   }
 
-  Widget _buildChipButton(String label, IconData icon, int index, int activeIndex, bool isDark, AppProvider provider, {int? count}) {
+  Widget _buildTab(String label, IconData icon, int index, int activeIndex, bool isDark, AppProvider provider, {int? count}) {
     final isActive = activeIndex == index;
-    final displayLabel = count != null ? '$label ($count)' : label;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => provider.setRequestsTabIndex(index),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isActive ? AppColors.primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(50),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 14, color: isActive ? Colors.white : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
-              const SizedBox(width: 3),
-              Flexible(
+    return GestureDetector(
+      onTap: () => provider.setRequestsTabIndex(index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.primary : (isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE4E8EE)),
+          borderRadius: BorderRadius.circular(50),
+          boxShadow: isActive
+              ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
+              : isDark
+                  ? null
+                  : [
+                      BoxShadow(color: const Color(0xFFBEC3CE).withValues(alpha: 0.3), offset: const Offset(2, 2), blurRadius: 4),
+                      const BoxShadow(color: Color(0xFFFDFFFF), offset: Offset(-2, -2), blurRadius: 4),
+                    ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: isActive ? Colors.white : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? Colors.white : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            if (count != null) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isActive ? Colors.white.withValues(alpha: 0.25) : AppColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 child: Text(
-                  displayLabel,
+                  '$count',
                   style: TextStyle(
-                    color: isActive ? Colors.white : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
-                    fontWeight: FontWeight.w600, fontSize: 11,
+                    color: isActive ? Colors.white : AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -657,7 +666,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => RequestDetailScreen(requestData: request)),
-        ),
+        ).then((_) => setState(() {})),
         child: Row(
           children: [
             Container(
