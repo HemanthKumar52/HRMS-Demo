@@ -30,25 +30,7 @@ class DashboardScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── 1. Greetings ──────────────────────────────────────────────
-          Text(
-            'Good ${_getGreeting()},',
-            style: theme.textTheme.bodyMedium,
-          )
-              .animate()
-              .fadeIn(duration: 400.ms)
-              .slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
-          const SizedBox(height: 2),
-          Text(
-            provider.userName.split(' ').first,
-            style: theme.textTheme.headlineLarge,
-          )
-              .animate()
-              .fadeIn(duration: 400.ms, delay: 80.ms)
-              .slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 80.ms, curve: Curves.easeOut),
-          const SizedBox(height: 20),
-
-          // ── 2. Attendance Timer ───────────────────────────────────────
+          // ── 1. Attendance Timer ───────────────────────────────────────
           _AttendanceTimerCard(provider: provider)
               .animate()
               .fadeIn(duration: 400.ms, delay: 160.ms)
@@ -335,12 +317,6 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Morning';
-    if (hour < 17) return 'Afternoon';
-    return 'Evening';
-  }
 }
 
 // =============================================================================
