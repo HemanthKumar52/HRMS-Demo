@@ -1,86 +1,98 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
+# OS and editor files
 .DS_Store
-.atom/
-.history
-.svn/
-migrate_working_dir/
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*.log
 
-# IntelliJ related
+# IDE settings
+.idea/
 *.iml
 *.ipr
 *.iws
-.idea/
-
-# Editor / local workspace settings
 .vscode/
+.history/
 .claude/
 .gemini/
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# Dart / Flutter
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
-.pub-cache/
 .pub/
-/build/
-/coverage/
+.pub-cache/
+build/
+coverage/
+doc/api/
 
-# Android related
-**/android/local.properties
-**/android/key.properties
-**/android/app/debug
-**/android/app/profile
-**/android/app/release
-**/*.keystore
-**/*.jks
+# Flutter generated artifacts
+*/.flutter-plugins-dependencies
+*/.dart_tool/
+**/flutter_export_environment.sh
+**/Flutter/ephemeral/
+**/Flutter/Generated.xcconfig
+**/Flutter/Flutter.podspec
+**/GeneratedPluginRegistrant.*
 
-# iOS/macOS related
-**/ios/Flutter/Generated.xcconfig
-**/ios/Flutter/flutter_export_environment.sh
-**/ios/Flutter/Flutter.podspec
-**/ios/Flutter/App.framework
-**/ios/Flutter/Flutter.framework
-**/ios/Flutter/ephemeral/
-**/ios/Runner/GeneratedPluginRegistrant.*
-**/ios/Runner/GoogleService-Info.plist
-**/ios/.symlinks/
-**/ios/Pods/
-**/ios/DerivedData/
+# Android
+android/.gradle/
+android/local.properties
+android/key.properties
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+*.keystore
+*.jks
+
+# iOS / macOS
+ios/Pods/
+ios/.symlinks/
+ios/DerivedData/
+macos/Pods/
+macos/.symlinks/
 *.mode1v3
 *.mode2v3
 *.moved-aside
 *.pbxuser
 *.perspectivev3
+*.xcuserstate
 Icon?
 
-# Windows related
-Thumbs.db
-**/windows/flutter/ephemeral/
-**/windows/flutter/generated_plugins.cmake
+# Linux / Windows generated Flutter files
+linux/flutter/ephemeral/
+windows/flutter/ephemeral/
+windows/flutter/generated_plugins.cmake
+macos/Flutter/ephemeral/
 
-# Linux related
-**/linux/flutter/ephemeral/
-
-# macOS related
-**/macos/flutter/ephemeral/
-
-# Symbolication related
+# Symbolication and obfuscation
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
 
-# Credentials and secrets
+# Python / Django backend
+venv/
+.venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.sqlite3
+db.sqlite3
+
+# Environment and secrets
 .env
 .env.*
+!.env.example
 
-# Temporary or junk files in root
-/*.pptx
-/*.pdf
-!/assets/
+# Local dumps and temp exports
+db_dump.sql
+*.dump.sql
+*.bak.sql
+migrate_working_dir/

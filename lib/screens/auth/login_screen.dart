@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
@@ -28,31 +31,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _login() async {
-    final username = _usernameController.text.trim().toLowerCase();
+    final username = _usernameController.text.trim();
     final password = _passwordController.text;
 
     if (username.isEmpty || password.isEmpty) {
       setState(() => _errorText = 'Please enter username and password');
-      return;
-    }
-
-    // Determine role from username
-    UserRole? role;
-    if (username == 'employee') {
-      role = UserRole.employee;
-    } else if (username == 'manager') {
-      role = UserRole.manager;
-    } else if (username == 'hr') {
-      role = UserRole.hr;
-    }
-
-    if (role == null) {
-      setState(() => _errorText = 'Invalid username. Use: employee, manager, or hr');
-      return;
-    }
-
-    if (password != '12345') {
-      setState(() => _errorText = 'Incorrect password');
       return;
     }
 
@@ -61,26 +44,53 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (!mounted) return;
+    try {
+      final response = await http.post(
+        Uri.parse('http://127.0.0.1:8000/v1/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': username, 'password': password}),
+      );
 
-    final provider = context.read<AppProvider>();
-    provider.setRole(role);
-    provider.login();
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final token = data['access_token'];
+        final userData = data['user'];
 
-    Navigator.pushReplacement(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const ShellScreen(),
-        transitionsBuilder: (_, animation, __, child) {
-          return FadeTransition(
-            opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
-            child: child,
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 500),
-      ),
-    );
+        // Store token
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('auth_token', token);
+        await prefs.setString('employee_id', userData['employee_id'] ?? '');
+        await prefs.setString('user_name', userData['name'] ?? '');
+        await prefs.setString('user_email', userData['email'] ?? '');
+        await prefs.setString('user_designation', userData['designation'] ?? '');
+        await prefs.setString('user_department', userData['department'] ?? '');
+
+        if (!mounted) return;
+
+        final provider = context.read<AppProvider>();
+        provider.login();
+
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => const ShellScreen(),
+            transitionsBuilder: (_, animation, __, child) {
+              return FadeTransition(
+                opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+                child: child,
+              );
+            },
+          ),
+        );
+      } else {
+        final data = jsonDecode(response.body);
+        setState(() => _errorText = data['detail'] ?? 'Invalid credentials');
+      }
+    } catch (e) {
+      setState(() => _errorText = 'Connection error: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
