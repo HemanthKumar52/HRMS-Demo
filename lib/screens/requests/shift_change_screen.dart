@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../animations/success_overlay.dart';
+import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/form_fields.dart';
@@ -40,20 +42,30 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_requestedDate == null) {
       showErrorSnackbar(context, 'Please select requested date');
       return;
     }
     setState(() => _isSubmitting = true);
-    Future.delayed(const Duration(seconds: 1), () {
+    try {
+      await ApiService.post('/shifts/request', {
+        'requesting_shift': _requestingShift ?? '',
+        'requested_date': (_requestedDate ?? DateTime.now()).toIso8601String().split('T')[0],
+        'requested_till': _requestedTill?.toIso8601String().split('T')[0],
+        'description': _descriptionController.text,
+      });
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      showSuccessSnackbar(context, 'Shift change request submitted');
+      await SuccessOverlay.show(context, message: 'Shift change request submitted');
       NotificationService.instance.showRequestApplied('Shift Change');
-      Navigator.pop(context);
-    });
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      showErrorSnackbar(context, 'Failed: ${e.toString().replaceAll('Exception: ', '')}');
+    }
   }
 
   @override

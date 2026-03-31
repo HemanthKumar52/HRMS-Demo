@@ -21,43 +21,86 @@ class NeuCard extends StatefulWidget {
   State<NeuCard> createState() => _NeuCardState();
 }
 
-class _NeuCardState extends State<NeuCard> with SingleTickerProviderStateMixin {
-  late AnimationController _scaleController;
-  late Animation<double> _scaleAnimation;
+class _NeuCardState extends State<NeuCard> with TickerProviderStateMixin {
+  late AnimationController _downController;
+  late AnimationController _upController;
+  late Animation<double> _scaleDown;
+  late Animation<double> _scaleUp;
+  bool _isDown = false;
 
   @override
   void initState() {
     super.initState();
-    _scaleController = AnimationController(
+    // Fast press down
+    _downController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 120),
+      duration: const Duration(milliseconds: 90),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.96).animate(
-      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
+    _scaleDown = Tween<double>(begin: 1.0, end: 0.94).animate(
+      CurvedAnimation(parent: _downController, curve: Curves.easeOut),
+    );
+
+    // Slower release with overshoot
+    _upController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 140),
+    );
+    _scaleUp = Tween<double>(begin: 0.94, end: 1.0).animate(
+      CurvedAnimation(parent: _upController, curve: Curves.easeOutBack),
     );
   }
 
   @override
   void dispose() {
-    _scaleController.dispose();
+    _downController.dispose();
+    _upController.dispose();
     super.dispose();
+  }
+
+  void _handleDown() {
+    if (widget.onTap == null) return;
+    _isDown = true;
+    _upController.reset();
+    _downController.forward();
+  }
+
+  void _handleUp() {
+    if (widget.onTap == null || !_isDown) return;
+    _isDown = false;
+    _downController.stop();
+    _upController.forward(from: 0);
+    widget.onTap?.call();
+  }
+
+  void _handleCancel() {
+    if (widget.onTap == null || !_isDown) return;
+    _isDown = false;
+    _downController.stop();
+    _upController.forward(from: 0);
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: widget.onTap != null ? (_) => _scaleController.forward() : null,
-      onTapUp: widget.onTap != null
-          ? (_) {
-              _scaleController.reverse();
-              widget.onTap?.call();
-            }
-          : null,
-      onTapCancel: widget.onTap != null ? () => _scaleController.reverse() : null,
-      child: ScaleTransition(
-        scale: widget.onTap != null
-            ? _scaleAnimation
-            : const AlwaysStoppedAnimation(1.0),
+      onTapDown: (_) => _handleDown(),
+      onTapUp: (_) => _handleUp(),
+      onTapCancel: _handleCancel,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_downController, _upController]),
+        builder: (context, child) {
+          double scale;
+          if (_downController.isAnimating || (_isDown && _downController.isCompleted)) {
+            scale = _scaleDown.value;
+          } else if (_upController.isAnimating) {
+            scale = _scaleUp.value;
+          } else {
+            scale = 1.0;
+          }
+          return Transform.scale(
+            scale: scale,
+            child: child,
+          );
+        },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: widget.pressed

@@ -135,29 +135,35 @@ class ProfileScreen extends StatelessWidget {
                   _InfoRow(
                     icon: Icons.email_outlined,
                     label: 'Email',
-                    value: 'venkat.kumar@ppulse.io',
+                    value: provider.userProfile['email'] ?? provider.email,
                   ),
                   const Divider(height: 24),
                   _InfoRow(
                     icon: Icons.phone_outlined,
                     label: 'Phone',
-                    value: '+91 98765 43210',
+                    value: (provider.userProfile['phone'] ?? '').toString().isNotEmpty
+                        ? provider.userProfile['phone']
+                        : 'Not set',
                   ),
                   const Divider(height: 24),
                   _InfoRow(
                     icon: Icons.cake_outlined,
                     label: 'Date of Birth',
-                    value: '15 Aug 1995',
+                    value: (provider.userProfile['dob'] ?? '').toString().isNotEmpty
+                        ? provider.userProfile['dob']
+                        : 'Not set',
                   ),
                   const Divider(height: 24),
                   _InfoRow(
                     icon: Icons.wc_outlined,
                     label: 'Gender',
-                    value: 'Male',
+                    value: (provider.userProfile['gender'] ?? '').toString().isNotEmpty
+                        ? provider.userProfile['gender']
+                        : 'Not set',
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms).slideY(begin: 0.12, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
             const SizedBox(height: 24),
 
             // Work Info section
@@ -169,35 +175,39 @@ class ProfileScreen extends StatelessWidget {
                   _InfoRow(
                     icon: Icons.badge_outlined,
                     label: 'Employee ID',
-                    value: provider.employeeId,
+                    value: provider.userProfile['employee_id'] ?? provider.employeeId,
                   ),
                   const Divider(height: 24),
                   _InfoRow(
                     icon: Icons.business_outlined,
                     label: 'Department',
-                    value: provider.department,
+                    value: provider.userProfile['department'] ?? provider.department,
                   ),
                   const Divider(height: 24),
                   _InfoRow(
                     icon: Icons.work_outline_rounded,
                     label: 'Designation',
-                    value: provider.designation,
+                    value: provider.userProfile['designation'] ?? provider.designation,
                   ),
                   const Divider(height: 24),
                   _InfoRow(
                     icon: Icons.calendar_today_outlined,
                     label: 'Date of Joining',
-                    value: '01 Mar 2024',
+                    value: (provider.userProfile['date_of_joining'] ?? '').toString().isNotEmpty
+                        ? provider.userProfile['date_of_joining']
+                        : 'Not set',
                   ),
                   const Divider(height: 24),
                   _InfoRow(
                     icon: Icons.supervisor_account_outlined,
                     label: 'Reporting Manager',
-                    value: 'Priya Sharma',
+                    value: provider.userProfile['reporting_manager'] != null
+                        ? provider.userProfile['reporting_manager']['name'] ?? 'Not assigned'
+                        : 'Not assigned',
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: 100.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 100.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: 100.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 100.ms, curve: Curves.easeOutCubic),
           ],
         ),
       ),

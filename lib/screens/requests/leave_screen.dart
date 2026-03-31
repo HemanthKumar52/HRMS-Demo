@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/status_chip.dart';
+import '../../services/api_service.dart';
 
 class LeaveScreen extends StatefulWidget {
   const LeaveScreen({super.key});
@@ -12,99 +13,75 @@ class LeaveScreen extends StatefulWidget {
 }
 
 class _LeaveScreenState extends State<LeaveScreen> {
-  final List<Map<String, dynamic>> _leaveBalances = [
-    {
-      'type': 'Casual Leave',
-      'used': 3,
-      'total': 12,
-      'color': AppColors.primary,
-      'icon': Icons.wb_sunny_rounded,
-    },
-    {
-      'type': 'Sick Leave',
-      'used': 1,
-      'total': 8,
-      'color': AppColors.danger,
-      'icon': Icons.local_hospital_rounded,
-    },
-    {
-      'type': 'Earned Leave',
-      'used': 5,
-      'total': 15,
-      'color': AppColors.success,
-      'icon': Icons.star_rounded,
-    },
-    {
-      'type': 'Comp Off',
-      'used': 0,
-      'total': 3,
-      'color': AppColors.orange,
-      'icon': Icons.swap_calls_rounded,
-    },
-  ];
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _leaveBalances = [];
+  List<Map<String, dynamic>> _leaveHistory = [];
 
-  final List<Map<String, dynamic>> _leaveHistory = [
-    {
-      'type': 'Casual Leave',
-      'startDate': 'Mar 10, 2026',
-      'endDate': 'Mar 12, 2026',
-      'days': 3,
-      'status': 'Pending',
-      'reason': 'Family function',
-      'appliedOn': 'Mar 5, 2026',
-      'approver': 'Rajesh Kumar',
-      'timeline': [
-        {'step': 'Applied', 'date': 'Mar 5, 2026', 'done': true},
-        {'step': 'Manager Review', 'date': 'Pending', 'done': false},
-        {'step': 'HR Approval', 'date': '', 'done': false},
-      ],
-    },
-    {
-      'type': 'Sick Leave',
-      'startDate': 'Feb 28, 2026',
-      'endDate': 'Feb 28, 2026',
-      'days': 1,
-      'status': 'Approved',
-      'reason': 'Not feeling well',
-      'appliedOn': 'Feb 27, 2026',
-      'approver': 'Rajesh Kumar',
-      'timeline': [
-        {'step': 'Applied', 'date': 'Feb 27, 2026', 'done': true},
-        {'step': 'Manager Review', 'date': 'Feb 27, 2026', 'done': true},
-        {'step': 'HR Approval', 'date': 'Feb 28, 2026', 'done': true},
-      ],
-    },
-    {
-      'type': 'Earned Leave',
-      'startDate': 'Feb 10, 2026',
-      'endDate': 'Feb 14, 2026',
-      'days': 5,
-      'status': 'Approved',
-      'reason': 'Vacation trip',
-      'appliedOn': 'Jan 28, 2026',
-      'approver': 'Rajesh Kumar',
-      'timeline': [
-        {'step': 'Applied', 'date': 'Jan 28, 2026', 'done': true},
-        {'step': 'Manager Review', 'date': 'Jan 29, 2026', 'done': true},
-        {'step': 'HR Approval', 'date': 'Jan 30, 2026', 'done': true},
-      ],
-    },
-    {
-      'type': 'Casual Leave',
-      'startDate': 'Jan 20, 2026',
-      'endDate': 'Jan 20, 2026',
-      'days': 1,
-      'status': 'Rejected',
-      'reason': 'Personal work',
-      'appliedOn': 'Jan 18, 2026',
-      'approver': 'Rajesh Kumar',
-      'timeline': [
-        {'step': 'Applied', 'date': 'Jan 18, 2026', 'done': true},
-        {'step': 'Manager Review', 'date': 'Jan 19, 2026', 'done': true},
-        {'step': 'Rejected', 'date': 'Jan 19, 2026', 'done': true},
-      ],
-    },
-  ];
+  static const _leaveTypeIcons = <String, IconData>{
+    'Casual Leave': Icons.wb_sunny_rounded,
+    'Sick Leave': Icons.local_hospital_rounded,
+    'Earned Leave': Icons.star_rounded,
+    'Comp Off': Icons.swap_calls_rounded,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final results = await Future.wait([
+        ApiService.getLeaveBalance(),
+        ApiService.get('/requests?type=Leave'),
+      ]);
+
+      final balanceResponse = results[0] as Map<String, dynamic>;
+      final historyResponse = results[1] as Map<String, dynamic>;
+
+      final balances = balanceResponse['balances'] as List<dynamic>? ?? [];
+      _leaveBalances = balances.map<Map<String, dynamic>>((b) {
+        final label = (b['label'] ?? '') as String;
+        final total = (b['total'] as num?)?.toInt() ?? 0;
+        final used = (b['used'] as num?)?.toInt() ?? 0;
+        return {
+          'type': label,
+          'used': used,
+          'total': total,
+          'color': _leaveTypeColor(label),
+          'icon': _leaveTypeIcons[label] ?? Icons.event_rounded,
+        };
+      }).toList();
+
+      final requests = historyResponse['requests'] as List<dynamic>? ?? [];
+      _leaveHistory = requests.map<Map<String, dynamic>>((r) {
+        final map = r as Map<String, dynamic>;
+        return {
+          'type': map['title'] ?? '',
+          'startDate': map['start_date'] ?? map['startDate'] ?? '',
+          'endDate': map['end_date'] ?? map['endDate'] ?? '',
+          'days': (map['days'] as num?)?.toInt() ?? 1,
+          'status': map['status'] ?? 'Pending',
+          'reason': map['description'] ?? '',
+          'appliedOn': map['applied_on'] ?? map['appliedOn'] ?? '',
+          'approver': map['approver'] ?? '',
+          'timeline': (map['timeline'] as List<dynamic>?)
+                  ?.map<Map<String, dynamic>>((t) => Map<String, dynamic>.from(t as Map))
+                  .toList() ??
+              [
+                {'step': 'Applied', 'date': map['applied_on'] ?? '', 'done': true},
+                {'step': 'Review', 'date': '', 'done': false},
+              ],
+        };
+      }).toList();
+    } catch (e) {
+      _leaveBalances = [];
+      _leaveHistory = [];
+    }
+    if (mounted) setState(() => _isLoading = false);
+  }
 
   Color _leaveTypeColor(String type) {
     switch (type) {
@@ -158,7 +135,9 @@ class _LeaveScreenState extends State<LeaveScreen> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,8 +197,8 @@ class _LeaveScreenState extends State<LeaveScreen> {
                               children: [
                                 TweenAnimationBuilder<int>(
                                   tween: IntTween(begin: 0, end: remaining),
-                                  duration: const Duration(milliseconds: 3500),
-                                  curve: Curves.easeOutExpo,
+                                  duration: const Duration(milliseconds: 1500),
+                                  curve: Curves.easeOutCubic,
                                   builder: (context, val, _) => Text(
                                     '$val',
                                     style: textTheme.headlineMedium?.copyWith(
@@ -239,8 +218,8 @@ class _LeaveScreenState extends State<LeaveScreen> {
                           ),
                           TweenAnimationBuilder<double>(
                             tween: Tween<double>(begin: 0, end: progress),
-                            duration: const Duration(milliseconds: 3500),
-                            curve: Curves.easeOutExpo,
+                            duration: const Duration(milliseconds: 1500),
+                            curve: Curves.easeOutCubic,
                             builder: (context, animVal, _) => SizedBox(
                               width: 40,
                               height: 40,
@@ -272,7 +251,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
                       ),
                     ],
                   ),
-                ).animate().fadeIn(duration: 400.ms, delay: (index * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (index * 80).ms, curve: Curves.easeOut);
+                ).animate().fadeIn(duration: 420.ms, delay: (index * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (index * 80).ms, curve: Curves.easeOutCubic);
               },
             ),
 
@@ -408,7 +387,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
                       ),
                     ],
                   ),
-                ).animate().fadeIn(duration: 400.ms, delay: (leaveIndex * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (leaveIndex * 80).ms, curve: Curves.easeOut),
+                ).animate().fadeIn(duration: 420.ms, delay: (leaveIndex * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (leaveIndex * 80).ms, curve: Curves.easeOutCubic),
               );
             }),
           ],

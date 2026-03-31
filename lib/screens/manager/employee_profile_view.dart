@@ -42,19 +42,19 @@ class EmployeeProfileView extends StatelessWidget {
               avatarColor: avatarColor,
               jobTitle: jobTitle,
               department: department,
-            ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms).slideY(begin: 0.12, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
             const SizedBox(height: 20),
 
             // Attendance Summary
-            _AttendanceSummarySection().animate().fadeIn(duration: 400.ms, delay: 80.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 80.ms, curve: Curves.easeOut),
+            _AttendanceSummarySection().animate().fadeIn(duration: 420.ms, delay: 80.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 80.ms, curve: Curves.easeOutCubic),
             const SizedBox(height: 16),
 
             // Leave History
-            _LeaveHistorySection().animate().fadeIn(duration: 400.ms, delay: 160.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 160.ms, curve: Curves.easeOut),
+            _LeaveHistorySection().animate().fadeIn(duration: 420.ms, delay: 160.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 160.ms, curve: Curves.easeOutCubic),
             const SizedBox(height: 16),
 
             // Performance Notes
-            _PerformanceNotesSection().animate().fadeIn(duration: 400.ms, delay: 240.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 240.ms, curve: Curves.easeOut),
+            _PerformanceNotesSection().animate().fadeIn(duration: 420.ms, delay: 240.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 240.ms, curve: Curves.easeOutCubic),
           ],
         ),
       ),
@@ -229,8 +229,8 @@ class _AttendanceSummarySection extends StatelessWidget {
               const Spacer(),
               TweenAnimationBuilder<int>(
                 tween: IntTween(begin: 0, end: 91),
-                duration: const Duration(milliseconds: 3500),
-                curve: Curves.easeOutExpo,
+                duration: const Duration(milliseconds: 1500),
+                curve: Curves.easeOutCubic,
                 builder: (context, value, _) => Text(
                   '$value%',
                   style: const TextStyle(
@@ -245,8 +245,8 @@ class _AttendanceSummarySection extends StatelessWidget {
           const SizedBox(height: 8),
           TweenAnimationBuilder<double>(
             tween: Tween<double>(begin: 0, end: 0.91),
-            duration: const Duration(milliseconds: 3500),
-            curve: Curves.easeOutExpo,
+            duration: const Duration(milliseconds: 1500),
+            curve: Curves.easeOutCubic,
             builder: (context, value, _) => ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: LinearProgressIndicator(
@@ -287,8 +287,8 @@ class _StatTile extends StatelessWidget {
         children: [
           TweenAnimationBuilder<int>(
             tween: IntTween(begin: 0, end: int.tryParse(value) ?? 0),
-            duration: const Duration(milliseconds: 3500),
-            curve: Curves.easeOutExpo,
+            duration: const Duration(milliseconds: 1500),
+            curve: Curves.easeOutCubic,
             builder: (context, val, _) => Text(
               '$val',
               style: TextStyle(

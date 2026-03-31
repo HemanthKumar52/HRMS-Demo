@@ -64,12 +64,8 @@ WSGI_APPLICATION = 'ppulse_backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'ppulse_db'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres'),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': '/Users/kaasprord/Projects/HRMS-Demo/shared_hrms.db',
     }
 }
 
@@ -115,9 +111,27 @@ SIMPLE_JWT = {
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
+# ═══════════════════════════════════════════
+# MICROSOFT SSO CONFIGURATION
+# ═══════════════════════════════════════════
+MICROSOFT_AUTH_CLIENT_ID = os.environ.get('MICROSOFT_AUTH_CLIENT_ID', '22a6161f-4a71-4a09-9b03-3eb026c8ec88')
+MICROSOFT_AUTH_CLIENT_SECRET = os.environ.get('MICROSOFT_AUTH_CLIENT_SECRET', 'Ij38Q~pO12WiOgwapwW2kGYVE7ouPBg3MCXKFch7')
+MICROSOFT_AUTH_TENANT_ID = os.environ.get('MICROSOFT_AUTH_TENANT_ID', '6cf47e8a-fa07-4cb7-bc19-c75fb013d1fb')
+MICROSOFT_AUTH_ENABLED = os.environ.get('MICROSOFT_AUTH_LOGIN_ENABLED', 'True') == 'True'
+
+# For mobile: deep link scheme callback
+MOBILE_AUTH_CALLBACK_SCHEME = 'ppulse'  # ppulse://auth-callback
+
+# ═══════════════════════════════════════════
+# GOOGLE SSO CONFIGURATION (hidden for now)
+# ═══════════════════════════════════════════
+GOOGLE_AUTH_CLIENT_ID = os.environ.get('GOOGLE_AUTH_CLIENT_ID', '')
+GOOGLE_AUTH_CLIENT_SECRET = os.environ.get('GOOGLE_AUTH_CLIENT_SECRET', '')
+GOOGLE_AUTH_ENABLED = os.environ.get('GOOGLE_AUTH_LOGIN_ENABLED', 'False') == 'True'
+
 AUTH_PASSWORD_HASHERS = [
-    'django.contrib.auth.hashers.Argon2PasswordHasher',
     'django.contrib.auth.hashers.PBKDF2PasswordHasher',
     'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
     'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
 ]

@@ -41,7 +41,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: (0 * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (0 * 80).ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: (0 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (0 * 80).ms, curve: Curves.easeOutCubic),
             const SizedBox(height: 12),
             NeuCard(
               child: Column(
@@ -82,7 +82,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: (1 * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (1 * 80).ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: (1 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (1 * 80).ms, curve: Curves.easeOutCubic),
             const SizedBox(height: 24),
 
             // Notifications section
@@ -91,7 +91,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: (2 * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (2 * 80).ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: (2 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (2 * 80).ms, curve: Curves.easeOutCubic),
             const SizedBox(height: 12),
             NeuCard(
               child: Row(
@@ -135,7 +135,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: (3 * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (3 * 80).ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: (3 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (3 * 80).ms, curve: Curves.easeOutCubic),
             const SizedBox(height: 24),
 
             // General section
@@ -144,7 +144,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: (4 * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (4 * 80).ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: (4 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (4 * 80).ms, curve: Curves.easeOutCubic),
             const SizedBox(height: 12),
             NeuCard(
               child: Column(
@@ -188,7 +188,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: (5 * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (5 * 80).ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: (5 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (5 * 80).ms, curve: Curves.easeOutCubic),
             const SizedBox(height: 24),
 
             // Legal section
@@ -197,7 +197,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: (6 * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (6 * 80).ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: (6 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (6 * 80).ms, curve: Curves.easeOutCubic),
             const SizedBox(height: 12),
             NeuCard(
               child: Column(
@@ -234,7 +234,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: (7 * 80).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (7 * 80).ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: (7 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (7 * 80).ms, curve: Curves.easeOutCubic),
           ],
         ),
       ),

@@ -71,7 +71,7 @@ class _HrEmployeeDirectoryState extends State<HrEmployeeDirectory> {
                 border: InputBorder.none,
               ),
             ),
-          ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
+          ).animate().fadeIn(duration: 420.ms).slideY(begin: 0.12, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
         ),
         const SizedBox(height: 12),
 
@@ -84,7 +84,7 @@ class _HrEmployeeDirectoryState extends State<HrEmployeeDirectory> {
               const SizedBox(width: 10),
               Expanded(child: _buildFilterDropdown('Status', _selectedStatus, _statuses, (v) => setState(() => _selectedStatus = v), isDark)),
             ],
-          ).animate().fadeIn(duration: 400.ms, delay: 80.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 80.ms, curve: Curves.easeOut),
+          ).animate().fadeIn(duration: 420.ms, delay: 80.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 80.ms, curve: Curves.easeOutCubic),
         ),
         const SizedBox(height: 8),
 
@@ -135,8 +135,8 @@ class _HrEmployeeDirectoryState extends State<HrEmployeeDirectory> {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: _EmployeeCard(employee: emp)
                     .animate()
-                    .fadeIn(duration: 400.ms, delay: ((index < 8 ? index : 8) * 60).ms)
-                    .slideY(begin: 0.06, end: 0, duration: 400.ms, delay: ((index < 8 ? index : 8) * 60).ms, curve: Curves.easeOut),
+                    .fadeIn(duration: 420.ms, delay: ((index < 8 ? index : 8) * 60).ms)
+                    .slideY(begin: 0.06, end: 0, duration: 420.ms, delay: ((index < 8 ? index : 8) * 60).ms, curve: Curves.easeOutCubic),
               );
             },
           ),

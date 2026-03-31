@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../animations/success_overlay.dart';
+import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../widgets/form_fields.dart';
 
@@ -42,7 +45,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedLeaveType == null) {
       showErrorSnackbar(context, 'Please select a leave type');
@@ -54,13 +57,25 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
     }
 
     setState(() => _isSubmitting = true);
-    Future.delayed(const Duration(seconds: 1), () {
+    try {
+      await ApiService.applyLeave({
+        'leave_type': _selectedLeaveType!,
+        'start_date': _startDate!.toIso8601String().split('T')[0],
+        'end_date': _endDate!.toIso8601String().split('T')[0],
+        'start_breakdown': (_startBreakdown ?? 'Full Day').toLowerCase().replaceAll(' ', '_'),
+        'end_breakdown': (_endBreakdown ?? 'Full Day').toLowerCase().replaceAll(' ', '_'),
+        'description': _descriptionController.text,
+      });
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      showSuccessSnackbar(context, 'Leave request submitted successfully');
       NotificationService.instance.showRequestApplied('Leave');
-      Navigator.pop(context);
-    });
+      await SuccessOverlay.show(context, message: 'Leave request submitted');
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      showErrorSnackbar(context, 'Failed: ${e.toString().replaceAll('Exception: ', '')}');
+    }
   }
 
   @override
@@ -144,7 +159,13 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
               formLabelGap,
               FormAttachment(
                 fileName: _attachmentName,
-                onTap: () => setState(() => _attachmentName = 'medical_certificate.pdf'),
+                onTap: () async {
+                  final picker = ImagePicker();
+                  final XFile? file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                  if (file != null) {
+                    setState(() => _attachmentName = file.name);
+                  }
+                },
                 onRemove: () => setState(() => _attachmentName = null),
               ),
               formFieldGap,

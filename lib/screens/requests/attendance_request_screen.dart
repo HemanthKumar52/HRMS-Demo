@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../animations/success_overlay.dart';
+import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/form_fields.dart';
@@ -76,20 +79,28 @@ class _AttendanceRequestScreenState extends State<AttendanceRequestScreen> {
     }
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_attendanceDate == null) {
       showErrorSnackbar(context, 'Please select attendance date');
       return;
     }
     setState(() => _isSubmitting = true);
-    Future.delayed(const Duration(seconds: 1), () {
+    try {
+      await ApiService.post('/attendance/regularize', {
+        'attendance_date': (_attendanceDate ?? DateTime.now()).toIso8601String().split('T')[0],
+        'description': _descriptionController.text,
+      });
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      showSuccessSnackbar(context, 'Attendance request submitted');
+      await SuccessOverlay.show(context, message: 'Attendance request submitted');
       NotificationService.instance.showRequestApplied('Attendance');
-      Navigator.pop(context);
-    });
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      showErrorSnackbar(context, 'Failed: ${e.toString().replaceAll('Exception: ', '')}');
+    }
   }
 
   @override
@@ -271,7 +282,11 @@ class _AttendanceRequestScreenState extends State<AttendanceRequestScreen> {
               formLabelGap,
               FormAttachment(
                 fileName: _attachmentName,
-                onTap: () => setState(() => _attachmentName = 'attendance_proof.jpg'),
+                onTap: () async {
+                  final picker = ImagePicker();
+                  final XFile? file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                  if (file != null) setState(() => _attachmentName = file.name);
+                },
                 onRemove: () => setState(() => _attachmentName = null),
               ),
               formFieldGap,

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../animations/motion.dart';
+import '../../services/api_service.dart';
 import '../auth/login_screen.dart';
+import '../shell_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -28,15 +32,37 @@ class _SplashScreenState extends State<SplashScreen>
       CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
     );
     _controller.forward();
-    Future.delayed(const Duration(seconds: 3), () {
+    _checkLoginStatus();
+  }
+
+  Future<void> _checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    final name = prefs.getString('user_name');
+
+    if (!mounted) return;
+
+    bool isValidSession = false;
+    if (token != null && name != null && name.isNotEmpty) {
+      // Validate the token by calling the API
+      try {
+        await ApiService.getCurrentUser();
+        isValidSession = true;
+      } catch (e) {
+        // Token expired or invalid - clear it
+        await prefs.remove('auth_token');
+        isValidSession = false;
+      }
+    }
+
+    if (!mounted) return;
+
+    Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => const LoginScreen(),
-            transitionDuration: const Duration(milliseconds: 600),
-            transitionsBuilder: (_, anim, __, child) =>
-                FadeTransition(opacity: anim, child: child),
+          Motion.pageRoute(
+            isValidSession ? const ShellScreen() : const LoginScreen(),
           ),
         );
       }
@@ -53,78 +79,49 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF1A1D2E),
-              Color(0xFF0D0F1A),
-              Color(0xFF1A0D2E),
-            ],
-          ),
-        ),
-        child: Center(
-          child: FadeTransition(
-            opacity: _fadeAnim,
-            child: ScaleTransition(
-              scale: _scaleAnim,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Animated pulse ring
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF4F8EF7), Color(0xFF7C5CFC)],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              const Color(0xFF4F8EF7).withValues(alpha: 0.4),
-                          blurRadius: 40,
-                          spreadRadius: 8,
+        color: const Color(0xFF0F0F1A),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -120, right: -100,
+              child: Container(width: 400, height: 400, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [const Color(0xFF6B3FA0).withValues(alpha: 0.5), const Color(0xFF3D1F6D).withValues(alpha: 0.15), Colors.transparent]))),
+            ),
+            Positioned(
+              bottom: -80, left: -100,
+              child: Container(width: 380, height: 380, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [const Color(0xFF6B3FA0).withValues(alpha: 0.45), const Color(0xFF3D1F6D).withValues(alpha: 0.1), Colors.transparent]))),
+            ),
+            Center(
+              child: FadeTransition(
+                opacity: _fadeAnim,
+                child: ScaleTransition(
+                  scale: _scaleAnim,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 100, height: 100,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF9B6DFF), Color(0xFF6B3FA0)]),
+                          boxShadow: [BoxShadow(color: const Color(0xFF9B6DFF).withValues(alpha: 0.5), blurRadius: 40, spreadRadius: 8)],
                         ),
-                      ],
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'PP',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 40,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 2,
-                        ),
+                        child: const Icon(Icons.person, color: Colors.white, size: 48),
                       ),
-                    ),
+                      const SizedBox(height: 28),
+                      RichText(
+                        text: const TextSpan(children: [
+                          TextSpan(text: 'p', style: TextStyle(color: Color(0xFF9B6DFF), fontSize: 36, fontWeight: FontWeight.w300, fontStyle: FontStyle.italic)),
+                          TextSpan(text: 'PULSE', style: TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w800, letterSpacing: 3)),
+                        ]),
+                      ),
+                      const SizedBox(height: 10),
+                      Text('HRMS, as it should be...', style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 15, letterSpacing: 0.5)),
+                    ],
                   ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'PPulse HRMS',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Your Workforce, Simplified',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

@@ -6,6 +6,7 @@ import '../auth/login_screen.dart';
 import 'profile_screen.dart';
 import '../directory/directory_screen.dart';
 import '../settings/settings_screen.dart';
+import '../../animations/motion.dart';
 
 void showProfileSheet(BuildContext context) {
   showModalBottomSheet(
@@ -166,8 +167,7 @@ class _ProfileSheet extends StatelessWidget {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (_) => const ProfileScreen()),
+                    Motion.pageRoute(const ProfileScreen()),
                   );
                 },
               ),
@@ -178,8 +178,7 @@ class _ProfileSheet extends StatelessWidget {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (_) => const DirectoryScreen()),
+                    Motion.pageRoute(const DirectoryScreen()),
                   );
                 },
               ),
@@ -190,8 +189,7 @@ class _ProfileSheet extends StatelessWidget {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (_) => const SettingsScreen()),
+                    Motion.pageRoute(const SettingsScreen()),
                   );
                 },
               ),
@@ -205,8 +203,7 @@ class _ProfileSheet extends StatelessWidget {
                   provider.logout();
                   Navigator.pushAndRemoveUntil(
                     context,
-                    MaterialPageRoute(
-                        builder: (_) => const LoginScreen()),
+                    Motion.pageRoute(const LoginScreen()),
                     (route) => false,
                   );
                 },

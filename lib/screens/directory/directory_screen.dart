@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../../animations/skeleton_loading.dart';
+import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 
@@ -12,89 +14,73 @@ class DirectoryScreen extends StatefulWidget {
 
 class _DirectoryScreenState extends State<DirectoryScreen> {
   String _searchQuery = '';
+  List<_Employee> _employees = [];
+  bool _isLoading = true;
 
-  // Only show employee's specific team hierarchy:
-  // Team members, Team Lead, Manager, HR, System Admin, CEO, CTO
-  static final _employees = <_Employee>[
-    // Leadership
-    _Employee(
-      name: 'Rajesh Iyer',
-      designation: 'CEO',
-      role: 'Leadership',
-      email: 'rajesh.iyer@ppulse.io',
-      initials: 'RI',
-      color: AppColors.danger,
-    ),
-    _Employee(
-      name: 'Sarah Chen',
-      designation: 'CTO',
-      role: 'Leadership',
-      email: 'sarah.chen@ppulse.io',
-      initials: 'SC',
-      color: AppColors.orange,
-    ),
-    // System Admin
-    _Employee(
-      name: 'Amit Desai',
-      designation: 'System Administrator',
-      role: 'IT Admin',
-      email: 'amit.desai@ppulse.io',
-      initials: 'AD',
-      color: AppColors.primaryDark,
-    ),
-    // HR
-    _Employee(
-      name: 'Deepika Joshi',
-      designation: 'HR Business Partner',
-      role: 'HR',
-      email: 'deepika.joshi@ppulse.io',
-      initials: 'DJ',
-      color: AppColors.pink,
-    ),
-    // Manager
-    _Employee(
-      name: 'James Wilson',
-      designation: 'Engineering Manager',
-      role: 'Manager',
-      email: 'james.wilson@ppulse.io',
-      initials: 'JW',
-      color: AppColors.secondary,
-    ),
-    // Team Lead
-    _Employee(
-      name: 'Priya Sharma',
-      designation: 'Team Lead',
-      role: 'Team Lead',
-      email: 'priya.sharma@ppulse.io',
-      initials: 'PS',
-      color: AppColors.primary,
-    ),
-    // Team Members
-    _Employee(
-      name: 'Venkat Kumar',
-      designation: 'Senior Software Engineer',
-      role: 'Team Member',
-      email: 'venkat.kumar@ppulse.io',
-      initials: 'VK',
-      color: AppColors.success,
-    ),
-    _Employee(
-      name: 'Kavya Menon',
-      designation: 'Software Engineer',
-      role: 'Team Member',
-      email: 'kavya.menon@ppulse.io',
-      initials: 'KM',
-      color: AppColors.primary,
-    ),
-    _Employee(
-      name: 'Rohan Das',
-      designation: 'DevOps Engineer',
-      role: 'Team Member',
-      email: 'rohan.das@ppulse.io',
-      initials: 'RD',
-      color: AppColors.orange,
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadEmployees();
+  }
+
+  String _getInitials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 2) {
+      return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+    }
+    return name.isNotEmpty ? name[0].toUpperCase() : '?';
+  }
+
+  Color _departmentColor(String department) {
+    switch (department.toLowerCase()) {
+      case 'engineering':
+        return AppColors.primary;
+      case 'hr':
+      case 'human resources':
+        return AppColors.pink;
+      case 'it':
+      case 'it admin':
+        return AppColors.primaryDark;
+      case 'management':
+      case 'leadership':
+        return AppColors.danger;
+      case 'finance':
+        return AppColors.success;
+      case 'marketing':
+        return AppColors.orange;
+      case 'design':
+        return AppColors.secondary;
+      default:
+        return AppColors.primary;
+    }
+  }
+
+  Future<void> _loadEmployees() async {
+    try {
+      final data = await ApiService.getEmployees();
+      if (!mounted) return;
+      setState(() {
+        _employees = data.map<_Employee>((e) {
+          final name = e['name'] ?? '';
+          final designation = e['designation'] ?? '';
+          final department = e['department'] ?? '';
+          final email = e['email'] ?? '';
+          return _Employee(
+            name: name,
+            designation: designation,
+            role: department,
+            email: email,
+            initials: _getInitials(name),
+            color: _departmentColor(department),
+          );
+        }).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    }
+  }
 
   List<_Employee> get _filtered {
     return _employees.where((e) {
@@ -165,7 +151,12 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
 
           // Employee list
           Expanded(
-            child: _filtered.isEmpty
+            child: _isLoading
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: SkeletonList(itemCount: 6, showCircle: true),
+                  )
+                : _filtered.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -274,7 +265,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                             ),
                           ],
                         ),
-                      ).animate().fadeIn(duration: 350.ms, delay: (index * 60).ms).slideX(begin: 0.05, end: 0, duration: 350.ms, delay: (index * 60).ms, curve: Curves.easeOut);
+                      ).animate().fadeIn(duration: 350.ms, delay: (index * 60).ms).slideX(begin: 0.05, end: 0, duration: 350.ms, delay: (index * 60).ms, curve: Curves.easeOutCubic);
                     },
                   ),
           ),

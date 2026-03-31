@@ -45,7 +45,7 @@ class _HrClaimsOverviewState extends State<HrClaimsOverview> with SingleTickerPr
               const SizedBox(width: 10),
               Expanded(child: _ClaimStatCard(label: 'Disbursed', value: '142', amount: '₹60,78,000', color: AppColors.primary)),
             ],
-          ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
+          ).animate().fadeIn(duration: 420.ms).slideY(begin: 0.12, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
         ),
         const SizedBox(height: 16),
 
@@ -71,7 +71,7 @@ class _HrClaimsOverviewState extends State<HrClaimsOverview> with SingleTickerPr
                 Tab(text: 'Disbursed'),
               ],
             ),
-          ).animate().fadeIn(duration: 400.ms, delay: 80.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 80.ms, curve: Curves.easeOut),
+          ).animate().fadeIn(duration: 420.ms, delay: 80.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 80.ms, curve: Curves.easeOutCubic),
         ),
         const SizedBox(height: 12),
 
@@ -136,7 +136,7 @@ class _HrClaimsOverviewState extends State<HrClaimsOverview> with SingleTickerPr
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: 160.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 160.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: 160.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 160.ms, curve: Curves.easeOutCubic),
           );
         }
 
@@ -145,8 +145,8 @@ class _HrClaimsOverviewState extends State<HrClaimsOverview> with SingleTickerPr
           padding: const EdgeInsets.only(bottom: 10),
           child: _ClaimCard(claim: claim, showActions: showActions)
               .animate()
-              .fadeIn(duration: 400.ms, delay: (240 + (index < 6 ? index : 6) * 60).ms)
-              .slideY(begin: 0.06, end: 0, duration: 400.ms, delay: (240 + (index < 6 ? index : 6) * 60).ms, curve: Curves.easeOut),
+              .fadeIn(duration: 420.ms, delay: (240 + (index < 6 ? index : 6) * 60).ms)
+              .slideY(begin: 0.06, end: 0, duration: 420.ms, delay: (240 + (index < 6 ? index : 6) * 60).ms, curve: Curves.easeOutCubic),
         );
       },
     );

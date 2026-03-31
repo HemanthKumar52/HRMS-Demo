@@ -1,5 +1,10 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
+from .sso_views import (
+    MicrosoftLoginView, MicrosoftCallbackView,
+    GoogleLoginView, GoogleCallbackView,
+    SSOStatusView,
+)
 from .views import (
     AuthView, RefreshTokenView, LogoutView, ChangePasswordView,
     UserMeView, AvatarUploadView,
@@ -14,6 +19,7 @@ from .views import (
     NotificationsView, NotificationReadView, NotificationsReadAllView, DeviceRegisterView,
     EmployeesListView, EmployeeDetailView,
     DashboardSummaryView, DashboardAnnouncementsView, DashboardAnalyticsView,
+    DepartmentsView, ShiftsListView, WorkTypesListView, LeaveTypesListView,
     SettingsView
 )
 
@@ -23,6 +29,13 @@ urlpatterns = [
     path('auth/refresh', RefreshTokenView.as_view(), name='token_refresh'),
     path('auth/logout', LogoutView.as_view(), name='logout'),
     path('auth/change-password', ChangePasswordView.as_view(), name='change_password'),
+
+    # SSO
+    path('auth/microsoft/login', MicrosoftLoginView.as_view(), name='microsoft_login'),
+    path('auth/microsoft/callback', MicrosoftCallbackView.as_view(), name='microsoft_callback'),
+    path('auth/google/login', GoogleLoginView.as_view(), name='google_login'),
+    path('auth/google/callback', GoogleCallbackView.as_view(), name='google_callback'),
+    path('auth/sso/status', SSOStatusView.as_view(), name='sso_status'),
     
     # User
     path('users/me', UserMeView.as_view(), name='user_me'),
@@ -61,7 +74,7 @@ urlpatterns = [
     path('requests/<int:pk>', RequestDetailView.as_view(), name='request_detail'),
     path('requests/<int:pk>/accept', RequestAcceptView.as_view(), name='request_accept'),
     path('requests/<int:pk>/reject', RequestRejectView.as_view(), name='request_reject'),
-    path('requests/<int:pk>', RequestCancelView.as_view(), name='request_cancel'),
+    path('requests/<int:pk>/cancel', RequestCancelView.as_view(), name='request_cancel'),
     
     # Payslips
     path('payslips', PayslipsView.as_view(), name='payslips'),
@@ -83,6 +96,12 @@ urlpatterns = [
     path('dashboard/announcements', DashboardAnnouncementsView.as_view(), name='dashboard_announcements'),
     path('dashboard/analytics', DashboardAnalyticsView.as_view(), name='dashboard_analytics'),
     
+    # Reference Data
+    path('departments', DepartmentsView.as_view(), name='departments'),
+    path('shifts', ShiftsListView.as_view(), name='shifts'),
+    path('work-types', WorkTypesListView.as_view(), name='work_types'),
+    path('leave-types', LeaveTypesListView.as_view(), name='leave_types'),
+
     # Settings
     path('settings', SettingsView.as_view(), name='settings'),
 ]

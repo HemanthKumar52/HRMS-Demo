@@ -199,16 +199,19 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   Row(
                     children: [
                       if (data['icon'] != null && data['color'] != null) ...[
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: (data['color'] as Color)
-                                .withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(14),
+                        Hero(
+                          tag: 'request_icon_${data['id']}_${data['type']}',
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: (data['color'] as Color)
+                                  .withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Icon(data['icon'] as IconData,
+                                color: data['color'] as Color, size: 22),
                           ),
-                          child: Icon(data['icon'] as IconData,
-                              color: data['color'] as Color, size: 22),
                         ),
                         const SizedBox(width: 14),
                       ],
@@ -236,11 +239,11 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms).slideY(
+            ).animate().fadeIn(duration: 420.ms).slideY(
                 begin: 0.08,
                 end: 0,
                 duration: 400.ms,
-                curve: Curves.easeOut),
+                curve: Curves.easeOutCubic),
 
             const SizedBox(height: 16),
 
@@ -305,12 +308,12 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   ],
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: 80.ms).slideY(
+            ).animate().fadeIn(duration: 420.ms, delay: 80.ms).slideY(
                 begin: 0.08,
                 end: 0,
                 duration: 400.ms,
                 delay: 80.ms,
-                curve: Curves.easeOut),
+                curve: Curves.easeOutCubic),
 
             const SizedBox(height: 16),
 
@@ -355,12 +358,12 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                     ),
                   ],
                 ),
-              ).animate().fadeIn(duration: 400.ms, delay: 120.ms).slideY(
+              ).animate().fadeIn(duration: 420.ms, delay: 120.ms).slideY(
                   begin: 0.08,
                   end: 0,
                   duration: 400.ms,
                   delay: 120.ms,
-                  curve: Curves.easeOut),
+                  curve: Curves.easeOutCubic),
               const SizedBox(height: 16),
             ],
 
@@ -525,12 +528,12 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   }),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: 160.ms).slideY(
+            ).animate().fadeIn(duration: 420.ms, delay: 160.ms).slideY(
                 begin: 0.08,
                 end: 0,
                 duration: 400.ms,
                 delay: 160.ms,
-                curve: Curves.easeOut),
+                curve: Curves.easeOutCubic),
 
             // ── Actions Section ──────────────────────────────────────
             if (isPending) ...[

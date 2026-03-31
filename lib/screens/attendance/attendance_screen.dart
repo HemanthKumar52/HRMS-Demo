@@ -3,7 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
+import '../../animations/skeleton_loading.dart';
 import '../../providers/app_provider.dart';
+import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/ppulse_footer.dart';
@@ -21,75 +23,108 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   late DateTime _currentMonth;
   late DateTime _today;
 
-  final int _workingDaysCount = 18;
-  final int _absentCount = 2;
-  final int _leaveCount = 1;
-  final int _holidayCount = 2;
+  int _workingDaysCount = 0;
+  int _absentCount = 0;
+  int _leaveCount = 0;
+  int _holidayCount = 0;
 
-  // Weekly hours data (Mon-Fri only)
-  final List<double> _weeklyHours = [8.5, 9.0, 7.5, 8.0, 8.5];
-
-  // Monthly week-wise attendance data
-  final List<_WeekData> _monthlyData = [
-    _WeekData(week: 'W1', present: 5, absent: 0, leave: 0),
-    _WeekData(week: 'W2', present: 4, absent: 1, leave: 0),
-    _WeekData(week: 'W3', present: 4, absent: 0, leave: 1),
-    _WeekData(week: 'W4', present: 5, absent: 1, leave: 0),
-  ];
-
-  // Punch time data for the week (Mon-Fri only)
-  final List<_PunchData> _punchData = [
-    _PunchData(day: 'Mon', punchIn: 9.0, punchOut: 17.5),
-    _PunchData(day: 'Tue', punchIn: 8.5, punchOut: 18.0),
-    _PunchData(day: 'Wed', punchIn: 9.2, punchOut: 16.7),
-    _PunchData(day: 'Thu', punchIn: 9.0, punchOut: 17.0),
-    _PunchData(day: 'Fri', punchIn: 8.8, punchOut: 17.3),
-  ];
+  List<double> _weeklyHours = [0, 0, 0, 0, 0];
+  List<_PunchData> _punchData = [];
 
   // Day status: 0=none, 1=working, 2=absent, 3=leave, 4=holiday
   final Map<int, int> _dayStatuses = {};
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _today = DateTime.now();
     _currentMonth = DateTime(_today.year, _today.month);
-    _generateMockStatuses();
+    _loadAttendanceData();
   }
 
   void _goToPreviousMonth() {
     setState(() {
       _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
-      _generateMockStatuses();
     });
+    _loadAttendanceData();
   }
 
   void _goToNextMonth() {
     setState(() {
       _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
-      _generateMockStatuses();
     });
+    _loadAttendanceData();
   }
 
-  void _generateMockStatuses() {
-    _dayStatuses.clear();
-    final daysInMonth =
-        DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
-    for (int day = 1; day <= daysInMonth; day++) {
-      final date = DateTime(_currentMonth.year, _currentMonth.month, day);
-      final weekday = date.weekday;
-      if (weekday == 6 || weekday == 7) continue; // skip weekends entirely
-      if (day == 5 || day == 19) {
-        _dayStatuses[day] = 4; // holiday
-      } else if (day == 12) {
-        _dayStatuses[day] = 3; // leave
-      } else if (day == 8 || day == 22) {
-        _dayStatuses[day] = 2; // absent
-      } else if (date.isBefore(_today) || date.isAtSameMomentAs(_today)) {
-        _dayStatuses[day] = 1; // working
-      } else {
-        _dayStatuses[day] = 0; // future
+  Future<void> _loadAttendanceData() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await ApiService.getAttendanceSummary(
+        month: _currentMonth.month,
+        year: _currentMonth.year,
+      );
+
+      final summary = data['summary'] ?? {};
+      final daily = List<Map<String, dynamic>>.from(data['daily'] ?? []);
+
+      _workingDaysCount = (summary['present'] ?? 0) as int;
+      _absentCount = (summary['absent'] ?? 0) as int;
+      _leaveCount = (summary['leave'] ?? 0) as int;
+      _holidayCount = (summary['holidays'] ?? 0) as int;
+
+      // Build day statuses from real data
+      _dayStatuses.clear();
+      for (var d in daily) {
+        final dateStr = d['date'] as String;
+        final day = int.parse(dateStr.split('-').last);
+        final status = d['status'] as String;
+        switch (status) {
+          case 'present':
+            _dayStatuses[day] = 1;
+            break;
+          case 'absent':
+            _dayStatuses[day] = 2;
+            break;
+          case 'leave':
+            _dayStatuses[day] = 3;
+            break;
+          case 'holiday':
+            _dayStatuses[day] = 4;
+            break;
+          case 'weekend':
+          case 'upcoming':
+          default:
+            _dayStatuses[day] = 0;
+        }
       }
+
+      // Load weekly data
+      try {
+        final weekData = await ApiService.getWeeklyAttendance();
+        final dailyHours = List<Map<String, dynamic>>.from(weekData['daily_hours'] ?? []);
+        _weeklyHours = dailyHours.take(5).map((d) {
+          final h = ((d['hours'] ?? 0) as num).toDouble();
+          return h.clamp(0.0, 24.0); // safety clamp
+        }).toList();
+        while (_weeklyHours.length < 5) _weeklyHours.add(0);
+
+        _punchData = List<Map<String, dynamic>>.from(weekData['punch_times'] ?? [])
+            .take(5)
+            .map((d) => _PunchData(
+                  day: d['day'] ?? '',
+                  punchIn: ((d['punch_in'] ?? 0) as num).toDouble(),
+                  punchOut: ((d['punch_out'] ?? 0) as num).toDouble(),
+                ))
+            .where((d) => d.punchIn > 0 || d.punchOut > 0) // filter empty entries
+            .toList();
+      } catch (e) {
+        debugPrint('Error fetching weekly: $e');
+      }
+    } catch (e) {
+      debugPrint('Error fetching attendance: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -131,7 +166,26 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SingleChildScrollView(
+      body: _isLoading
+          ? SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                children: [
+                  const SkeletonCard(lines: 4, showCircle: false),
+                  const SizedBox(height: 16),
+                  const SkeletonCard(lines: 3, showCircle: false),
+                  const SizedBox(height: 16),
+                  const SkeletonCard(lines: 5, showCircle: false),
+                  const SizedBox(height: 16),
+                  const SkeletonCard(lines: 3, showCircle: false),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadAttendanceData,
+              color: AppColors.primary,
+              child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,8 +193,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             // --- Clock In Card ---
             _ClockInCard(provider: provider)
                 .animate()
-                .fadeIn(duration: 400.ms)
-                .slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
+                .fadeIn(duration: 420.ms)
+                .slideY(begin: 0.12, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
 
             const SizedBox(height: 16),
 
@@ -193,7 +247,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: 80.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 80.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: 80.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 80.ms, curve: Curves.easeOutCubic),
 
             const SizedBox(height: 16),
 
@@ -225,7 +279,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   _buildLegend(tt),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: 160.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 160.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: 160.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 160.ms, curve: Curves.easeOutCubic),
 
             const SizedBox(height: 16),
 
@@ -284,7 +338,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: 240.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 240.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: 240.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 240.ms, curve: Curves.easeOutCubic),
 
             const SizedBox(height: 16),
 
@@ -304,12 +358,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  SizedBox(
+                  ClipRect(
+                    child: SizedBox(
                     height: 180,
                     child: BarChart(
                       BarChartData(
                         alignment: BarChartAlignment.spaceAround,
-                        maxY: 10,
+                        maxY: (_weeklyHours.reduce((a, b) => a > b ? a : b).clamp(1, 24) + 1).ceilToDouble().clamp(4, 24),
                         barTouchData: BarTouchData(
                           enabled: true,
                           touchCallback: (FlTouchEvent event, barTouchResponse) {
@@ -364,7 +419,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             sideTitles: SideTitles(
                               showTitles: true,
                               reservedSize: 30,
-                              interval: 2,
                               getTitlesWidget: (value, meta) {
                                 return Text(
                                   '${value.toInt()}h',
@@ -414,9 +468,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       curve: Curves.easeInOutCubic,
                     ),
                   ),
+                  ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: 320.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 320.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: 320.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 320.ms, curve: Curves.easeOutCubic),
 
             const SizedBox(height: 16),
 
@@ -444,10 +499,23 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  ..._punchData.map((data) => _buildTimelineRow(data, tt, isDark)),
+                  if (_punchData.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: Text(
+                          'No punch data this week',
+                          style: tt.bodyMedium?.copyWith(
+                            color: isDark ? Colors.white38 : Colors.black38,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    ..._punchData.map((data) => _buildTimelineRow(data, tt, isDark)),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 400.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: 400.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 400.ms, curve: Curves.easeOutCubic),
 
             const SizedBox(height: 16),
 
@@ -475,12 +543,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  SizedBox(
+                  ClipRect(
+                    child: SizedBox(
                     height: 200,
                     child: BarChart(
                       BarChartData(
                         alignment: BarChartAlignment.spaceAround,
-                        maxY: 6,
+                        maxY: (_workingDaysCount + 2).toDouble().clamp(5, 30),
                         barTouchData: BarTouchData(enabled: true),
                         titlesData: FlTitlesData(
                           show: true,
@@ -488,13 +557,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             sideTitles: SideTitles(
                               showTitles: true,
                               getTitlesWidget: (value, meta) {
-                                if (value.toInt() >= _monthlyData.length) return const SizedBox.shrink();
+                                final labels = ['Working', 'Absent', 'Leave'];
+                                if (value.toInt() >= labels.length) return const SizedBox.shrink();
                                 return Padding(
                                   padding: const EdgeInsets.only(top: 8),
                                   child: Text(
-                                    _monthlyData[value.toInt()].week,
+                                    labels[value.toInt()],
                                     style: tt.bodySmall
-                                        ?.copyWith(fontWeight: FontWeight.w600),
+                                        ?.copyWith(fontWeight: FontWeight.w600, fontSize: 10),
                                   ),
                                 );
                               },
@@ -531,48 +601,35 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           ),
                         ),
                         borderData: FlBorderData(show: false),
-                        barGroups: List.generate(_monthlyData.length, (i) {
-                          final data = _monthlyData[i];
-                          return BarChartGroupData(
-                            x: i,
-                            barRods: [
-                              BarChartRodData(
-                                toY: data.present.toDouble(),
-                                width: 16,
-                                borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(4)),
-                                color: AppColors.success,
-                              ),
-                              BarChartRodData(
-                                toY: data.absent.toDouble(),
-                                width: 16,
-                                borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(4)),
-                                color: AppColors.danger,
-                              ),
-                              BarChartRodData(
-                                toY: data.leave.toDouble(),
-                                width: 16,
-                                borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(4)),
-                                color: AppColors.orange,
-                              ),
-                            ],
-                          );
-                        }),
+                        barGroups: [
+                          BarChartGroupData(x: 0, barRods: [
+                            BarChartRodData(toY: _workingDaysCount.toDouble(), width: 24,
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(4)), color: AppColors.success),
+                          ]),
+                          BarChartGroupData(x: 1, barRods: [
+                            BarChartRodData(toY: _absentCount.toDouble(), width: 24,
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(4)), color: AppColors.danger),
+                          ]),
+                          BarChartGroupData(x: 2, barRods: [
+                            BarChartRodData(toY: _leaveCount.toDouble(), width: 24,
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(4)), color: AppColors.orange),
+                          ]),
+                        ],
                       ),
                       duration: const Duration(milliseconds: 800),
                       curve: Curves.easeInOutCubic,
                     ),
                   ),
+                  ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: 480.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 480.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: 480.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 480.ms, curve: Curves.easeOutCubic),
 
             const PPulseFooter(),
             const SizedBox(height: 80),
           ],
         ),
+      ),
       ),
     );
   }
@@ -679,8 +736,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           children: [
             TweenAnimationBuilder<int>(
               tween: IntTween(begin: 0, end: count),
-              duration: const Duration(milliseconds: 3500),
-              curve: Curves.easeOutExpo,
+              duration: const Duration(milliseconds: 1500),
+              curve: Curves.easeOutCubic,
               builder: (context, value, _) => Text(
                 '$value',
                 style: tt.headlineMedium?.copyWith(

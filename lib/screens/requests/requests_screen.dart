@@ -2,7 +2,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
+import '../../animations/motion.dart';
+import '../../animations/skeleton_loading.dart';
 import '../../providers/app_provider.dart';
+import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/status_chip.dart';
@@ -25,6 +28,7 @@ class RequestsScreen extends StatefulWidget {
 
 class _RequestsScreenState extends State<RequestsScreen> {
   String _activeFilter = 'All';
+  bool _isLoading = true;
 
   final List<String> _filterOptions = [
     'All',
@@ -49,162 +53,132 @@ class _RequestsScreenState extends State<RequestsScreen> {
   ];
 
   // Employee requests (visible to Manager/HR in Requested tab)
-  final List<Map<String, dynamic>> _employeeRequests = [
-    {
-      'id': 'REQ-101', 'type': 'Leave', 'title': 'Casual Leave', 'status': 'Pending',
-      'icon': Icons.beach_access_rounded, 'color': AppColors.primary,
-      'employeeName': 'Priya Sharma', 'subtitle': 'Mar 22 - Mar 23, 2026',
-      'appliedDate': '17 Mar 2026, 09:15 AM', 'description': 'Family function attendance.',
-    },
-    {
-      'id': 'REQ-102', 'type': 'Claims', 'title': 'Travel Reimbursement', 'status': 'Accepted',
-      'icon': Icons.receipt_long_rounded, 'color': AppColors.success,
-      'employeeName': 'Rahul Verma', 'subtitle': '₹12,500',
-      'appliedDate': '15 Mar 2026, 02:30 PM', 'description': 'Client visit to Bangalore office.',
-    },
-    {
-      'id': 'REQ-103', 'type': 'Tickets', 'title': 'VPN Access Issue', 'status': 'Pending',
-      'icon': Icons.confirmation_number_rounded, 'color': AppColors.orange,
-      'employeeName': 'Anita Desai', 'appliedDate': '16 Mar 2026, 11:00 AM',
-      'description': 'Unable to connect to company VPN from home network.',
-    },
-    {
-      'id': 'REQ-104', 'type': 'Shift Requests', 'title': 'Night Shift Swap', 'status': 'Rejected',
-      'icon': Icons.swap_horiz_rounded, 'color': AppColors.pink,
-      'employeeName': 'Karan Patel', 'appliedDate': '14 Mar 2026, 04:45 PM',
-      'description': 'Requesting night shift swap for personal reasons.',
-      'rejectionReason': 'Night shift is already at full capacity for the requested dates.',
-    },
-    {
-      'id': 'REQ-105', 'type': 'Work Type Requests', 'title': 'Work From Home', 'status': 'Accepted',
-      'icon': Icons.home_work_rounded, 'color': AppColors.secondary,
-      'employeeName': 'Sneha Gupta', 'subtitle': 'Mar 20 - Mar 21, 2026',
-      'appliedDate': '13 Mar 2026, 10:20 AM', 'description': 'Internet installation at new residence.',
-    },
-    {
-      'id': 'REQ-106', 'type': 'Attendance Requests', 'title': 'Check-in Correction', 'status': 'Pending',
-      'icon': Icons.fingerprint_rounded, 'color': AppColors.warning,
-      'employeeName': 'Amit Singh', 'appliedDate': '17 Mar 2026, 08:30 AM',
-      'description': 'Biometric did not register. Was present at office from 9 AM.',
-    },
-    {
-      'id': 'REQ-107', 'type': 'Leave', 'title': 'Sick Leave', 'status': 'Accepted',
-      'icon': Icons.local_hospital_rounded, 'color': AppColors.danger,
-      'employeeName': 'Divya Nair', 'subtitle': 'Mar 18, 2026',
-      'appliedDate': '18 Mar 2026, 07:45 AM', 'description': 'Fever and cold. Doctor advised rest.',
-    },
-    {
-      'id': 'REQ-108', 'type': 'Claims', 'title': 'Office Supplies', 'status': 'Pending',
-      'icon': Icons.receipt_long_rounded, 'color': AppColors.success,
-      'employeeName': 'Rohan Mehta', 'subtitle': '₹3,200',
-      'appliedDate': '16 Mar 2026, 03:15 PM', 'description': 'Purchased ergonomic keyboard and mouse.',
-    },
-    {
-      'id': 'REQ-109', 'type': 'Asset Requests', 'title': 'Laptop Request', 'status': 'Pending',
-      'icon': Icons.devices_rounded, 'color': AppColors.neonPurple,
-      'employeeName': 'Tanvi Shah', 'appliedDate': '15 Mar 2026, 01:00 PM',
-      'description': 'Current laptop has hardware issues. Requesting replacement.',
-    },
-    {
-      'id': 'REQ-110', 'type': 'Tickets', 'title': 'Email Config Issue', 'status': 'Accepted',
-      'icon': Icons.confirmation_number_rounded, 'color': AppColors.orange,
-      'employeeName': 'Vikram Joshi', 'appliedDate': '12 Mar 2026, 09:50 AM',
-      'description': 'Outlook not syncing emails on mobile device.',
-    },
-  ];
+  List<Map<String, dynamic>> _employeeRequests = [];
 
   // Manager/HR's own personal requests (My Requests tab)
-  final List<Map<String, dynamic>> _myRequests = [
-    {
-      'id': 'REQ-001', 'type': 'Leave', 'title': 'Casual Leave', 'status': 'Pending',
-      'icon': Icons.beach_access_rounded, 'color': AppColors.primary,
-      'subtitle': 'Mar 25 - Mar 26, 2026',
-      'appliedDate': '17 Mar 2026, 10:30 AM', 'description': 'Personal work.',
-    },
-    {
-      'id': 'REQ-002', 'type': 'Claims', 'title': 'Travel Reimbursement', 'status': 'Accepted',
-      'icon': Icons.receipt_long_rounded, 'color': AppColors.success,
-      'subtitle': '₹24,000',
-      'appliedDate': '10 Mar 2026, 11:00 AM', 'description': 'Client meeting travel expenses.',
-    },
-    {
-      'id': 'REQ-003', 'type': 'Leave', 'title': 'Earned Leave', 'status': 'Accepted',
-      'icon': Icons.beach_access_rounded, 'color': AppColors.primary,
-      'subtitle': 'Apr 10 - Apr 14, 2026',
-      'appliedDate': '05 Mar 2026, 09:00 AM', 'description': 'Annual family vacation.',
-    },
-  ];
+  List<Map<String, dynamic>> _myRequests = [];
 
   // Requested: user's own submitted requests (for Employee role)
-  final List<Map<String, dynamic>> _requests = [
-    {
-      'id': 'REQ-001', 'type': 'Leave', 'title': 'Casual Leave', 'status': 'Pending',
-      'icon': Icons.beach_access_rounded, 'color': AppColors.primary,
-      'subtitle': 'Mar 22 - Mar 23, 2026',
-      'appliedDate': '17 Mar 2026, 09:15 AM', 'description': 'Family function attendance.',
-    },
-    {
-      'id': 'REQ-002', 'type': 'Claims', 'title': 'Travel Reimbursement', 'status': 'Accepted',
-      'icon': Icons.receipt_long_rounded, 'color': AppColors.success,
-      'subtitle': '₹12,500',
-      'appliedDate': '15 Mar 2026, 02:30 PM', 'description': 'Client visit to Bangalore office.',
-    },
-    {
-      'id': 'REQ-003', 'type': 'Tickets', 'title': 'VPN Access Issue', 'status': 'Pending',
-      'icon': Icons.confirmation_number_rounded, 'color': AppColors.orange,
-      'appliedDate': '16 Mar 2026, 11:00 AM', 'description': 'Unable to connect to company VPN.',
-    },
-    {
-      'id': 'REQ-004', 'type': 'Shift Requests', 'title': 'Night Shift Swap', 'status': 'Rejected',
-      'icon': Icons.swap_horiz_rounded, 'color': AppColors.pink,
-      'appliedDate': '14 Mar 2026, 04:45 PM', 'description': 'Requesting night shift swap.',
-      'rejectionReason': 'Night shift is already at full capacity for the requested dates.',
-    },
-    {
-      'id': 'REQ-005', 'type': 'Work Type Requests', 'title': 'Work From Home', 'status': 'Accepted',
-      'icon': Icons.home_work_rounded, 'color': AppColors.secondary,
-      'subtitle': 'Mar 20 - Mar 21, 2026',
-      'appliedDate': '13 Mar 2026, 10:20 AM', 'description': 'Internet installation at new residence.',
-    },
-    {
-      'id': 'REQ-006', 'type': 'Attendance Requests', 'title': 'Check-in Correction', 'status': 'Pending',
-      'icon': Icons.fingerprint_rounded, 'color': AppColors.warning,
-      'appliedDate': '17 Mar 2026, 08:30 AM', 'description': 'Biometric did not register.',
-    },
-    {
-      'id': 'REQ-007', 'type': 'Leave', 'title': 'Sick Leave', 'status': 'Accepted',
-      'icon': Icons.local_hospital_rounded, 'color': AppColors.danger,
-      'subtitle': 'Mar 18, 2026',
-      'appliedDate': '18 Mar 2026, 07:45 AM', 'description': 'Fever and cold.',
-    },
-    {
-      'id': 'REQ-008', 'type': 'Claims', 'title': 'Office Supplies', 'status': 'Pending',
-      'icon': Icons.receipt_long_rounded, 'color': AppColors.success,
-      'subtitle': '₹3,200',
-      'appliedDate': '16 Mar 2026, 03:15 PM', 'description': 'Purchased ergonomic keyboard.',
-    },
-    {
-      'id': 'REQ-009', 'type': 'Asset Requests', 'title': 'Laptop Request', 'status': 'Pending',
-      'icon': Icons.devices_rounded, 'color': AppColors.neonPurple,
-      'appliedDate': '15 Mar 2026, 01:00 PM', 'description': 'Current laptop has hardware issues.',
-    },
-    {
-      'id': 'REQ-010', 'type': 'Tickets', 'title': 'Email Config Issue', 'status': 'Accepted',
-      'icon': Icons.confirmation_number_rounded, 'color': AppColors.orange,
-      'appliedDate': '12 Mar 2026, 09:50 AM', 'description': 'Outlook not syncing emails.',
-    },
-    {
-      'id': 'REQ-011', 'type': 'Leave', 'title': 'Earned Leave', 'status': 'Pending',
-      'icon': Icons.beach_access_rounded, 'color': AppColors.primary,
-      'subtitle': 'Apr 5 - Apr 7, 2026',
-      'appliedDate': '11 Mar 2026, 10:00 AM', 'description': 'Family vacation.',
-    },
-    {
-      'id': 'REQ-012', 'type': 'Work Type Requests', 'title': 'Hybrid Request', 'status': 'Pending',
-      'icon': Icons.home_work_rounded, 'color': AppColors.secondary,
-      'appliedDate': '17 Mar 2026, 11:30 AM', 'description': 'Requesting hybrid work mode.',
-    },
-  ];
+  List<Map<String, dynamic>> _requests = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRequests();
+  }
+
+  IconData _iconForType(String type) {
+    switch (type) {
+      case 'Leave':
+        return Icons.beach_access_rounded;
+      case 'Claims':
+        return Icons.receipt_long_rounded;
+      case 'Tickets':
+        return Icons.confirmation_number_rounded;
+      case 'Shift Requests':
+        return Icons.swap_horiz_rounded;
+      case 'Work Type Requests':
+        return Icons.home_work_rounded;
+      case 'Attendance Requests':
+        return Icons.fingerprint_rounded;
+      case 'Asset Requests':
+        return Icons.devices_rounded;
+      default:
+        return Icons.description_rounded;
+    }
+  }
+
+  Color _colorForType(String type) {
+    switch (type) {
+      case 'Leave':
+        return AppColors.primary;
+      case 'Claims':
+        return AppColors.success;
+      case 'Tickets':
+        return AppColors.orange;
+      case 'Shift Requests':
+        return AppColors.pink;
+      case 'Work Type Requests':
+        return AppColors.secondary;
+      case 'Attendance Requests':
+        return AppColors.warning;
+      case 'Asset Requests':
+        return AppColors.neonPurple;
+      default:
+        return AppColors.primary;
+    }
+  }
+
+  String _normalizeStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'requested':
+      case 'pending':
+        return 'Pending';
+      case 'approved':
+      case 'accepted':
+        return 'Accepted';
+      case 'rejected':
+      case 'denied':
+        return 'Rejected';
+      default:
+        return 'Pending';
+    }
+  }
+
+  Map<String, dynamic> _mapApiRequest(Map<String, dynamic> apiReq) {
+    final type = apiReq['type'] as String? ?? '';
+    final status = _normalizeStatus(apiReq['status'] as String? ?? '');
+    final employeeName = apiReq['employee'] is Map
+        ? (apiReq['employee'] as Map)['name'] as String?
+        : null;
+    return {
+      'id': apiReq['id']?.toString() ?? '',
+      'type': type,
+      'title': apiReq['title'] ?? '',
+      'status': status,
+      'icon': _iconForType(type),
+      'color': _colorForType(type),
+      if (employeeName != null) 'employeeName': employeeName,
+      if (apiReq['subtitle'] != null) 'subtitle': apiReq['subtitle'],
+      if (apiReq['applied_date'] != null) 'appliedDate': apiReq['applied_date'],
+      if (apiReq['appliedDate'] != null) 'appliedDate': apiReq['appliedDate'],
+      if (apiReq['description'] != null) 'description': apiReq['description'],
+      if (apiReq['rejection_reason'] != null) 'rejectionReason': apiReq['rejection_reason'],
+      if (apiReq['rejectionReason'] != null) 'rejectionReason': apiReq['rejectionReason'],
+    };
+  }
+
+  Future<void> _loadRequests() async {
+    try {
+      final data = await ApiService.get('/requests');
+      if (!mounted) return;
+      final rawRequests = (data['requests'] as List?) ?? [];
+      final allMapped = rawRequests
+          .map<Map<String, dynamic>>((r) => _mapApiRequest(Map<String, dynamic>.from(r)))
+          .toList();
+
+      // Separate into employee requests (have employeeName) and own requests
+      final employee = <Map<String, dynamic>>[];
+      final own = <Map<String, dynamic>>[];
+      for (final req in allMapped) {
+        if (req.containsKey('employeeName')) {
+          employee.add(req);
+        } else {
+          own.add(req);
+        }
+      }
+
+      setState(() {
+        _employeeRequests = employee;
+        _myRequests = own;
+        _requests = allMapped;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    }
+  }
 
   List<Map<String, dynamic>> get _filteredRequests {
     if (_activeFilter == 'All') return _requests;
@@ -259,7 +233,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
       default:
         return;
     }
-    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+    Navigator.push(context, Motion.pageRoute(screen));
   }
 
   void _showFilterSheet() {
@@ -393,12 +367,17 @@ class _RequestsScreenState extends State<RequestsScreen> {
 
           // Content based on selected chip
           Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              switchInCurve: Curves.easeOut,
-              switchOutCurve: Curves.easeIn,
-              child: _buildTabContent(safeIndex, isManagerOrHr, textTheme, isDark),
-            ),
+            child: _isLoading
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: SkeletonList(itemCount: 5, showCircle: false),
+                  )
+                : AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    switchInCurve: Curves.easeOut,
+                    switchOutCurve: Curves.easeIn,
+                    child: _buildTabContent(safeIndex, isManagerOrHr, textTheme, isDark),
+                  ),
           ),
         ],
       ),
@@ -522,7 +501,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                       Icon(Icons.chevron_right_rounded, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext, size: 22),
                     ],
                   ),
-                ).animate().fadeIn(duration: 350.ms, delay: (index * 60).ms).slideX(begin: 0.05, end: 0, duration: 350.ms, delay: (index * 60).ms, curve: Curves.easeOut),
+                ).animate().fadeIn(duration: 350.ms, delay: (index * 60).ms).slideX(begin: 0.05, end: 0, duration: 350.ms, delay: (index * 60).ms, curve: Curves.easeOutCubic),
               );
             },
           ),
@@ -660,17 +639,20 @@ class _RequestsScreenState extends State<RequestsScreen> {
       child: NeuCard(
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => RequestDetailScreen(requestData: request)),
+          Motion.pageRoute(RequestDetailScreen(requestData: request)),
         ).then((_) => setState(() {})),
         child: Row(
           children: [
-            Container(
-              width: 42, height: 42,
-              decoration: BoxDecoration(
-                color: (request['color'] as Color).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
+            Hero(
+              tag: 'request_icon_${request['id']}_${request['type']}',
+              child: Container(
+                width: 42, height: 42,
+                decoration: BoxDecoration(
+                  color: (request['color'] as Color).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(request['icon'] as IconData, color: request['color'] as Color, size: 20),
               ),
-              child: Icon(request['icon'] as IconData, color: request['color'] as Color, size: 20),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -713,7 +695,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
             Icon(Icons.chevron_right_rounded, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext, size: 20),
           ],
         ),
-      ).animate().fadeIn(duration: 350.ms, delay: (index * 60).ms).slideX(begin: 0.05, end: 0, duration: 350.ms, delay: (index * 60).ms, curve: Curves.easeOut),
+      ).animate().fadeIn(duration: 350.ms, delay: (index * 60).ms).slideX(begin: 0.05, end: 0, duration: 350.ms, delay: (index * 60).ms, curve: Curves.easeOutCubic),
     );
   }
 

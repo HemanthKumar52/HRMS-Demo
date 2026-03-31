@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../animations/success_overlay.dart';
+import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/form_fields.dart';
@@ -18,8 +21,9 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
   String? _selectedType;
   String? _selectedEmployee;
   DateTime? _date;
-  final List<String> _images = [];
+  final List<XFile> _images = [];
   bool _isSubmitting = false;
+  final ImagePicker _picker = ImagePicker();
 
   final List<String> _claimTypes = [
     'Travel Reimbursement',
@@ -44,21 +48,61 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
     super.dispose();
   }
 
-  void _addImage() {
-    setState(() => _images.add('receipt_${_images.length + 1}.jpg'));
-    showSuccessSnackbar(context, 'Image added successfully');
+  Future<void> _addImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 80,
+      );
+      if (image != null) {
+        setState(() => _images.add(image));
+        if (mounted) showSuccessSnackbar(context, 'Image added successfully');
+      }
+    } catch (e) {
+      if (mounted) showErrorSnackbar(context, 'Could not pick image');
+    }
   }
 
-  void _submit() {
+  Future<void> _takePhoto() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 80,
+      );
+      if (image != null) {
+        setState(() => _images.add(image));
+        if (mounted) showSuccessSnackbar(context, 'Photo captured');
+      }
+    } catch (e) {
+      if (mounted) showErrorSnackbar(context, 'Could not take photo');
+    }
+  }
+
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSubmitting = true);
-    Future.delayed(const Duration(seconds: 1), () {
+    try {
+      await ApiService.submitClaim({
+        'title': _titleController.text,
+        'claim_type': _selectedType ?? 'other',
+        'amount': 0,
+        'date': (_date ?? DateTime.now()).toIso8601String().split('T')[0],
+        'description': _descriptionController.text,
+      });
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      showSuccessSnackbar(context, 'Claim submitted successfully');
+      await SuccessOverlay.show(context, message: 'Claim submitted successfully');
       NotificationService.instance.showRequestApplied('Claim');
-      Navigator.pop(context);
-    });
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      showErrorSnackbar(context, 'Failed: ${e.toString().replaceAll('Exception: ', '')}');
+    }
   }
 
   @override
@@ -139,7 +183,7 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
                         children: [
                           const Icon(Icons.image_rounded, size: 18, color: AppColors.success),
                           const SizedBox(width: 6),
-                          Text(entry.value, style: textTheme.bodySmall),
+                          Text(entry.value.name, style: textTheme.bodySmall),
                           const SizedBox(width: 6),
                           GestureDetector(
                             onTap: () => setState(() => _images.removeAt(entry.key)),

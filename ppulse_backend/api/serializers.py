@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate
 from .models import (
     User, Employee, Department, JobPosition, EmployeeWorkInformation,
     Shift, WorkType, Attendance, LeaveType, AvailableLeave, LeaveRequest,
-    ClaimRequest, Ticket, ShiftRequestModel, WorkTypeRequestModel, 
+    ClaimRequest, Ticket, ShiftRequestModel, WorkTypeRequestModel,
     AttendanceRequestModel, AssetCategoryModel, AssetRequestModel,
     Payslip, NotificationModel, Announcement, DeviceTokenModel, UserSettingsModel
 )
@@ -12,13 +12,12 @@ from .models import (
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone', 'avatar']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'is_staff', 'is_active']
 
 
 class EmployeeSerializer(serializers.ModelSerializer):
-    name = serializers.CharField(source='employee_first_name', read_only=True)
-    reporting_manager = serializers.SerializerMethodField()
-    
+    name = serializers.SerializerMethodField()
+
     class Meta:
         model = Employee
         fields = [
@@ -26,41 +25,19 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'employee_profile', 'email', 'phone', 'address', 'country', 'state', 'city',
             'zip', 'dob', 'gender', 'qualification', 'marital_status', 'children',
             'emergency_contact', 'emergency_contact_name', 'emergency_contact_relation',
-            'is_active', 'employee_user_id', 'reporting_manager', 'created_at', 'updated_at'
+            'is_active', 'employee_user_id_id', 'experience'
         ]
-    
-    def get_reporting_manager(self, obj):
-        try:
-            work_info = EmployeeWorkInformation.objects.get(employee_id_id=obj.employee_user_id_id)
-            if work_info.reporting_manager:
-                return {
-                    'id': work_info.reporting_manager.id,
-                    'name': work_info.reporting_manager.name,
-                    'employee_id': work_info.reporting_manager.badge_id
-                }
-        except EmployeeWorkInformation.DoesNotExist:
-            pass
-        return None
+
+    def get_name(self, obj):
+        return f"{obj.employee_first_name or ''} {obj.employee_last_name or ''}".strip()
 
 
 class EmployeeWorkInfoSerializer(serializers.ModelSerializer):
-    employee = EmployeeSerializer(read_only=True)
-    department_name = serializers.CharField(source='department.name', read_only=True)
-    designation = serializers.CharField(source='job_position.title', read_only=True)
-    reporting_manager = serializers.SerializerMethodField()
-    
     class Meta:
         model = EmployeeWorkInformation
-        fields = ['id', 'employee', 'email', 'mobile', 'date_joining', 'department', 
-                  'department_name', 'job_position', 'designation', 'reporting_manager', 'work_type']
-    
-    def get_reporting_manager(self, obj):
-        if obj.reporting_manager:
-            return {
-                'id': obj.reporting_manager.id,
-                'name': obj.reporting_manager.name
-            }
-        return None
+        fields = ['id', 'email', 'mobile', 'date_joining', 'department_id_id',
+                  'job_position_id_id', 'reporting_manager_id_id', 'work_type_id_id',
+                  'basic_salary', 'shift_id_id']
 
 
 class DepartmentSerializer(serializers.ModelSerializer):
@@ -88,9 +65,6 @@ class WorkTypeSerializer(serializers.ModelSerializer):
 
 
 class AttendanceSerializer(serializers.ModelSerializer):
-    employee_name = serializers.CharField(source='employee.name', read_only=True)
-    employee_id = serializers.CharField(source='employee.badge_id', read_only=True)
-    
     class Meta:
         model = Attendance
         fields = '__all__'
@@ -103,20 +77,13 @@ class LeaveTypeSerializer(serializers.ModelSerializer):
 
 
 class AvailableLeaveSerializer(serializers.ModelSerializer):
-    type = serializers.CharField(source='leave_type.code')
-    label = serializers.CharField(source='leave_type.name')
-    total = serializers.FloatField(source='total_leave_days')
-    used = serializers.FloatField(source='used_days')
-    remaining = serializers.FloatField(source='remaining_days')
-    
     class Meta:
         model = AvailableLeave
-        fields = ['type', 'label', 'total', 'used', 'remaining']
+        fields = ['id', 'available_days', 'carryforward_days', 'total_leave_days',
+                  'assigned_date', 'employee_id_id', 'leave_type_id_id']
 
 
 class LeaveRequestSerializer(serializers.ModelSerializer):
-    leave_type_name = serializers.CharField(source='leave_type.name', read_only=True)
-    
     class Meta:
         model = LeaveRequest
         fields = '__all__'
@@ -135,17 +102,9 @@ class TicketSerializer(serializers.ModelSerializer):
 
 
 class ShiftRequestSerializer(serializers.ModelSerializer):
-    shift_details = serializers.SerializerMethodField()
-    
     class Meta:
         model = ShiftRequestModel
         fields = '__all__'
-    
-    def get_shift_details(self, obj):
-        return {
-            'name': obj.requesting_shift.employee_shift,
-            'timing': obj.requesting_shift.full_time
-        }
 
 
 class WorkTypeRequestSerializer(serializers.ModelSerializer):
@@ -167,30 +126,10 @@ class AssetRequestSerializer(serializers.ModelSerializer):
 
 
 class PayslipSerializer(serializers.ModelSerializer):
-    earnings = serializers.SerializerMethodField()
-    deductions = serializers.SerializerMethodField()
-    
     class Meta:
         model = Payslip
         fields = ['id', 'month', 'year', 'month_label', 'gross_salary', 'net_pay',
-                  'total_deductions', 'earnings', 'deductions', 'paid_on', 'pdf_url']
-    
-    def get_earnings(self, obj):
-        return {
-            'basic': float(obj.basic),
-            'hra': float(obj.hra),
-            'da': float(obj.da),
-            'special_allowance': float(obj.special_allowance),
-            'other_allowance': float(obj.other_allowance)
-        }
-    
-    def get_deductions(self, obj):
-        return {
-            'provident_fund': float(obj.provident_fund),
-            'esi': float(obj.esi),
-            'professional_tax': float(obj.professional_tax),
-            'income_tax': float(obj.income_tax)
-        }
+                  'employee_id_id']
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -216,11 +155,11 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
     device_id = serializers.CharField(required=False)
     fcm_token = serializers.CharField(required=False)
-    
+
     def validate(self, data):
         username = data.get('username')
         password = data.get('password')
-        
+
         if username and password:
             user = authenticate(username=username, password=password)
             if not user:
@@ -230,7 +169,7 @@ class LoginSerializer(serializers.Serializer):
             data['user'] = user
         else:
             raise serializers.ValidationError('Username and password are required')
-        
+
         return data
 
 
@@ -281,14 +220,14 @@ class ClaimSubmitSerializer(serializers.Serializer):
 class TicketRaiseSerializer(serializers.Serializer):
     title = serializers.CharField()
     description = serializers.CharField()
-    ticket_type = serializers.CharField()
-    priority = serializers.CharField()
+    ticket_type = serializers.CharField(required=False, default='General')
+    priority = serializers.CharField(required=False, default='medium')
     assign_department = serializers.CharField(required=False)
     cc_emails = serializers.ListField(child=serializers.EmailField(), required=False)
     attachments = serializers.ListField(child=serializers.FileField(), required=False)
 
 
-class ShiftRequestSerializer(serializers.Serializer):
+class ShiftRequestCreateSerializer(serializers.Serializer):
     requesting_shift = serializers.CharField()
     requested_date = serializers.DateField()
     requested_till = serializers.DateField(required=False)
@@ -296,7 +235,7 @@ class ShiftRequestSerializer(serializers.Serializer):
     is_permanent = serializers.BooleanField(required=False)
 
 
-class WorkTypeRequestSerializer(serializers.Serializer):
+class WorkTypeRequestCreateSerializer(serializers.Serializer):
     work_type = serializers.CharField()
     requested_date = serializers.DateField()
     requested_till = serializers.DateField(required=False)
@@ -319,7 +258,7 @@ class AttendanceRegularizeSerializer(serializers.Serializer):
     attachment = serializers.FileField(required=False)
 
 
-class AssetRequestSerializer(serializers.Serializer):
+class AssetRequestCreateSerializer(serializers.Serializer):
     asset_category = serializers.CharField()
     description = serializers.CharField(required=False)
 

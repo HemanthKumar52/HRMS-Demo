@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../animations/success_overlay.dart';
+import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/form_fields.dart';
@@ -42,16 +44,24 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSubmitting = true);
-    Future.delayed(const Duration(seconds: 1), () {
+    try {
+      await ApiService.post('/assets/request', {
+        'asset_category': _selectedCategory ?? '',
+        'description': _descriptionController.text,
+      });
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      showSuccessSnackbar(context, 'Asset request submitted');
+      await SuccessOverlay.show(context, message: 'Asset request submitted');
       NotificationService.instance.showRequestApplied('Asset');
-      Navigator.pop(context);
-    });
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      showErrorSnackbar(context, 'Failed: ${e.toString().replaceAll('Exception: ', '')}');
+    }
   }
 
   @override

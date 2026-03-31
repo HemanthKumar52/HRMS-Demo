@@ -65,7 +65,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen>
               ],
             ),
           ),
-        ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
+        ).animate().fadeIn(duration: 420.ms).slideY(begin: 0.12, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
         const SizedBox(height: 8),
 
         // Tab Views
@@ -385,8 +385,8 @@ class _LeaveTab extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 14),
           child: _ApprovalCard(request: req)
               .animate()
-              .fadeIn(duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms)
-              .slideY(begin: 0.06, end: 0, duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOut),
+              .fadeIn(duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms)
+              .slideY(begin: 0.06, end: 0, duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOutCubic),
         );
       },
     );
@@ -587,8 +587,8 @@ class _ClaimsTab extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 14),
           child: _ClaimCard(claim: claim)
               .animate()
-              .fadeIn(duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms)
-              .slideY(begin: 0.06, end: 0, duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOut),
+              .fadeIn(duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms)
+              .slideY(begin: 0.06, end: 0, duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOutCubic),
         );
       },
     );
@@ -796,8 +796,8 @@ class _TicketsTab extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 14),
           child: _TicketCard(ticket: ticket)
               .animate()
-              .fadeIn(duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms)
-              .slideY(begin: 0.06, end: 0, duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOut),
+              .fadeIn(duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms)
+              .slideY(begin: 0.06, end: 0, duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOutCubic),
         );
       },
     );
@@ -1045,8 +1045,8 @@ class _WorkTypeTab extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 14),
           child: _WorkTypeCard(request: req)
               .animate()
-              .fadeIn(duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms)
-              .slideY(begin: 0.06, end: 0, duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOut),
+              .fadeIn(duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms)
+              .slideY(begin: 0.06, end: 0, duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOutCubic),
         );
       },
     );
@@ -1268,8 +1268,8 @@ class _RegularizationTab extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 14),
           child: _RegularizationCard(request: req)
               .animate()
-              .fadeIn(duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms)
-              .slideY(begin: 0.06, end: 0, duration: 400.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOut),
+              .fadeIn(duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms)
+              .slideY(begin: 0.06, end: 0, duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOutCubic),
         );
       },
     );

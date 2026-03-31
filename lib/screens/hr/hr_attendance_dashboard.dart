@@ -58,7 +58,7 @@ class _HrAttendanceDashboardState extends State<HrAttendanceDashboard> {
                 );
               }).toList(),
             ),
-          ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
+          ).animate().fadeIn(duration: 420.ms).slideY(begin: 0.12, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
           const SizedBox(height: 20),
 
           // Overall Attendance Summary
@@ -68,7 +68,7 @@ class _HrAttendanceDashboardState extends State<HrAttendanceDashboard> {
               const SizedBox(width: 10),
               Expanded(child: _SummaryCard(label: 'Absent', value: '18', pct: '1.5%', color: AppColors.danger, icon: Icons.cancel)),
             ],
-          ).animate().fadeIn(duration: 400.ms, delay: 80.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 80.ms, curve: Curves.easeOut),
+          ).animate().fadeIn(duration: 420.ms, delay: 80.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 80.ms, curve: Curves.easeOutCubic),
           const SizedBox(height: 10),
           Row(
             children: [
@@ -76,12 +76,12 @@ class _HrAttendanceDashboardState extends State<HrAttendanceDashboard> {
               const SizedBox(width: 10),
               Expanded(child: _SummaryCard(label: 'WFH', value: '10', pct: '0.8%', color: AppColors.primary, icon: Icons.home_work)),
             ],
-          ).animate().fadeIn(duration: 400.ms, delay: 160.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 160.ms, curve: Curves.easeOut),
+          ).animate().fadeIn(duration: 420.ms, delay: 160.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 160.ms, curve: Curves.easeOutCubic),
           const SizedBox(height: 24),
 
           // Department-wise Attendance
           Text('Department-wise Attendance', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))
-              .animate().fadeIn(duration: 400.ms, delay: 240.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 240.ms, curve: Curves.easeOut),
+              .animate().fadeIn(duration: 420.ms, delay: 240.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 240.ms, curve: Curves.easeOutCubic),
           const SizedBox(height: 12),
           NeuCard(
             padding: const EdgeInsets.all(20),
@@ -98,12 +98,12 @@ class _HrAttendanceDashboardState extends State<HrAttendanceDashboard> {
                 _DeptAttendanceRow(dept: 'Finance', present: 95, total: 100, color: AppColors.pink, isDark: isDark),
               ],
             ),
-          ).animate().fadeIn(duration: 400.ms, delay: 320.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 320.ms, curve: Curves.easeOut),
+          ).animate().fadeIn(duration: 420.ms, delay: 320.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 320.ms, curve: Curves.easeOutCubic),
           const SizedBox(height: 24),
 
           // Weekly Attendance Heatmap
           Text('Weekly Attendance Rate', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))
-              .animate().fadeIn(duration: 400.ms, delay: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 400.ms, curve: Curves.easeOut),
+              .animate().fadeIn(duration: 420.ms, delay: 400.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 400.ms, curve: Curves.easeOutCubic),
           const SizedBox(height: 12),
           NeuCard(
             padding: const EdgeInsets.all(16),
@@ -153,12 +153,12 @@ class _HrAttendanceDashboardState extends State<HrAttendanceDashboard> {
                 curve: Curves.easeInOutCubic,
               ),
             ),
-          ).animate().fadeIn(duration: 400.ms, delay: 480.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 480.ms, curve: Curves.easeOut),
+          ).animate().fadeIn(duration: 420.ms, delay: 480.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 480.ms, curve: Curves.easeOutCubic),
           const SizedBox(height: 24),
 
           // Attendance Anomalies
           Text('Attendance Anomalies', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))
-              .animate().fadeIn(duration: 400.ms, delay: 560.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 560.ms, curve: Curves.easeOut),
+              .animate().fadeIn(duration: 420.ms, delay: 560.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 560.ms, curve: Curves.easeOutCubic),
           const SizedBox(height: 12),
           ..._buildAnomalies(theme, isDark),
           const SizedBox(height: 24),
@@ -196,7 +196,7 @@ class _HrAttendanceDashboardState extends State<HrAttendanceDashboard> {
                 ),
               ],
             ),
-          ).animate().fadeIn(duration: 400.ms, delay: 720.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 720.ms, curve: Curves.easeOut),
+          ).animate().fadeIn(duration: 420.ms, delay: 720.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 720.ms, curve: Curves.easeOutCubic),
           const SizedBox(height: 20),
         ],
       ),
@@ -264,7 +264,7 @@ class _HrAttendanceDashboardState extends State<HrAttendanceDashboard> {
               Icon(Icons.chevron_right_rounded, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext, size: 20),
             ],
           ),
-        ).animate().fadeIn(duration: 400.ms, delay: (640 + i * 60).ms).slideY(begin: 0.06, end: 0, duration: 400.ms, delay: (640 + i * 60).ms, curve: Curves.easeOut),
+        ).animate().fadeIn(duration: 420.ms, delay: (640 + i * 60).ms).slideY(begin: 0.06, end: 0, duration: 420.ms, delay: (640 + i * 60).ms, curve: Curves.easeOutCubic),
       );
     }).toList();
   }
@@ -320,8 +320,8 @@ class _SummaryCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 TweenAnimationBuilder<int>(
                   tween: IntTween(begin: 0, end: _numericValue),
-                  duration: const Duration(milliseconds: 3500),
-                  curve: Curves.easeOutExpo,
+                  duration: const Duration(milliseconds: 1500),
+                  curve: Curves.easeOutCubic,
                   builder: (context, val, _) => Text(_formatValue(val), style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: color)),
                 ),
               ],

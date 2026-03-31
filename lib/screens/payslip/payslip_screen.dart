@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import '../../animations/motion.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/ppulse_footer.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'payslip_viewer_screen.dart';
+import '../../services/api_service.dart';
 
 class PayslipScreen extends StatefulWidget {
   const PayslipScreen({super.key});
@@ -21,10 +23,44 @@ class _PayslipScreenState extends State<PayslipScreen> {
   int _touchedTotalIndex = -1;
   int _selectedYear = 2026;
 
+  bool _isLoading = true;
+  List<dynamic> _payslips = [];
+  Map<String, dynamic> _selectedPayslip = {};
+
   final List<String> _months = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPayslips();
+  }
+
+  Future<void> _loadPayslips() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await ApiService.get('/payslips/list?year=$_selectedYear');
+      _payslips = response['payslips'] ?? [];
+      // Auto-load details for the currently selected month
+      await _loadPayslipDetails();
+    } catch (e) {
+      _payslips = [];
+      _selectedPayslip = {};
+    }
+    if (mounted) setState(() => _isLoading = false);
+  }
+
+  Future<void> _loadPayslipDetails() async {
+    try {
+      final m = _selectedMonthIndex + 1;
+      final response = await ApiService.get('/payslips?month=$m&year=$_selectedYear');
+      _selectedPayslip = response is Map<String, dynamic> ? response : {};
+    } catch (e) {
+      _selectedPayslip = {};
+    }
+  }
 
   void _goToPreviousMonth() {
     setState(() {
@@ -35,6 +71,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
         _selectedMonthIndex--;
       }
     });
+    _loadPayslips();
   }
 
   void _goToNextMonth() {
@@ -46,24 +83,39 @@ class _PayslipScreenState extends State<PayslipScreen> {
         _selectedMonthIndex++;
       }
     });
+    _loadPayslips();
   }
 
-  final double _grossSalary = 85000;
-  final double _totalDeductions = 18350;
+  double get _grossSalary => (_selectedPayslip['gross_pay'] as num?)?.toDouble() ?? 0;
+  double get _totalDeductions => (_selectedPayslip['deduction'] as num?)?.toDouble() ?? 0;
+  double get _basicPay => (_selectedPayslip['basic_pay'] as num?)?.toDouble() ?? 0;
 
-  final List<_SalaryItem> _earnings = [
-    _SalaryItem('Basic', 42500, AppColors.primary),
-    _SalaryItem('HRA', 17000, AppColors.success),
-    _SalaryItem('DA', 12750, AppColors.orange),
-    _SalaryItem('Special Allowance', 12750, AppColors.secondary),
-  ];
+  List<_SalaryItem> get _earnings {
+    if (_grossSalary == 0) return [];
+    final hra = _basicPay * 0.4;
+    final da = _basicPay * 0.3;
+    final special = _grossSalary - _basicPay - hra - da;
+    return [
+      _SalaryItem('Basic', _basicPay, AppColors.primary),
+      _SalaryItem('HRA', hra, AppColors.success),
+      _SalaryItem('DA', da, AppColors.orange),
+      if (special > 0) _SalaryItem('Special Allowance', special, AppColors.secondary),
+    ];
+  }
 
-  final List<_SalaryItem> _deductions = [
-    _SalaryItem('Provident Fund', 5100, AppColors.primary),
-    _SalaryItem('ESI', 637, AppColors.warning),
-    _SalaryItem('Professional Tax', 200, AppColors.secondary),
-    _SalaryItem('Income Tax', 12413, AppColors.danger),
-  ];
+  List<_SalaryItem> get _deductions {
+    if (_totalDeductions == 0) return [];
+    final pf = _basicPay * 0.12;
+    final esi = _grossSalary * 0.0075;
+    const pt = 200.0;
+    final tax = _totalDeductions - pf - esi - pt;
+    return [
+      _SalaryItem('Provident Fund', pf, AppColors.primary),
+      _SalaryItem('ESI', esi, AppColors.warning),
+      _SalaryItem('Professional Tax', pt, AppColors.secondary),
+      if (tax > 0) _SalaryItem('Income Tax', tax, AppColors.danger),
+    ];
+  }
 
   double get _netPay => _grossSalary - _totalDeductions;
 
@@ -80,7 +132,9 @@ class _PayslipScreenState extends State<PayslipScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,9 +159,29 @@ class _PayslipScreenState extends State<PayslipScreen> {
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms).slideY(begin: 0.12, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
 
             const SizedBox(height: 16),
+
+            if (_selectedPayslip.isEmpty) ...[
+              const SizedBox(height: 60),
+              Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.receipt_long_rounded, size: 64, color: Colors.grey.shade400),
+                    const SizedBox(height: 16),
+                    Text('No payslip data', style: tt.titleMedium?.copyWith(color: Colors.grey)),
+                    const SizedBox(height: 8),
+                    Text('Payslip for ${_months[_selectedMonthIndex]} $_selectedYear is not available.',
+                      style: tt.bodyMedium?.copyWith(color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+              const PPulseFooter(),
+              const SizedBox(height: 80),
+            ] else ...[
 
             // --- Total Earnings Card ---
             Container(
@@ -141,8 +215,8 @@ class _PayslipScreenState extends State<PayslipScreen> {
                             const SizedBox(height: 6),
                             TweenAnimationBuilder<double>(
                               tween: Tween(begin: 0, end: _grossSalary),
-                              duration: const Duration(milliseconds: 3500),
-                              curve: Curves.easeOutExpo,
+                              duration: const Duration(milliseconds: 1500),
+                              curve: Curves.easeOutCubic,
                               builder: (context, value, _) => Text(
                                 _currencyFormat.format(value),
                                 style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800),
@@ -174,7 +248,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: 40.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 40.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: 40.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 40.ms, curve: Curves.easeOutCubic),
 
             const SizedBox(height: 16),
 
@@ -250,7 +324,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
                   ],
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: 160.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 160.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: 160.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 160.ms, curve: Curves.easeOutCubic),
 
             const SizedBox(height: 16),
 
@@ -326,7 +400,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
                   ],
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: 240.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 240.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: 240.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 240.ms, curve: Curves.easeOutCubic),
 
             const SizedBox(height: 16),
 
@@ -400,7 +474,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
                   ],
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: 320.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 320.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: 320.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 320.ms, curve: Curves.easeOutCubic),
 
             const SizedBox(height: 16),
 
@@ -437,7 +511,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 400.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: 400.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 400.ms, curve: Curves.easeOutCubic),
 
             const SizedBox(height: 16),
 
@@ -474,7 +548,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 400.ms, delay: 480.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 480.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: 480.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 480.ms, curve: Curves.easeOutCubic),
 
             const SizedBox(height: 20),
 
@@ -488,12 +562,10 @@ class _PayslipScreenState extends State<PayslipScreen> {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => PayslipViewerScreen(
+                          Motion.pageRoute(PayslipViewerScreen(
                               month: _months[_selectedMonthIndex],
                               year: _selectedYear,
-                            ),
-                          ),
+                          )),
                         );
                       },
                       icon: const Icon(Icons.visibility_rounded, size: 20),
@@ -536,10 +608,11 @@ class _PayslipScreenState extends State<PayslipScreen> {
                   ),
                 ),
               ],
-            ).animate().fadeIn(duration: 400.ms, delay: 560.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 560.ms, curve: Curves.easeOut),
+            ).animate().fadeIn(duration: 420.ms, delay: 560.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 560.ms, curve: Curves.easeOutCubic),
 
             const PPulseFooter(),
             const SizedBox(height: 80),
+            ], // end else
           ],
         ),
       ),

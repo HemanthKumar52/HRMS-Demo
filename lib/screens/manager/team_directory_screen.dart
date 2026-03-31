@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
+import '../../animations/motion.dart';
 import 'employee_profile_view.dart';
 
 class TeamDirectoryScreen extends StatefulWidget {
@@ -58,7 +59,7 @@ class _TeamDirectoryScreenState extends State<TeamDirectoryScreen> {
                     : null,
               ),
             ),
-          ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.08, end: 0, duration: 400.ms, curve: Curves.easeOut),
+          ).animate().fadeIn(duration: 420.ms).slideY(begin: 0.12, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
         ),
         const SizedBox(height: 8),
 
@@ -72,7 +73,7 @@ class _TeamDirectoryScreenState extends State<TeamDirectoryScreen> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: _TeamSection(team: team),
-              ).animate().fadeIn(duration: 400.ms, delay: (index * 100).ms).slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (index * 100).ms, curve: Curves.easeOut);
+              ).animate().fadeIn(duration: 420.ms, delay: (index * 100).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (index * 100).ms, curve: Curves.easeOutCubic);
             },
           ),
         ),
@@ -284,15 +285,13 @@ class _MemberRow extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => EmployeeProfileView(
+          Motion.pageRoute(EmployeeProfileView(
               name: member.name,
               initials: member.initials,
               avatarColor: member.avatarColor,
               jobTitle: member.jobTitle,
               department: _getDepartment(member),
-            ),
-          ),
+          )),
         );
       },
       child: Padding(

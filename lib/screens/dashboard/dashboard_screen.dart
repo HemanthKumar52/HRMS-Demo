@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../animations/motion.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
@@ -34,15 +35,15 @@ class DashboardScreen extends StatelessWidget {
           // ── 1. Attendance Timer ───────────────────────────────────────
           _AttendanceTimerCard(provider: provider)
               .animate()
-              .fadeIn(duration: 400.ms, delay: 160.ms)
-              .slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 160.ms, curve: Curves.easeOut),
+              .fadeIn(duration: 420.ms, delay: 160.ms)
+              .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 160.ms, curve: Curves.easeOutCubic),
           const SizedBox(height: 16),
 
           // ── 3. Quick Actions ──────────────────────────────────────────
           Text('Quick Actions', style: theme.textTheme.titleMedium)
               .animate()
-              .fadeIn(duration: 400.ms, delay: 240.ms)
-              .slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 240.ms, curve: Curves.easeOut),
+              .fadeIn(duration: 420.ms, delay: 240.ms)
+              .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 240.ms, curve: Curves.easeOutCubic),
           const SizedBox(height: 12),
           GridView.count(
             shrinkWrap: true,
@@ -54,33 +55,33 @@ class DashboardScreen extends StatelessWidget {
             children: [
               _QuickAction(
                 icon: Icons.event_busy, label: 'Leave', color: AppColors.primary,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ApplyLeaveScreen())),
+                onTap: () => Navigator.push(context, Motion.pageRoute(const ApplyLeaveScreen())),
               ),
               _QuickAction(
                 icon: Icons.receipt, label: 'Claims', color: AppColors.success,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubmitClaimScreen())),
+                onTap: () => Navigator.push(context, Motion.pageRoute(const SubmitClaimScreen())),
               ),
               _QuickAction(
                 icon: Icons.confirmation_num, label: 'Tickets', color: AppColors.orange,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RaiseTicketScreen())),
+                onTap: () => Navigator.push(context, Motion.pageRoute(const RaiseTicketScreen())),
               ),
               _QuickAction(
                 icon: Icons.swap_horiz, label: 'Shift', color: AppColors.secondary,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ShiftChangeScreen())),
+                onTap: () => Navigator.push(context, Motion.pageRoute(const ShiftChangeScreen())),
               ),
               _QuickAction(
                 icon: Icons.work, label: 'Work Type', color: AppColors.pink,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WorkTypeRequestScreen())),
+                onTap: () => Navigator.push(context, Motion.pageRoute(const WorkTypeRequestScreen())),
               ),
               _QuickAction(
                 icon: Icons.access_time, label: 'Attendance', color: AppColors.primaryDark,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AttendanceRequestScreen())),
+                onTap: () => Navigator.push(context, Motion.pageRoute(const AttendanceRequestScreen())),
               ),
             ],
           )
               .animate()
-              .fadeIn(duration: 400.ms, delay: 320.ms)
-              .slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 320.ms, curve: Curves.easeOut),
+              .fadeIn(duration: 420.ms, delay: 320.ms)
+              .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 320.ms, curve: Curves.easeOutCubic),
           const SizedBox(height: 16),
 
           // ── 4. Manager Insights (Manager/HR only) ─────────────────────
@@ -92,8 +93,8 @@ class DashboardScreen extends StatelessWidget {
           if (isManagerOrHr) ...[
             _TeamAttendanceCard(isDark: isDark)
                 .animate()
-                .fadeIn(duration: 400.ms, delay: 560.ms)
-                .slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 560.ms, curve: Curves.easeOut),
+                .fadeIn(duration: 420.ms, delay: 560.ms)
+                .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 560.ms, curve: Curves.easeOutCubic),
             const SizedBox(height: 16),
           ],
 
@@ -117,9 +118,9 @@ class DashboardScreen extends StatelessWidget {
                       Text('Leave Balance', style: theme.textTheme.bodySmall),
                       const SizedBox(height: 4),
                       TweenAnimationBuilder<int>(
-                        tween: IntTween(begin: 0, end: 12),
-                        duration: const Duration(milliseconds: 3500),
-                        curve: Curves.easeOutExpo,
+                        tween: IntTween(begin: 0, end: provider.leaveBalance),
+                        duration: const Duration(milliseconds: 1500),
+                        curve: Curves.easeOutCubic,
                         builder: (context, value, _) => Text(
                           '$value',
                           style: theme.textTheme.titleLarge?.copyWith(
@@ -151,9 +152,9 @@ class DashboardScreen extends StatelessWidget {
                       Text('Attendance', style: theme.textTheme.bodySmall),
                       const SizedBox(height: 4),
                       TweenAnimationBuilder<int>(
-                        tween: IntTween(begin: 0, end: 96),
-                        duration: const Duration(milliseconds: 3500),
-                        curve: Curves.easeOutExpo,
+                        tween: IntTween(begin: 0, end: provider.attendancePct > 0 ? provider.attendancePct.toInt() : provider.attendancePercentage.toInt()),
+                        duration: const Duration(milliseconds: 1500),
+                        curve: Curves.easeOutCubic,
                         builder: (context, value, _) => Text(
                           '$value%',
                           style: theme.textTheme.titleLarge?.copyWith(
@@ -170,8 +171,8 @@ class DashboardScreen extends StatelessWidget {
             ],
           )
               .animate()
-              .fadeIn(duration: 400.ms, delay: (isManagerOrHr ? 640 : 400).ms)
-              .slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (isManagerOrHr ? 640 : 400).ms, curve: Curves.easeOut),
+              .fadeIn(duration: 420.ms, delay: (isManagerOrHr ? 640 : 400).ms)
+              .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (isManagerOrHr ? 640 : 400).ms, curve: Curves.easeOutCubic),
           const SizedBox(height: 14),
 
           // ── 7. Leave Summary ──────────────────────────────────────────
@@ -194,21 +195,33 @@ class DashboardScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    _LeaveTypeChip(label: 'Casual', used: 3, total: 8, color: AppColors.primary, isDark: isDark),
-                    const SizedBox(width: 10),
-                    _LeaveTypeChip(label: 'Sick', used: 1, total: 6, color: AppColors.orange, isDark: isDark),
-                    const SizedBox(width: 10),
-                    _LeaveTypeChip(label: 'Earned', used: 2, total: 10, color: AppColors.success, isDark: isDark),
-                  ],
-                ),
+                if (provider.leaveBalances.isNotEmpty)
+                  Row(
+                    children: [
+                      for (int i = 0; i < provider.leaveBalances.length && i < 3; i++) ...[
+                        if (i > 0) const SizedBox(width: 10),
+                        _LeaveTypeChip(
+                          label: (provider.leaveBalances[i]['label'] ?? 'Leave').toString(),
+                          used: ((provider.leaveBalances[i]['used'] ?? 0) as num).toInt(),
+                          total: ((provider.leaveBalances[i]['total'] ?? 1) as num).toInt().clamp(1, 999),
+                          color: [AppColors.primary, AppColors.orange, AppColors.success][i % 3],
+                          isDark: isDark,
+                        ),
+                      ],
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      _LeaveTypeChip(label: 'Total', used: 0, total: provider.leaveBalance > 0 ? provider.leaveBalance : 1, color: AppColors.primary, isDark: isDark),
+                    ],
+                  ),
               ],
             ),
           )
               .animate()
-              .fadeIn(duration: 400.ms, delay: (isManagerOrHr ? 720 : 480).ms)
-              .slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (isManagerOrHr ? 720 : 480).ms, curve: Curves.easeOut),
+              .fadeIn(duration: 420.ms, delay: (isManagerOrHr ? 720 : 480).ms)
+              .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (isManagerOrHr ? 720 : 480).ms, curve: Curves.easeOutCubic),
           const SizedBox(height: 16),
 
           // ── 8. Performance (Manager/HR only) ──────────────────────────
@@ -242,71 +255,79 @@ class DashboardScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                _AnnouncementItem(
-                  title: 'Company Town Hall',
-                  subtitle: 'March 15, 2026 at 3:00 PM',
-                  icon: Icons.event,
-                ),
-                const Divider(height: 16),
-                _AnnouncementItem(
-                  title: 'New Leave Policy Update',
-                  subtitle: 'Effective from April 1, 2026',
-                  icon: Icons.policy,
-                ),
-                if (isManagerOrHr) ...[
-                  const Divider(height: 16),
-                  _AnnouncementItem(
-                    title: 'Quarterly Review Deadline',
-                    subtitle: 'Submit reviews by March 25, 2026',
-                    icon: Icons.assessment,
+                if (provider.recentActivity.isNotEmpty)
+                  ...provider.recentActivity.take(3).map((a) {
+                    final status = a['status'] ?? '';
+                    return Column(children: [
+                      _AnnouncementItem(
+                        title: a['title'] ?? 'Activity',
+                        subtitle: '${a['date'] ?? ''} - ${status}',
+                        icon: status == 'approved' ? Icons.check_circle : status == 'rejected' ? Icons.cancel : Icons.pending,
+                      ),
+                      const Divider(height: 16),
+                    ]);
+                  })
+                else
+                  const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Text('No recent activity', style: TextStyle(color: Colors.grey)),
                   ),
-                ],
               ],
             ),
           )
               .animate()
-              .fadeIn(duration: 400.ms, delay: (isManagerOrHr ? 880 : 560).ms)
-              .slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (isManagerOrHr ? 880 : 560).ms, curve: Curves.easeOut),
+              .fadeIn(duration: 420.ms, delay: (isManagerOrHr ? 880 : 560).ms)
+              .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (isManagerOrHr ? 880 : 560).ms, curve: Curves.easeOutCubic),
           const SizedBox(height: 16),
 
           // ── Recent Activity ───────────────────────────────────────────
           Text('Recent Activity', style: theme.textTheme.titleMedium)
               .animate()
-              .fadeIn(duration: 400.ms, delay: (isManagerOrHr ? 960 : 640).ms)
-              .slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (isManagerOrHr ? 960 : 640).ms, curve: Curves.easeOut),
+              .fadeIn(duration: 420.ms, delay: (isManagerOrHr ? 960 : 640).ms)
+              .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (isManagerOrHr ? 960 : 640).ms, curve: Curves.easeOutCubic),
           const SizedBox(height: 12),
           NeuCard(
             child: Column(
               children: [
-                _ActivityItem(
-                  icon: Icons.check_circle,
-                  color: AppColors.success,
-                  title: 'Leave Approved',
-                  subtitle: 'Casual leave on Mar 5 was approved',
-                  time: '2 hours ago',
-                ),
-                Divider(height: 20, color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.06)),
-                _ActivityItem(
-                  icon: Icons.login_rounded,
-                  color: AppColors.primary,
-                  title: 'Punch In',
-                  subtitle: 'Punched in at 09:02 AM today',
-                  time: '5 hours ago',
-                ),
-                Divider(height: 20, color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.06)),
-                _ActivityItem(
-                  icon: Icons.receipt_long,
-                  color: AppColors.orange,
-                  title: 'Expense Submitted',
-                  subtitle: 'Travel reimbursement - ₹34,500',
-                  time: 'Yesterday',
-                ),
+                if (provider.isPunchedIn && provider.punchInTime != null)
+                  _ActivityItem(
+                    icon: Icons.login_rounded,
+                    color: AppColors.primary,
+                    title: 'Punched In',
+                    subtitle: 'Punched in at ${provider.punchInTime!.hour}:${provider.punchInTime!.minute.toString().padLeft(2, '0')} today',
+                    time: 'Today',
+                  ),
+                if (provider.recentActivity.isNotEmpty)
+                  ...provider.recentActivity.take(3).map((a) {
+                    final status = a['status'] ?? '';
+                    final statusColor = status == 'approved' ? AppColors.success
+                        : status == 'rejected' ? AppColors.danger : AppColors.orange;
+                    return Column(children: [
+                      Divider(height: 20, color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.06)),
+                      _ActivityItem(
+                        icon: status == 'approved' ? Icons.check_circle
+                            : status == 'rejected' ? Icons.cancel : Icons.pending_actions,
+                        color: statusColor,
+                        title: a['title'] ?? 'Request',
+                        subtitle: a['date'] ?? '',
+                        time: status,
+                      ),
+                    ]);
+                  }),
+                if (!provider.isPunchedIn && provider.recentActivity.isEmpty)
+                  _ActivityItem(
+                    icon: Icons.info_outline,
+                    color: AppColors.primary,
+                    title: 'No recent activity',
+                    subtitle: 'Your actions will appear here',
+                    time: '',
+                  ),
               ],
             ),
           )
               .animate()
-              .fadeIn(duration: 400.ms, delay: (isManagerOrHr ? 1040 : 720).ms)
-              .slideY(begin: 0.08, end: 0, duration: 400.ms, delay: (isManagerOrHr ? 1040 : 720).ms, curve: Curves.easeOut),
+              .fadeIn(duration: 420.ms, delay: (isManagerOrHr ? 1040 : 720).ms)
+              .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (isManagerOrHr ? 1040 : 720).ms, curve: Curves.easeOutCubic),
           const SizedBox(height: 20),
 
           // ── HR-specific: Employee Stats & Leave Analytics ─────────────
@@ -333,6 +354,12 @@ class _ManagerInsightsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final provider = context.watch<AppProvider>();
+    final pa = provider.pendingApprovals;
+    final totalPending = (pa['total'] ?? 0) as int;
+    final pendingLeaves = (pa['leave_requests'] ?? 0).toString();
+    final pendingClaims = (pa['claims'] ?? 0).toString();
+    final pendingTickets = (pa['tickets'] ?? 0).toString();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,11 +382,10 @@ class _ManagerInsightsSection extends StatelessWidget {
           ],
         )
             .animate()
-            .fadeIn(duration: 400.ms, delay: 400.ms)
-            .slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 400.ms, curve: Curves.easeOut),
+            .fadeIn(duration: 420.ms, delay: 400.ms)
+            .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 400.ms, curve: Curves.easeOutCubic),
         const SizedBox(height: 14),
 
-        // Pending Approvals Card
         NeuCard(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -385,9 +411,9 @@ class _ManagerInsightsSection extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: TweenAnimationBuilder<int>(
-                      tween: IntTween(begin: 0, end: 15),
-                      duration: const Duration(milliseconds: 3500),
-                      curve: Curves.easeOutExpo,
+                      tween: IntTween(begin: 0, end: totalPending),
+                      duration: const Duration(milliseconds: 1500),
+                      curve: Curves.easeOutCubic,
                       builder: (context, value, _) => Text(
                         '$value',
                         style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w700, fontSize: 14),
@@ -399,21 +425,21 @@ class _ManagerInsightsSection extends StatelessWidget {
               const SizedBox(height: 16),
               _InsightActionRow(
                 label: 'Leave Requests',
-                count: '8',
+                count: pendingLeaves,
                 color: AppColors.warning,
                 onTap: () => _navigateToRequested(context),
               ),
               const SizedBox(height: 10),
               _InsightActionRow(
                 label: 'Claims',
-                count: '4',
+                count: pendingClaims,
                 color: AppColors.primary,
                 onTap: () => _navigateToRequested(context),
               ),
               const SizedBox(height: 10),
               _InsightActionRow(
-                label: 'Shift Changes',
-                count: '3',
+                label: 'Tickets',
+                count: pendingTickets,
                 color: AppColors.secondary,
                 onTap: () => _navigateToRequested(context),
               ),
@@ -421,8 +447,8 @@ class _ManagerInsightsSection extends StatelessWidget {
           ),
         )
             .animate()
-            .fadeIn(duration: 400.ms, delay: 480.ms)
-            .slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 480.ms, curve: Curves.easeOut),
+            .fadeIn(duration: 420.ms, delay: 480.ms)
+            .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 480.ms, curve: Curves.easeOutCubic),
         const SizedBox(height: 16),
       ],
     );
@@ -543,8 +569,8 @@ class _PerformanceSection extends StatelessWidget {
           ),
         )
             .animate()
-            .fadeIn(duration: 400.ms, delay: 800.ms)
-            .slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 800.ms, curve: Curves.easeOut),
+            .fadeIn(duration: 420.ms, delay: 800.ms)
+            .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 800.ms, curve: Curves.easeOutCubic),
         const SizedBox(height: 16),
       ],
     );
@@ -576,8 +602,8 @@ class _HrAnalyticsSection extends StatelessWidget {
           ],
         )
             .animate()
-            .fadeIn(duration: 400.ms, delay: 1120.ms)
-            .slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 1120.ms, curve: Curves.easeOut),
+            .fadeIn(duration: 420.ms, delay: 1120.ms)
+            .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 1120.ms, curve: Curves.easeOutCubic),
         const SizedBox(height: 12),
         Row(
           children: [
@@ -589,8 +615,8 @@ class _HrAnalyticsSection extends StatelessWidget {
           ],
         )
             .animate()
-            .fadeIn(duration: 400.ms, delay: 1200.ms)
-            .slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 1200.ms, curve: Curves.easeOut),
+            .fadeIn(duration: 420.ms, delay: 1200.ms)
+            .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 1200.ms, curve: Curves.easeOutCubic),
         const SizedBox(height: 16),
 
         // Leave Analytics
@@ -625,8 +651,8 @@ class _HrAnalyticsSection extends StatelessWidget {
           ),
         )
             .animate()
-            .fadeIn(duration: 400.ms, delay: 1280.ms)
-            .slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 1280.ms, curve: Curves.easeOut),
+            .fadeIn(duration: 420.ms, delay: 1280.ms)
+            .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 1280.ms, curve: Curves.easeOutCubic),
         const SizedBox(height: 20),
 
         // Attendance Trends Chart
@@ -702,8 +728,8 @@ class _HrAnalyticsSection extends StatelessWidget {
           ),
         )
             .animate()
-            .fadeIn(duration: 400.ms, delay: 1360.ms)
-            .slideY(begin: 0.08, end: 0, duration: 400.ms, delay: 1360.ms, curve: Curves.easeOut),
+            .fadeIn(duration: 420.ms, delay: 1360.ms)
+            .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 1360.ms, curve: Curves.easeOutCubic),
         const SizedBox(height: 20),
       ],
     );
@@ -895,8 +921,8 @@ class _LeaveTypeChip extends StatelessWidget {
           children: [
             TweenAnimationBuilder<int>(
               tween: IntTween(begin: 0, end: remaining),
-              duration: const Duration(milliseconds: 3500),
-              curve: Curves.easeOutExpo,
+              duration: const Duration(milliseconds: 1500),
+              curve: Curves.easeOutCubic,
               builder: (context, value, _) => Text('$value', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: color)),
             ),
             const SizedBox(height: 2),
@@ -1141,8 +1167,8 @@ class _HrStatMini extends StatelessWidget {
           const SizedBox(height: 8),
           TweenAnimationBuilder<int>(
             tween: IntTween(begin: 0, end: _numericValue),
-            duration: const Duration(milliseconds: 3500),
-            curve: Curves.easeOutExpo,
+            duration: const Duration(milliseconds: 1500),
+            curve: Curves.easeOutCubic,
             builder: (context, val, _) => Text(_formatValue(val), style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: color)),
           ),
           const SizedBox(height: 2),
