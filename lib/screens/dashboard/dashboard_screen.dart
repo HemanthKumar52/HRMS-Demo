@@ -8,12 +8,16 @@ import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/ppulse_footer.dart';
+import '../../services/api_service.dart';
 import '../requests/apply_leave_screen.dart';
 import '../requests/submit_claim_screen.dart';
 import '../requests/raise_ticket_screen.dart';
 import '../requests/shift_change_screen.dart';
 import '../requests/work_type_request_screen.dart';
 import '../requests/attendance_request_screen.dart';
+import '../manager/analytics_screen.dart';
+import '../directory/directory_screen.dart';
+import 'org_chart_screen.dart';
 
 
 class DashboardScreen extends StatelessWidget {
@@ -83,6 +87,67 @@ class DashboardScreen extends StatelessWidget {
               .fadeIn(duration: 420.ms, delay: 320.ms)
               .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 320.ms, curve: Curves.easeOutCubic),
           const SizedBox(height: 16),
+
+          // ── Manager/HR Quick Actions ────────────────────────────────
+          if (isManagerOrHr) ...[
+            Text('Management', style: theme.textTheme.titleMedium)
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 340.ms)
+                .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 340.ms, curve: Curves.easeOutCubic),
+            const SizedBox(height: 12),
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 3,
+              childAspectRatio: 1.1,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              children: [
+                _QuickAction(
+                  icon: Icons.people_outline, label: 'Directory', color: AppColors.primary,
+                  onTap: () => Navigator.push(context, Motion.pageRoute(const DirectoryScreen())),
+                ),
+                _QuickAction(
+                  icon: Icons.analytics_outlined, label: 'Analytics', color: AppColors.secondary,
+                  onTap: () => Navigator.push(context, Motion.pageRoute(const AnalyticsScreen())),
+                ),
+                _QuickAction(
+                  icon: Icons.account_tree_outlined, label: 'Org Chart', color: AppColors.success,
+                  onTap: () => Navigator.push(context, Motion.pageRoute(const OrgChartScreen())),
+                ),
+              ],
+            )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 380.ms)
+                .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 380.ms, curve: Curves.easeOutCubic),
+            const SizedBox(height: 16),
+          ],
+
+          // ── Org Chart for all roles ─────────────────────────────────
+          if (!isManagerOrHr) ...[
+            NeuCard(
+              onTap: () => Navigator.push(context, Motion.pageRoute(const OrgChartScreen())),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.account_tree_outlined, color: AppColors.success, size: 20),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(child: Text('Organisation Chart', style: theme.textTheme.titleMedium)),
+                  Icon(Icons.chevron_right_rounded, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+                ],
+              ),
+            )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 340.ms)
+                .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 340.ms, curve: Curves.easeOutCubic),
+            const SizedBox(height: 16),
+          ],
 
           // ── 4. Manager Insights (Manager/HR only) ─────────────────────
           if (isManagerOrHr) ...[
@@ -200,12 +265,14 @@ class DashboardScreen extends StatelessWidget {
                     children: [
                       for (int i = 0; i < provider.leaveBalances.length && i < 3; i++) ...[
                         if (i > 0) const SizedBox(width: 10),
-                        _LeaveTypeChip(
-                          label: (provider.leaveBalances[i]['label'] ?? 'Leave').toString(),
-                          used: ((provider.leaveBalances[i]['used'] ?? 0) as num).toInt(),
-                          total: ((provider.leaveBalances[i]['total'] ?? 1) as num).toInt().clamp(1, 999),
-                          color: [AppColors.primary, AppColors.orange, AppColors.success][i % 3],
-                          isDark: isDark,
+                        Expanded(
+                          child: _LeaveTypeChip(
+                            label: (provider.leaveBalances[i]['label'] ?? 'Leave').toString(),
+                            used: ((provider.leaveBalances[i]['used'] ?? 0) as num).toInt(),
+                            total: ((provider.leaveBalances[i]['total'] ?? 1) as num).toInt().clamp(1, 999),
+                            color: [AppColors.primary, AppColors.orange, AppColors.success][i % 3],
+                            isDark: isDark,
+                          ),
                         ),
                       ],
                     ],
@@ -529,14 +596,42 @@ class _TeamAttendanceCard extends StatelessWidget {
 // =============================================================================
 // PERFORMANCE SECTION (Manager/HR)
 // =============================================================================
-class _PerformanceSection extends StatelessWidget {
+class _PerformanceSection extends StatefulWidget {
   final bool isDark;
   final UserRole role;
   const _PerformanceSection({required this.isDark, required this.role});
 
   @override
+  State<_PerformanceSection> createState() => _PerformanceSectionState();
+}
+
+class _PerformanceSectionState extends State<_PerformanceSection> {
+  double _attendanceRate = 0;
+  double _avgHours = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final data = await ApiService.get('/dashboard/manager-stats');
+      if (!mounted) return;
+      setState(() {
+        _attendanceRate = ((data['attendance_rate'] ?? 0) as num).toDouble();
+        _avgHours = ((data['avg_work_hours'] ?? 0) as num).toDouble();
+      });
+    } catch (_) {}
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final attPct = (_attendanceRate / 100).clamp(0.0, 1.0);
+    final hoursPct = (_avgHours / 10).clamp(0.0, 1.0);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -549,10 +644,7 @@ class _PerformanceSection extends StatelessWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.pastelPurple,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                    decoration: BoxDecoration(color: AppColors.pastelPurple, borderRadius: BorderRadius.circular(10)),
                     child: const Icon(Icons.analytics_rounded, color: AppColors.secondary, size: 20),
                   ),
                   const SizedBox(width: 12),
@@ -560,11 +652,9 @@ class _PerformanceSection extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              _PerformanceRow(label: 'On-time Completion', pct: 0.88, pctText: '88%', color: AppColors.success, isDark: isDark),
+              _PerformanceRow(label: 'Attendance Rate', pct: attPct, pctText: '${_attendanceRate.toStringAsFixed(1)}%', color: AppColors.success, isDark: widget.isDark),
               const SizedBox(height: 14),
-              _PerformanceRow(label: 'Avg. Work Hours', pct: 0.92, pctText: '9.2h', color: AppColors.primary, isDark: isDark),
-              const SizedBox(height: 14),
-              _PerformanceRow(label: 'Attendance Rate', pct: 0.95, pctText: '95%', color: AppColors.secondary, isDark: isDark),
+              _PerformanceRow(label: 'Avg. Work Hours', pct: hoursPct, pctText: '${_avgHours.toStringAsFixed(1)}h', color: AppColors.primary, isDark: widget.isDark),
             ],
           ),
         )
@@ -580,9 +670,42 @@ class _PerformanceSection extends StatelessWidget {
 // =============================================================================
 // HR ANALYTICS SECTION
 // =============================================================================
-class _HrAnalyticsSection extends StatelessWidget {
+class _HrAnalyticsSection extends StatefulWidget {
   final bool isDark;
   const _HrAnalyticsSection({required this.isDark});
+
+  @override
+  State<_HrAnalyticsSection> createState() => _HrAnalyticsSectionState();
+}
+
+class _HrAnalyticsSectionState extends State<_HrAnalyticsSection> {
+  int _total = 0, _active = 0, _onLeave = 0, _present = 0, _absent = 0;
+  List<Map<String, dynamic>> _leaveUtil = [];
+
+  static const _colors = [AppColors.primary, AppColors.orange, AppColors.success, AppColors.secondary, AppColors.pink, AppColors.warning];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final data = await ApiService.get('/dashboard/manager-stats');
+      if (!mounted) return;
+      setState(() {
+        _total = (data['total_employees'] ?? 0) as int;
+        _active = (data['active_employees'] ?? 0) as int;
+        _onLeave = (data['on_leave_today'] ?? 0) as int;
+        _present = (data['present_today'] ?? 0) as int;
+        _absent = (data['absent_today'] ?? 0) as int;
+        _leaveUtil = List<Map<String, dynamic>>.from(
+          (data['leave_utilization'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? [],
+        );
+      });
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -594,11 +717,11 @@ class _HrAnalyticsSection extends StatelessWidget {
         // Employee Statistics
         Row(
           children: [
-            Expanded(child: _HrStatMini(label: 'Total', value: '1,240', color: AppColors.primary, icon: Icons.groups_rounded)),
+            Expanded(child: _HrStatMini(label: 'Total', value: '$_total', color: AppColors.primary, icon: Icons.groups_rounded)),
             const SizedBox(width: 10),
-            Expanded(child: _HrStatMini(label: 'Active', value: '1,198', color: AppColors.success, icon: Icons.check_circle_outline)),
+            Expanded(child: _HrStatMini(label: 'Present', value: '$_present', color: AppColors.success, icon: Icons.check_circle_outline)),
             const SizedBox(width: 10),
-            Expanded(child: _HrStatMini(label: 'On Leave', value: '42', color: AppColors.warning, icon: Icons.event_busy)),
+            Expanded(child: _HrStatMini(label: 'On Leave', value: '$_onLeave', color: AppColors.warning, icon: Icons.event_busy)),
           ],
         )
             .animate()
@@ -607,11 +730,11 @@ class _HrAnalyticsSection extends StatelessWidget {
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _HrStatMini(label: 'New Hires', value: '8', color: AppColors.secondary, icon: Icons.person_add)),
+            Expanded(child: _HrStatMini(label: 'Active', value: '$_active', color: AppColors.secondary, icon: Icons.person)),
             const SizedBox(width: 10),
-            Expanded(child: _HrStatMini(label: 'Exits', value: '3', color: AppColors.danger, icon: Icons.person_remove)),
+            Expanded(child: _HrStatMini(label: 'Absent', value: '$_absent', color: AppColors.danger, icon: Icons.person_off)),
             const SizedBox(width: 10),
-            Expanded(child: _HrStatMini(label: 'Open Roles', value: '12', color: AppColors.orange, icon: Icons.work_outline)),
+            const Expanded(child: SizedBox()),
           ],
         )
             .animate()
@@ -619,7 +742,7 @@ class _HrAnalyticsSection extends StatelessWidget {
             .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 1200.ms, curve: Curves.easeOutCubic),
         const SizedBox(height: 16),
 
-        // Leave Analytics
+        // Leave Utilization from DB
         NeuCard(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -629,10 +752,7 @@ class _HrAnalyticsSection extends StatelessWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.pastelPurple,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                    decoration: BoxDecoration(color: AppColors.pastelPurple, borderRadius: BorderRadius.circular(10)),
                     child: const Icon(Icons.pie_chart_rounded, color: AppColors.secondary, size: 20),
                   ),
                   const SizedBox(width: 12),
@@ -640,13 +760,24 @@ class _HrAnalyticsSection extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              _LeaveUtilRow(label: 'Casual Leave', pct: 0.62, pctText: '62%', color: AppColors.primary, isDark: isDark),
-              const SizedBox(height: 14),
-              _LeaveUtilRow(label: 'Sick Leave', pct: 0.28, pctText: '28%', color: AppColors.orange, isDark: isDark),
-              const SizedBox(height: 14),
-              _LeaveUtilRow(label: 'Earned Leave', pct: 0.45, pctText: '45%', color: AppColors.success, isDark: isDark),
-              const SizedBox(height: 14),
-              _LeaveUtilRow(label: 'Comp Off', pct: 0.15, pctText: '15%', color: AppColors.secondary, isDark: isDark),
+              if (_leaveUtil.isEmpty)
+                Text('Loading...', style: theme.textTheme.bodySmall)
+              else
+                ..._leaveUtil.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final l = entry.value;
+                  final pct = ((l['percentage'] ?? 0) as num).toDouble();
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: i < _leaveUtil.length - 1 ? 14 : 0),
+                    child: _LeaveUtilRow(
+                      label: l['label'] ?? '',
+                      pct: (pct / 100).clamp(0.0, 1.0),
+                      pctText: '${pct.toStringAsFixed(0)}%',
+                      color: _colors[i % _colors.length],
+                      isDark: widget.isDark,
+                    ),
+                  );
+                }),
             ],
           ),
         )
@@ -701,7 +832,7 @@ class _HrAnalyticsSection extends StatelessWidget {
                             if (value.toInt() >= days.length) return const SizedBox.shrink();
                             return Padding(
                               padding: const EdgeInsets.only(top: 8),
-                              child: Text(days[value.toInt()], style: TextStyle(fontSize: 11, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+                              child: Text(days[value.toInt()], style: TextStyle(fontSize: 11, color: widget.isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
                             );
                           },
                         ),
@@ -1029,22 +1160,20 @@ class _QuickAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return NeuCard(
       onTap: onTap,
-      child: NeuCard(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: color, size: 22),
-            ),
-            const SizedBox(height: 8),
-            Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500), textAlign: TextAlign.center),
-          ],
-        ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500), textAlign: TextAlign.center),
+        ],
       ),
     );
   }

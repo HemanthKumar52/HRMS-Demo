@@ -48,6 +48,33 @@ def get_request_id(prefix, obj_id):
     return f"{prefix}-{str(obj_id).zfill(4)}"
 
 
+def create_notification(recipient_user_id, verb, description=''):
+    """Create an in-app notification for a user."""
+    try:
+        NotificationModel.objects.create(
+            recipient_id=recipient_user_id,
+            verb=verb,
+            description=description,
+            unread=True,
+            timestamp=timezone.now(),
+        )
+    except Exception:
+        pass
+
+
+def notify_managers_of_request(employee, request_type, title):
+    """Notify the employee's manager about a new request."""
+    work_info = EmployeeWorkInformation.objects.filter(employee_id_id=employee.id).first()
+    if work_info and work_info.reporting_manager_id_id:
+        manager = get_employee_by_id(work_info.reporting_manager_id_id)
+        if manager and manager.employee_user_id_id:
+            create_notification(
+                manager.employee_user_id_id,
+                f'New {request_type} Request',
+                f'{employee.name} submitted: {title}'
+            )
+
+
 class AuthView(APIView):
     permission_classes = [AllowAny]
 
@@ -76,6 +103,14 @@ class AuthView(APIView):
             department = ''
             designation = ''
 
+        # Determine role
+        if user.is_staff:
+            role = 'hr'
+        elif EmployeeWorkInformation.objects.filter(reporting_manager_id_id=employee.id).exists():
+            role = 'manager'
+        else:
+            role = 'employee'
+
         refresh = RefreshToken.for_user(user)
 
         return Response({
@@ -89,7 +124,8 @@ class AuthView(APIView):
                 'email': user.email,
                 'designation': designation,
                 'department': department,
-                'avatar_url': employee.avatar_url
+                'avatar_url': employee.avatar_url,
+                'role': role
             }
         })
 
@@ -173,13 +209,42 @@ class UserMeView(APIView):
                         'employee_id': reporting_emp.badge_id or str(reporting_emp.id)
                     }
 
+        # Determine role: hr if is_staff, manager if has direct reports, else employee
+        if user.is_staff:
+            role = 'hr'
+        elif EmployeeWorkInformation.objects.filter(reporting_manager_id_id=employee.id).exists():
+            role = 'manager'
+        else:
+            role = 'employee'
+
+        # Gather additional work info fields
+        shift_name = ''
+        work_type_name = ''
+        location = ''
+        basic_salary = None
+        salary_hour = None
+        contract_end = None
+        experience = employee.experience or ''
+
+        if work_info:
+            if work_info.shift_id_id:
+                shift = Shift.objects.filter(id=work_info.shift_id_id).first()
+                shift_name = shift.employee_shift if shift else ''
+            if work_info.work_type_id_id:
+                wt = WorkType.objects.filter(id=work_info.work_type_id_id).first()
+                work_type_name = wt.work_type if wt else ''
+            location = work_info.location or ''
+            basic_salary = float(work_info.basic_salary) if work_info.basic_salary else None
+            salary_hour = float(work_info.salary_hour) if work_info.salary_hour else None
+            contract_end = work_info.contract_end_date.isoformat() if work_info.contract_end_date else None
+
         return Response({
             'id': str(user.id),
             'employee_id': employee.badge_id or str(employee.id),
             'name': employee.name,
             'email': user.email,
             'phone': employee.phone or '',
-            'role': 'employee',
+            'role': role,
             'designation': designation,
             'department': department,
             'date_of_joining': date_joining.isoformat() if date_joining else None,
@@ -192,6 +257,16 @@ class UserMeView(APIView):
             'qualification': employee.qualification or '',
             'emergency_contact': employee.emergency_contact or '',
             'emergency_contact_name': employee.emergency_contact_name or '',
+            'children': employee.children or '',
+            'experience': experience,
+            # Work information
+            'shift': shift_name,
+            'work_type': work_type_name,
+            'location': location,
+            'basic_salary': basic_salary,
+            'salary_per_hour': salary_hour,
+            'contract_end_date': contract_end,
+            'company': 'PPulse Technologies',
         })
 
     def put(self, request):
@@ -426,12 +501,36 @@ class AttendanceMonthlyView(APIView):
                 punch_out = None
                 total_hours = None
 
+            # Extra fields for the attendance log table
+            shift_name = ''
+            work_type_name = ''
+            min_hour = '00:00'
+            overtime = '00:00'
+            out_date = None
+            if day_date in attendances_dict:
+                att = attendances_dict[day_date]
+                min_hour = att.minimum_hour or '00:00'
+                overtime = att.attendance_overtime or '00:00'
+                if att.attendance_clock_out_date:
+                    out_date = att.attendance_clock_out_date.isoformat()
+                if att.shift_id_id:
+                    s = Shift.objects.filter(id=att.shift_id_id).first()
+                    shift_name = s.employee_shift if s else ''
+                if att.work_type_id_id:
+                    wt = WorkType.objects.filter(id=att.work_type_id_id).first()
+                    work_type_name = wt.work_type if wt else ''
+
             daily.append({
                 'date': day_date.isoformat(),
                 'status': status_val,
                 'punch_in': punch_in,
                 'punch_out': punch_out,
-                'total_hours': total_hours
+                'out_date': out_date,
+                'total_hours': total_hours,
+                'shift': shift_name,
+                'work_type': work_type_name,
+                'min_hour': min_hour,
+                'overtime': overtime,
             })
 
         working_days = present + absent + leave + half_days
@@ -639,6 +738,11 @@ class LeaveApplyView(APIView):
             status='requested'
         )
 
+        # Notify employee and manager
+        create_notification(request.user.id, 'Leave Request Submitted',
+                          f'{leave_type.name} from {start_date} to {end_date}')
+        notify_managers_of_request(employee, 'Leave', f'{leave_type.name} Leave')
+
         return Response({
             'id': str(leave_request.id),
             'request_id': get_request_id('LV', leave_request.id),
@@ -688,6 +792,9 @@ class ClaimSubmitView(APIView):
             is_approved=False,
             is_rejected=False,
         )
+
+        create_notification(request.user.id, 'Claim Submitted', f'{title} - {amount}')
+        notify_managers_of_request(employee, 'Claim', title)
 
         return Response({
             'id': str(ticket.id),
@@ -858,19 +965,25 @@ class AssetRequestView(APIView):
         if not employee:
             return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Find asset category by name
-        from django.db import connection
         cat_name = serializer.validated_data['asset_category']
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT id FROM asset_assetcategory WHERE asset_category_name = ? LIMIT 1", [cat_name])
-            row = cursor.fetchone()
-            cat_id = row[0] if row else 1
+        # Try to find category in DB, fall back to storing name in description
+        cat_id = 1
+        try:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT id FROM asset_assetcategory WHERE asset_category_name = %s LIMIT 1", [cat_name])
+                row = cursor.fetchone()
+                if row:
+                    cat_id = row[0]
+        except Exception:
+            pass  # Table may not exist, use default
 
+        desc = serializer.validated_data.get('description', '')
         asset_request = AssetRequestModel.objects.create(
             requested_employee_id_id=employee.id,
             asset_category_id_id=cat_id,
             asset_request_date=date.today(),
-            description=serializer.validated_data.get('description', ''),
+            description=f"[{cat_name}] {desc}" if cat_name else desc,
             asset_request_status='Requested',
         )
 
@@ -878,9 +991,9 @@ class AssetRequestView(APIView):
             'id': str(asset_request.id),
             'request_id': get_request_id('AS', asset_request.id),
             'type': 'Asset Requests',
-            'title': f"{asset_request.asset_category} Request",
+            'title': f"{cat_name} Request",
             'status': asset_request.status,
-            'asset_category': asset_request.asset_category,
+            'asset_category': cat_name,
         }, status=status.HTTP_201_CREATED)
 
 
@@ -894,11 +1007,29 @@ class RequestsListView(APIView):
         if not employee:
             return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
 
+        # Get direct report IDs for manager/hr filtering
+        if role != 'self':
+            if request.user.is_staff:
+                # HR sees all requests except their own
+                team_ids = list(Employee.objects.exclude(id=employee.id).values_list('id', flat=True))
+            else:
+                # Manager sees only direct reports' requests
+                team_ids = list(
+                    EmployeeWorkInformation.objects.filter(
+                        reporting_manager_id_id=employee.id
+                    ).values_list('employee_id_id', flat=True)
+                )
+
         requests_list = []
 
         def get_items(model, type_name, emp_filter):
             try:
-                qs = model.objects.filter(**emp_filter) if role == 'self' else model.objects.all()
+                if role == 'self':
+                    qs = model.objects.filter(**emp_filter)
+                else:
+                    # Build team filter using the same field name as emp_filter
+                    team_field = list(emp_filter.keys())[0]
+                    qs = model.objects.filter(**{f'{team_field}__in': team_ids})
                 # Filter by status - use property-based filtering for models without status column
                 filtered = []
                 for item in qs:
@@ -945,6 +1076,18 @@ class RequestsListView(APIView):
                 emp_name = emp.name if emp else 'Unknown'
                 emp_badge = (emp.badge_id or str(emp.id)) if emp else ''
 
+                # Extract created date from various model fields
+                item_date = (
+                    getattr(item, 'created_at', None) or
+                    getattr(item, 'created_date', None) or
+                    getattr(item, 'asset_request_date', None) or
+                    getattr(item, 'start_date', None)
+                )
+                if item_date:
+                    date_str = item_date.isoformat() if hasattr(item_date, 'isoformat') else str(item_date)
+                else:
+                    date_str = ''
+
                 requests_list.append({
                     'id': str(item.id),
                     'request_id': get_request_id(type_name[:2].upper(), item.id),
@@ -959,14 +1102,18 @@ class RequestsListView(APIView):
                         'employee_id': emp_badge,
                     },
                     'subtitle': f"{emp_name} - {type_name}",
-                    'description': getattr(item, 'description', '')
+                    'description': getattr(item, 'description', ''),
+                    'created_date': date_str,
                 })
+
+        # Sort by created_date descending (newest first), fallback to id
+        requests_list.sort(key=lambda r: (r.get('created_date') or '', int(r['id'])), reverse=True)
 
         return Response({
             'total': len(requests_list),
             'page': 1,
-            'limit': 20,
-            'requests': requests_list[:20]
+            'limit': 50,
+            'requests': requests_list[:50]
         })
 
 
@@ -1060,6 +1207,15 @@ class RequestAcceptView(APIView):
             item.status = 'approved'
             item.save()
 
+        # Notify the request owner
+        emp_id = getattr(item, 'employee_id_id', None) or getattr(item, 'requested_employee_id_id', None)
+        if emp_id:
+            emp = get_employee_by_id(emp_id)
+            if emp and emp.employee_user_id_id:
+                title = getattr(item, 'title', 'Request')
+                create_notification(emp.employee_user_id_id, 'Request Approved',
+                                  f'Your request "{title}" has been approved')
+
         return Response({
             'id': str(item.id),
             'request_id': get_request_id('REQ', item.id),
@@ -1099,6 +1255,16 @@ class RequestRejectView(APIView):
             if hasattr(item, 'reject_reason') and rejection_reason:
                 item.reject_reason = rejection_reason
             item.save()
+
+        # Notify the request owner
+        emp_id = getattr(item, 'employee_id_id', None) or getattr(item, 'requested_employee_id_id', None)
+        if emp_id:
+            emp = get_employee_by_id(emp_id)
+            if emp and emp.employee_user_id_id:
+                title = getattr(item, 'title', 'Request')
+                create_notification(emp.employee_user_id_id, 'Request Rejected',
+                                  f'Your request "{title}" was rejected' +
+                                  (f': {rejection_reason}' if rejection_reason else ''))
 
         return Response({
             'id': str(item.id),
@@ -1196,8 +1362,149 @@ class PayslipsListView(APIView):
 
 class PayslipPDFView(APIView):
     def get(self, request, pk):
+        from django.http import HttpResponse
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        import io
+
         payslip = get_object_or_404(Payslip, id=pk)
-        return Response({'error': 'PDF not available'}, status=status.HTTP_404_NOT_FOUND)
+        employee = get_employee_by_id(payslip.employee_id_id)
+        emp_name = employee.name if employee else 'Unknown'
+        badge = (employee.badge_id or str(employee.id)) if employee else ''
+
+        work_info = EmployeeWorkInformation.objects.filter(employee_id_id=payslip.employee_id_id).first()
+        designation = ''
+        dept_name = ''
+        if work_info:
+            if work_info.job_position_id_id:
+                jp = JobPosition.objects.filter(id=work_info.job_position_id_id).first()
+                designation = jp.job_position if jp else ''
+            if work_info.department_id_id:
+                dept = Department.objects.filter(id=work_info.department_id_id).first()
+                dept_name = dept.department if dept else ''
+
+        month_names = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December']
+        month_label = month_names[payslip.month] if payslip.month and 1 <= payslip.month <= 12 else ''
+
+        gross = float(payslip.gross_pay or 0)
+        net = float(payslip.net_pay or 0)
+        basic = float(payslip.basic_pay or 0)
+        deduction = float(payslip.deduction or 0)
+        hra = round(basic * 0.4, 2)
+        da = round(basic * 0.2, 2)
+        special = max(0, round(gross - basic - hra - da, 2))
+        pf = round(basic * 0.12, 2)
+        tax = max(0, round(deduction - pf, 2))
+
+        # Generate PDF
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=0.5*inch, bottomMargin=0.5*inch)
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=18, alignment=1, spaceAfter=6)
+        subtitle_style = ParagraphStyle('Sub', parent=styles['Normal'], fontSize=11, alignment=1, textColor=colors.grey)
+        section_style = ParagraphStyle('Section', parent=styles['Heading2'], fontSize=13, spaceAfter=8, spaceBefore=16,
+                                       textColor=colors.HexColor('#3B5FE5'))
+
+        elements = []
+
+        # Header
+        elements.append(Paragraph('PPulse Technologies', title_style))
+        elements.append(Paragraph(f'Payslip for {month_label} {payslip.year}', subtitle_style))
+        elements.append(Spacer(1, 20))
+
+        # Employee details table
+        elements.append(Paragraph('Employee Details', section_style))
+        emp_data = [
+            ['Name', emp_name, 'Employee ID', badge],
+            ['Designation', designation, 'Department', dept_name],
+            ['Pay Period', f'{month_label} {payslip.year}', 'Status', payslip.status or 'Generated'],
+        ]
+        emp_table = Table(emp_data, colWidths=[1.3*inch, 2*inch, 1.3*inch, 2*inch])
+        emp_table.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.grey),
+            ('TEXTCOLOR', (2, 0), (2, -1), colors.grey),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(emp_table)
+        elements.append(Spacer(1, 16))
+
+        # Earnings
+        elements.append(Paragraph('Earnings', section_style))
+        earn_data = [
+            ['Component', 'Amount (\u20B9)'],
+            ['Basic Pay', f'{basic:,.0f}'],
+            ['HRA', f'{hra:,.0f}'],
+            ['DA', f'{da:,.0f}'],
+            ['Special Allowance', f'{special:,.0f}'],
+            ['Gross Pay', f'{gross:,.0f}'],
+        ]
+        earn_table = Table(earn_data, colWidths=[4*inch, 2.5*inch])
+        earn_table.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F0F0F0')),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#E8F5E9')),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E0E0E0')),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ]))
+        elements.append(earn_table)
+        elements.append(Spacer(1, 12))
+
+        # Deductions
+        elements.append(Paragraph('Deductions', section_style))
+        ded_data = [
+            ['Component', 'Amount (\u20B9)'],
+            ['Provident Fund (12%)', f'{pf:,.0f}'],
+            ['Professional Tax', f'{tax:,.0f}'],
+            ['Total Deductions', f'{deduction:,.0f}'],
+        ]
+        ded_table = Table(ded_data, colWidths=[4*inch, 2.5*inch])
+        ded_table.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F0F0F0')),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#FFEBEE')),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E0E0E0')),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ]))
+        elements.append(ded_table)
+        elements.append(Spacer(1, 20))
+
+        # Net Pay
+        net_data = [['Net Pay', f'\u20B9 {net:,.0f}']]
+        net_table = Table(net_data, colWidths=[4*inch, 2.5*inch])
+        net_table.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 14),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#E3F2FD')),
+            ('TEXTCOLOR', (1, 0), (1, 0), colors.HexColor('#1565C0')),
+            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#1565C0')),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ('TOPPADDING', (0, 0), (-1, -1), 12),
+            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+        ]))
+        elements.append(net_table)
+
+        doc.build(elements)
+        buf.seek(0)
+
+        response = HttpResponse(buf.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="payslip_{emp_name.replace(" ", "_")}_{month_label}_{payslip.year}.pdf"'
+        return response
 
 
 class NotificationsView(APIView):
@@ -1277,7 +1584,7 @@ class EmployeesListView(APIView):
             employees = employees.filter(id__in=work_info_emp_ids)
 
         emp_list = []
-        for emp in employees[:20]:
+        for emp in employees[:100]:
             work_info = EmployeeWorkInformation.objects.filter(employee_id_id=emp.id).first()
             designation = ''
             dept_name = ''
@@ -1392,7 +1699,7 @@ class DashboardSummaryView(APIView):
                           if (month_start + timedelta(days=d)).weekday() < 5)
         attendance_pct = round((present_days / working_days * 100), 1) if working_days > 0 else 0.0
 
-        # Build recent activity from actual requests
+        # Build recent activity from ALL request types
         recent_activity = []
         for lr in LeaveRequest.objects.filter(employee_id_id=employee.id).order_by('-id')[:5]:
             lt = LeaveType.objects.filter(id=lr.leave_type_id_id).first()
@@ -1400,8 +1707,32 @@ class DashboardSummaryView(APIView):
                 'type': 'leave',
                 'title': f"{lt.name if lt else 'Leave'} Request",
                 'status': lr.status,
-                'date': lr.requested_date.isoformat() if lr.requested_date else None,
+                'date': lr.start_date.isoformat() if lr.start_date else None,
             })
+        for sr in ShiftRequestModel.objects.filter(employee_id_id=employee.id).order_by('-id')[:3]:
+            recent_activity.append({
+                'type': 'shift',
+                'title': 'Shift Change Request',
+                'status': sr.status,
+                'date': sr.requested_date.isoformat() if sr.requested_date else None,
+            })
+        for wr in WorkTypeRequestModel.objects.filter(employee_id_id=employee.id).order_by('-id')[:3]:
+            recent_activity.append({
+                'type': 'work_type',
+                'title': 'Work Type Request',
+                'status': wr.status,
+                'date': wr.requested_date.isoformat() if wr.requested_date else None,
+            })
+        for ar in AttendanceRequestModel.objects.filter(employee_id=employee.id).order_by('-id')[:3]:
+            recent_activity.append({
+                'type': 'attendance',
+                'title': 'Attendance Request',
+                'status': ar.status,
+                'date': ar.requested_date.isoformat() if ar.requested_date else None,
+            })
+        # Sort all by date descending and limit to 8
+        recent_activity.sort(key=lambda x: x.get('date') or '', reverse=True)
+        recent_activity = recent_activity[:8]
 
         # Pending requests counts for manager view
         pending_leaves = LeaveRequest.objects.filter(status='requested').count()
@@ -1529,6 +1860,133 @@ class LeaveTypesListView(APIView):
                 'name': lt.name or '',
             } for lt in leave_types]
         })
+
+
+class ManagerStatsView(APIView):
+    def get(self, request):
+        """Real-time manager/HR dashboard stats from DB."""
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        today = date.today()
+        month_start = date(today.year, today.month, 1)
+
+        # Total/active employees
+        total_employees = Employee.objects.filter(is_active=True).count()
+        inactive = Employee.objects.filter(is_active=False).count()
+
+        # Today's attendance
+        today_punched = Attendance.objects.filter(
+            attendance_date=today, attendance_clock_in__isnull=False
+        ).count()
+        on_leave_today = LeaveRequest.objects.filter(
+            status='approved', start_date__lte=today, end_date__gte=today
+        ).count()
+        absent_today = total_employees - today_punched - on_leave_today
+
+        # Attendance rate this month
+        working_days = sum(1 for d in range((today - month_start).days + 1)
+                          if (month_start + timedelta(days=d)).weekday() < 5)
+        total_possible = total_employees * max(working_days, 1)
+        total_present = Attendance.objects.filter(
+            attendance_date__gte=month_start, attendance_date__lte=today,
+            attendance_clock_in__isnull=False
+        ).count()
+        attendance_rate = round((total_present / total_possible * 100), 1) if total_possible > 0 else 0
+
+        # Avg work hours (from employees who checked out this month)
+        checked_out = Attendance.objects.filter(
+            attendance_date__gte=month_start, attendance_date__lte=today,
+            attendance_clock_in__isnull=False, attendance_clock_out__isnull=False
+        )
+        total_hours = 0
+        count_hours = 0
+        for att in checked_out:
+            if att.attendance_worked_hour:
+                try:
+                    parts = att.attendance_worked_hour.split(':')
+                    total_hours += int(parts[0]) + int(parts[1]) / 60
+                    count_hours += 1
+                except Exception:
+                    pass
+        avg_hours = round(total_hours / count_hours, 1) if count_hours > 0 else 0
+
+        # Leave utilization by type
+        leave_util = []
+        for lt in LeaveType.objects.all():
+            all_avail = AvailableLeave.objects.filter(leave_type_id_id=lt.id)
+            total_alloc = sum(a.total_leave_days or 0 for a in all_avail)
+            total_used = sum(a.used_days for a in all_avail)
+            pct = round(total_used / total_alloc * 100) if total_alloc > 0 else 0
+            leave_util.append({
+                'label': lt.name,
+                'used': round(total_used, 1),
+                'total': round(total_alloc, 1),
+                'percentage': pct,
+            })
+
+        return Response({
+            'total_employees': total_employees,
+            'active_employees': total_employees,
+            'inactive_employees': inactive,
+            'present_today': today_punched,
+            'absent_today': max(0, absent_today),
+            'on_leave_today': on_leave_today,
+            'attendance_rate': attendance_rate,
+            'avg_work_hours': avg_hours,
+            'leave_utilization': leave_util,
+        })
+
+
+class OrgChartView(APIView):
+    def get(self, request):
+        """Build org chart hierarchy from reporting_manager relationships."""
+        employees = Employee.objects.filter(is_active=True)
+
+        def build_node(emp):
+            work_info = EmployeeWorkInformation.objects.filter(employee_id_id=emp.id).first()
+            designation = ''
+            dept_name = ''
+            if work_info:
+                if work_info.job_position_id_id:
+                    jp = JobPosition.objects.filter(id=work_info.job_position_id_id).first()
+                    designation = jp.job_position if jp else ''
+                if work_info.department_id_id:
+                    dept = Department.objects.filter(id=work_info.department_id_id).first()
+                    dept_name = dept.department if dept else ''
+
+            # Find direct reports
+            report_ids = EmployeeWorkInformation.objects.filter(
+                reporting_manager_id_id=emp.id
+            ).values_list('employee_id_id', flat=True)
+            children = []
+            for rid in report_ids:
+                child = employees.filter(id=rid).first()
+                if child:
+                    children.append(build_node(child))
+
+            return {
+                'id': str(emp.id),
+                'name': emp.name,
+                'employee_id': emp.badge_id or str(emp.id),
+                'designation': designation,
+                'department': dept_name,
+                'avatar_url': emp.avatar_url,
+                'children': children,
+            }
+
+        # Find root nodes (employees with no manager)
+        managed_ids = set(EmployeeWorkInformation.objects.filter(
+            reporting_manager_id_id__isnull=False
+        ).values_list('employee_id_id', flat=True))
+
+        roots = []
+        for emp in employees:
+            if emp.id not in managed_ids:
+                roots.append(build_node(emp))
+
+        return Response({'org_chart': roots})
 
 
 class SettingsView(APIView):

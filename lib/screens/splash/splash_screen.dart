@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../animations/motion.dart';
+import '../../providers/app_provider.dart';
 import '../../services/api_service.dart';
 import '../auth/login_screen.dart';
 import '../shell_screen.dart';
@@ -44,10 +46,22 @@ class _SplashScreenState extends State<SplashScreen>
 
     bool isValidSession = false;
     if (token != null && name != null && name.isNotEmpty) {
-      // Validate the token by calling the API
+      // Validate token and restore role
       try {
-        await ApiService.getCurrentUser();
+        final userData = await ApiService.getCurrentUser();
         isValidSession = true;
+        // Restore role from API response
+        if (mounted) {
+          final provider = context.read<AppProvider>();
+          final roleStr = userData['role'] ?? 'employee';
+          if (roleStr == 'hr') {
+            provider.setRole(UserRole.hr);
+          } else if (roleStr == 'manager') {
+            provider.setRole(UserRole.manager);
+          } else {
+            provider.setRole(UserRole.employee);
+          }
+        }
       } catch (e) {
         // Token expired or invalid - clear it
         await prefs.remove('auth_token');

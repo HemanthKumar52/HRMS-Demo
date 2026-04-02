@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import '../../animations/success_overlay.dart';
+import '../../providers/app_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../widgets/form_fields.dart';
@@ -23,21 +25,31 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   bool _isSubmitting = false;
   String? _attachmentName;
 
-  final List<String> _leaveTypes = [
-    'Casual Leave',
-    'Sick Leave',
-    'Earned Leave',
-    'Comp Off',
-    'Maternity Leave',
-    'Paternity Leave',
-    'Bereavement Leave',
-  ];
+  List<String> _leaveTypes = [];
 
   final List<String> _breakdownOptions = [
     'Full Day',
     'First Half',
     'Second Half',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLeaveTypes();
+  }
+
+  Future<void> _loadLeaveTypes() async {
+    try {
+      final types = await ApiService.getLeaveTypes();
+      if (!mounted) return;
+      setState(() {
+        _leaveTypes = types.map<String>((t) => t['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+      });
+    } catch (_) {
+      _leaveTypes = ['Casual Leave', 'Sick Leave', 'Earned Leave'];
+    }
+  }
 
   @override
   void dispose() {
@@ -69,6 +81,18 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       NotificationService.instance.showRequestApplied('Leave');
+      // Refresh notifications so badge updates
+      try { await ApiService.getNotifications().then((data) {
+        if (!mounted) return;
+        final provider = context.read<AppProvider>();
+        provider.updateNotifications(
+          List<Map<String, dynamic>>.from((data['notifications'] as List? ?? []).map((n) => Map<String, dynamic>.from(n))),
+          (data['unread_count'] ?? 0) as int,
+        );
+      }); } catch (e) {
+        debugPrint('NOTIF_REFRESH ERROR after leave: $e');
+      }
+      if (!mounted) return;
       await SuccessOverlay.show(context, message: 'Leave request submitted');
       if (mounted) Navigator.pop(context);
     } catch (e) {

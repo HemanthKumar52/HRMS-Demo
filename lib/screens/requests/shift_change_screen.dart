@@ -22,19 +22,26 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
   bool _permanentRequest = false;
   bool _isSubmitting = false;
 
-  final List<String> _employees = [
-    'Venkat Kumar',
-    'Priya Sharma',
-    'Rahul Verma',
-    'Anita Desai',
-  ];
+  List<String> _employees = [];
+  List<String> _shifts = [];
 
-  final List<String> _shifts = [
-    'Morning Shift (6:00 AM - 2:00 PM)',
-    'General Shift (9:00 AM - 6:00 PM)',
-    'Afternoon Shift (2:00 PM - 10:00 PM)',
-    'Night Shift (10:00 PM - 6:00 AM)',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final emps = await ApiService.getEmployees();
+      final shifts = await ApiService.getShifts();
+      if (!mounted) return;
+      setState(() {
+        _employees = emps.map<String>((e) => e['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+        _shifts = shifts.map<String>((s) => s['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+      });
+    } catch (_) {}
+  }
 
   @override
   void dispose() {

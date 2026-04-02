@@ -14,7 +14,6 @@ dependencies:
   fl_chart: ^0.70.2
   provider: ^6.1.2
   flutter_animate: ^4.5.2
-  percent_indicator: ^4.2.3
   intl: ^0.19.0
   pdfx: ^2.6.0
   flutter_local_notifications: ^21.0.0
@@ -23,6 +22,7 @@ dependencies:
   shared_preferences: ^2.2.2
   image_picker: ^1.2.1
   url_launcher: ^6.3.1
+  path_provider: ^2.1.2
 
 dev_dependencies:
   flutter_test:

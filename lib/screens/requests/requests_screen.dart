@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../animations/motion.dart';
 import '../../animations/skeleton_loading.dart';
@@ -145,33 +146,38 @@ class _RequestsScreenState extends State<RequestsScreen> {
       if (apiReq['description'] != null) 'description': apiReq['description'],
       if (apiReq['rejection_reason'] != null) 'rejectionReason': apiReq['rejection_reason'],
       if (apiReq['rejectionReason'] != null) 'rejectionReason': apiReq['rejectionReason'],
+      'created_date': apiReq['created_date'] ?? '',
     };
   }
 
   Future<void> _loadRequests() async {
     try {
-      final data = await ApiService.get('/requests');
+      // Fetch own requests (role=self)
+      final selfData = await ApiService.getRequests(role: 'self');
       if (!mounted) return;
-      final rawRequests = (data['requests'] as List?) ?? [];
-      final allMapped = rawRequests
+      final selfRaw = (selfData['requests'] as List?) ?? [];
+      final selfMapped = selfRaw
           .map<Map<String, dynamic>>((r) => _mapApiRequest(Map<String, dynamic>.from(r)))
           .toList();
 
-      // Separate into employee requests (have employeeName) and own requests
-      final employee = <Map<String, dynamic>>[];
-      final own = <Map<String, dynamic>>[];
-      for (final req in allMapped) {
-        if (req.containsKey('employeeName')) {
-          employee.add(req);
-        } else {
-          own.add(req);
-        }
+      // For manager/HR, also fetch team requests (role=all)
+      var teamMapped = <Map<String, dynamic>>[];
+      final provider = context.read<AppProvider>();
+      if (provider.role == UserRole.manager || provider.role == UserRole.hr) {
+        try {
+          final teamData = await ApiService.getRequests(role: 'all');
+          if (!mounted) return;
+          final teamRaw = (teamData['requests'] as List?) ?? [];
+          teamMapped = teamRaw
+              .map<Map<String, dynamic>>((r) => _mapApiRequest(Map<String, dynamic>.from(r)))
+              .toList();
+        } catch (_) {}
       }
 
       setState(() {
-        _employeeRequests = employee;
-        _myRequests = own;
-        _requests = allMapped;
+        _requests = selfMapped;       // Employee's own submitted requests
+        _myRequests = selfMapped;     // Manager's own requests (My Requests tab)
+        _employeeRequests = teamMapped; // Team requests for manager/HR (Requested tab)
         _isLoading = false;
       });
     } catch (e) {
@@ -233,7 +239,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
       default:
         return;
     }
-    Navigator.push(context, Motion.pageRoute(screen));
+    Navigator.push(context, Motion.pageRoute(screen)).then((_) => _loadRequests());
   }
 
   void _showFilterSheet() {
@@ -302,6 +308,84 @@ class _RequestsScreenState extends State<RequestsScreen> {
     );
   }
 
+  // ─── Date grouping helpers (WhatsApp style) ─────────────────────
+  String _dateGroupLabel(String dateStr) {
+    if (dateStr.isEmpty) return 'Older';
+    try {
+      final date = DateTime.parse(dateStr).toLocal();
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final dateOnly = DateTime(date.year, date.month, date.day);
+      final diff = today.difference(dateOnly).inDays;
+
+      if (diff == 0) return 'Today';
+      if (diff == 1) return 'Yesterday';
+      if (diff < 7) return 'This Week';
+      if (diff < 14) return 'Last Week';
+      if (diff < 30) return 'This Month';
+      if (diff < 60) return 'Last Month';
+      return DateFormat('MMMM yyyy').format(date);
+    } catch (_) {
+      return 'Older';
+    }
+  }
+
+  /// Builds a flat list of widgets with date section headers inserted.
+  List<Widget> _buildGroupedRequestWidgets(
+    List<Map<String, dynamic>> requests,
+    TextTheme textTheme,
+    bool isDark, {
+    required bool showEmployee,
+  }) {
+    if (requests.isEmpty) return [];
+
+    final widgets = <Widget>[];
+    String? lastGroup;
+    int animIndex = 0;
+
+    for (final request in requests) {
+      final group = _dateGroupLabel(request['created_date'] as String? ?? '');
+      if (group != lastGroup) {
+        lastGroup = group;
+        widgets.add(
+          Padding(
+            padding: EdgeInsets.only(top: widgets.isEmpty ? 0 : 12, bottom: 8, left: 4),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    group,
+                    style: textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11,
+                      letterSpacing: 0.5,
+                      color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Divider(
+                    height: 1,
+                    color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.06),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      widgets.add(_buildRequestListTile(request, textTheme, isDark, animIndex, showEmployee: showEmployee));
+      animIndex++;
+    }
+    return widgets;
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -365,18 +449,23 @@ class _RequestsScreenState extends State<RequestsScreen> {
             ),
           ),
 
-          // Content based on selected chip
+          // Content based on selected chip (with pull-to-refresh)
           Expanded(
             child: _isLoading
                 ? Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: SkeletonList(itemCount: 5, showCircle: false),
                   )
-                : AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    switchInCurve: Curves.easeOut,
-                    switchOutCurve: Curves.easeIn,
-                    child: _buildTabContent(safeIndex, isManagerOrHr, textTheme, isDark),
+                : RefreshIndicator(
+                    onRefresh: _loadRequests,
+                    color: AppColors.primary,
+                    displacement: 40,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      switchInCurve: Curves.easeOut,
+                      switchOutCurve: Curves.easeIn,
+                      child: _buildTabContent(safeIndex, isManagerOrHr, textTheme, isDark),
+                    ),
                   ),
           ),
         ],
@@ -513,21 +602,28 @@ class _RequestsScreenState extends State<RequestsScreen> {
   // ─── "Requested" tab for Employee: shows own submitted requests ─
   Widget _buildRequestedView(TextTheme textTheme, bool isDark) {
     final filtered = _filteredRequests;
+    final grouped = _buildGroupedRequestWidgets(filtered, textTheme, isDark, showEmployee: false);
     return Column(
       key: const ValueKey('requested-list'),
       children: [
         if (_activeFilter != 'All')
           _buildFilterIndicator(textTheme, '${filtered.length} results'),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-            itemCount: filtered.length + 1,
-            itemBuilder: (context, index) {
-              if (index == filtered.length) return const PPulseFooter();
-              final request = filtered[index];
-              return _buildRequestListTile(request, textTheme, isDark, index, showEmployee: false);
-            },
-          ),
+          child: filtered.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.inbox_rounded, size: 56, color: isDark ? AppColors.darkSubtext.withValues(alpha: 0.4) : AppColors.lightSubtext.withValues(alpha: 0.4)),
+                      const SizedBox(height: 12),
+                      Text('No requests yet', style: textTheme.bodyMedium?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+                    ],
+                  ),
+                )
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+                  children: [...grouped, const PPulseFooter()],
+                ),
         ),
       ],
     );
@@ -536,21 +632,28 @@ class _RequestsScreenState extends State<RequestsScreen> {
   // ─── "Requested" tab for Manager/HR: shows employee requests ────
   Widget _buildEmployeeRequestsView(TextTheme textTheme, bool isDark) {
     final filtered = _filteredEmployeeRequests;
+    final grouped = _buildGroupedRequestWidgets(filtered, textTheme, isDark, showEmployee: true);
     return Column(
       key: const ValueKey('employee-requests-list'),
       children: [
         if (_activeFilter != 'All')
           _buildFilterIndicator(textTheme, '${filtered.length} results'),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-            itemCount: filtered.length + 1,
-            itemBuilder: (context, index) {
-              if (index == filtered.length) return const PPulseFooter();
-              final request = filtered[index];
-              return _buildRequestListTile(request, textTheme, isDark, index, showEmployee: true);
-            },
-          ),
+          child: filtered.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.inbox_rounded, size: 56, color: isDark ? AppColors.darkSubtext.withValues(alpha: 0.4) : AppColors.lightSubtext.withValues(alpha: 0.4)),
+                      const SizedBox(height: 12),
+                      Text('No team requests', style: textTheme.bodyMedium?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+                    ],
+                  ),
+                )
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+                  children: [...grouped, const PPulseFooter()],
+                ),
         ),
       ],
     );
@@ -559,6 +662,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
   // ─── "My Requests" tab for Manager/HR: shows own requests ───────
   Widget _buildMyRequestsView(TextTheme textTheme, bool isDark) {
     final filtered = _filteredMyRequests;
+    final grouped = _buildGroupedRequestWidgets(filtered, textTheme, isDark, showEmployee: false);
     return Column(
       key: const ValueKey('my-requests-list'),
       children: [
@@ -576,14 +680,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     ],
                   ),
                 )
-              : ListView.builder(
+              : ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-                  itemCount: filtered.length + 1,
-                  itemBuilder: (context, index) {
-                    if (index == filtered.length) return const PPulseFooter();
-                    final request = filtered[index];
-                    return _buildRequestListTile(request, textTheme, isDark, index, showEmployee: false);
-                  },
+                  children: [...grouped, const PPulseFooter()],
                 ),
         ),
       ],
@@ -640,7 +739,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
         onTap: () => Navigator.push(
           context,
           Motion.pageRoute(RequestDetailScreen(requestData: request)),
-        ).then((_) => setState(() {})),
+        ).then((_) => _loadRequests()),
         child: Row(
           children: [
             Hero(

@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
+import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
@@ -53,9 +54,12 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     }
   }
 
-  void _handleAccept() {
+  void _handleAccept() async {
+    final id = int.tryParse(_data['id']?.toString() ?? '');
+    if (id == null) return;
     setState(() => _isProcessing = true);
-    Future.delayed(const Duration(milliseconds: 600), () {
+    try {
+      await ApiService.acceptRequest(id);
       if (!mounted) return;
       setState(() {
         _data['status'] = 'Accepted';
@@ -72,20 +76,32 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ));
-    });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isProcessing = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Failed to accept: ${e.toString().replaceAll('Exception: ', '')}'),
+        backgroundColor: AppColors.danger,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+    }
   }
 
-  void _handleReject() {
+  void _handleReject() async {
     if (!_showRejectionField) {
       setState(() => _showRejectionField = true);
       return;
     }
+    final id = int.tryParse(_data['id']?.toString() ?? '');
+    if (id == null) return;
     setState(() => _isProcessing = true);
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (!mounted) return;
+    try {
       final reason = _rejectionController.text.isNotEmpty
           ? _rejectionController.text
           : 'Rejected by manager';
+      await ApiService.rejectRequest(id, reason: reason);
+      if (!mounted) return;
       setState(() {
         _data['status'] = 'Rejected';
         _data['rejectionReason'] = reason;
@@ -102,7 +118,16 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ));
-    });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isProcessing = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Failed to reject: ${e.toString().replaceAll('Exception: ', '')}'),
+        backgroundColor: AppColors.danger,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+    }
   }
 
   @override

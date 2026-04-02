@@ -31,33 +31,33 @@ class _AttendanceRequestScreenState extends State<AttendanceRequestScreen> {
   String? _attachmentName;
   bool _isSubmitting = false;
 
-  final List<String> _employees = [
-    'Venkat Kumar',
-    'Priya Sharma',
-    'Rahul Verma',
-    'Anita Desai',
-  ];
-
-  final List<String> _shifts = [
-    'Morning Shift',
-    'General Shift',
-    'Afternoon Shift',
-    'Night Shift',
-  ];
+  List<String> _employees = [];
+  List<String> _shifts = [];
+  List<String> _workTypes = [];
 
   final List<String> _statusOptions = [
-    'Present',
-    'Absent',
-    'Half Day',
-    'On Duty',
+    'Present', 'Absent', 'Half Day', 'On Duty',
   ];
 
-  final List<String> _workTypes = [
-    'Work From Home',
-    'Work From Office',
-    'Hybrid',
-    'Remote',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final emps = await ApiService.getEmployees();
+      final shifts = await ApiService.getShifts();
+      final wts = await ApiService.getWorkTypes();
+      if (!mounted) return;
+      setState(() {
+        _employees = emps.map<String>((e) => e['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+        _shifts = shifts.map<String>((s) => s['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+        _workTypes = wts.map<String>((w) => w['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+      });
+    } catch (_) {}
+  }
 
   @override
   void dispose() {

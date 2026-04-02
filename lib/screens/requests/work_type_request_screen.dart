@@ -22,19 +22,26 @@ class _WorkTypeRequestScreenState extends State<WorkTypeRequestScreen> {
   bool _permanentRequest = false;
   bool _isSubmitting = false;
 
-  final List<String> _employees = [
-    'Venkat Kumar',
-    'Priya Sharma',
-    'Rahul Verma',
-    'Anita Desai',
-  ];
+  List<String> _employees = [];
+  List<String> _workTypes = [];
 
-  final List<String> _workTypes = [
-    'Work From Home',
-    'Work From Office',
-    'Hybrid',
-    'Remote',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final emps = await ApiService.getEmployees();
+      final wts = await ApiService.getWorkTypes();
+      if (!mounted) return;
+      setState(() {
+        _employees = emps.map<String>((e) => e['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+        _workTypes = wts.map<String>((w) => w['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+      });
+    } catch (_) {}
+  }
 
   @override
   void dispose() {

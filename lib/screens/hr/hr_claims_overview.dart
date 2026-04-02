@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:fl_chart/fl_chart.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
+import '../../widgets/styled_donut_chart.dart';
 
 class HrClaimsOverview extends StatefulWidget {
   const HrClaimsOverview({super.key});
@@ -106,33 +106,16 @@ class _HrClaimsOverviewState extends State<HrClaimsOverview> with SingleTickerPr
                 children: [
                   Text('Claims by Category', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, fontSize: 15)),
                   const SizedBox(height: 12),
-                  SizedBox(
-                    height: 150,
-                    child: PieChart(
-                      PieChartData(
-                        sectionsSpace: 2,
-                        centerSpaceRadius: 35,
-                        sections: [
-                          PieChartSectionData(value: 45, title: '45%', color: AppColors.primary, radius: 35, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11)),
-                          PieChartSectionData(value: 25, title: '25%', color: AppColors.success, radius: 35, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11)),
-                          PieChartSectionData(value: 20, title: '20%', color: AppColors.orange, radius: 35, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11)),
-                          PieChartSectionData(value: 10, title: '10%', color: AppColors.secondary, radius: 35, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11)),
-                        ],
-                      ),
-                      duration: const Duration(milliseconds: 800),
-                      curve: Curves.easeInOutCubic,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 14,
-                    runSpacing: 6,
-                    children: const [
-                      _Legend(label: 'Travel', color: AppColors.primary),
-                      _Legend(label: 'Medical', color: AppColors.success),
-                      _Legend(label: 'Equipment', color: AppColors.orange),
-                      _Legend(label: 'Other', color: AppColors.secondary),
+                  StyledDonutChart(
+                    size: 160,
+                    strokeWidth: 22,
+                    segments: const [
+                      DonutSegment(label: 'Travel', value: 45, color: AppColors.primary),
+                      DonutSegment(label: 'Medical', value: 25, color: AppColors.success),
+                      DonutSegment(label: 'Equipment', value: 20, color: AppColors.orange),
+                      DonutSegment(label: 'Other', value: 10, color: AppColors.secondary),
                     ],
+                    centerLabel: 'Claims',
                   ),
                 ],
               ),
@@ -389,23 +372,3 @@ class _ActionBtn extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Legend
-// ---------------------------------------------------------------------------
-class _Legend extends StatelessWidget {
-  final String label;
-  final Color color;
-  const _Legend({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3))),
-        const SizedBox(width: 6),
-        Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkSubtext : AppColors.lightSubtext)),
-      ],
-    );
-  }
-}

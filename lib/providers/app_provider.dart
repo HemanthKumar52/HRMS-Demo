@@ -128,9 +128,15 @@ class AppProvider extends ChangeNotifier {
         debugPrint('Error fetching leaves: $e');
       }
 
-      // Fetch user profile
+      // Fetch user profile and update role
       try {
         _userProfile = await ApiService.getCurrentUser();
+        final roleStr = _userProfile['role'] ?? '';
+        if (roleStr == 'hr') {
+          _role = UserRole.hr;
+        } else if (roleStr == 'manager') {
+          _role = UserRole.manager;
+        }
       } catch (e) {
         debugPrint('Error fetching profile: $e');
       }
@@ -188,7 +194,16 @@ class AppProvider extends ChangeNotifier {
       NotificationService.instance.showPunchIn();
       notifyListeners();
     } catch (e) {
-      triggerDynamicIsland('Punch In Failed', Icons.error, Colors.red);
+      final msg = e.toString();
+      if (msg.contains('ALREADY_PUNCHED_IN') || msg.contains('Already clocked in')) {
+        // Already punched in — just sync the state
+        _isPunchedIn = true;
+        _punchInTime ??= DateTime.now();
+        triggerDynamicIsland('Already Clocked In', Icons.check_circle, const Color(0xFF34D399));
+        notifyListeners();
+      } else {
+        triggerDynamicIsland('Punch In Failed', Icons.error, Colors.red);
+      }
     }
   }
 
@@ -201,7 +216,15 @@ class AppProvider extends ChangeNotifier {
       NotificationService.instance.showPunchOut();
       notifyListeners();
     } catch (e) {
-      triggerDynamicIsland('Punch Out Failed', Icons.error, Colors.red);
+      final msg = e.toString();
+      if (msg.contains('NOT_PUNCHED_IN') || msg.contains('without punching in')) {
+        _isPunchedIn = false;
+        _punchInTime = null;
+        triggerDynamicIsland('Not Clocked In Yet', Icons.info, Colors.orange);
+        notifyListeners();
+      } else {
+        triggerDynamicIsland('Punch Out Failed', Icons.error, Colors.red);
+      }
     }
   }
 
@@ -337,6 +360,12 @@ class AppProvider extends ChangeNotifier {
 
   void setEmployeeId(String id) {
     _employeeId = id;
+    notifyListeners();
+  }
+
+  void updateNotifications(List<Map<String, dynamic>> notifications, int unreadCount) {
+    _notifications = notifications;
+    _unreadNotifications = unreadCount;
     notifyListeners();
   }
 

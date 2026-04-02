@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/app_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -14,6 +15,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
+  bool _isSyncing = false;
 
   @override
   Widget build(BuildContext context) {
@@ -138,13 +140,84 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ).animate().fadeIn(duration: 420.ms, delay: (3 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (3 * 80).ms, curve: Curves.easeOutCubic),
             const SizedBox(height: 24),
 
+            // Sync section
+            Text(
+              'Data',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ).animate().fadeIn(duration: 420.ms, delay: (4 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (4 * 80).ms, curve: Curves.easeOutCubic),
+            const SizedBox(height: 12),
+            NeuCard(
+              onTap: _isSyncing ? null : () async {
+                setState(() => _isSyncing = true);
+                try {
+                  await context.read<AppProvider>().fetchDashboardData();
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: const Text('All data synced successfully'),
+                    backgroundColor: AppColors.success,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ));
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: const Text('Sync failed. Check your connection.'),
+                    backgroundColor: AppColors.danger,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ));
+                } finally {
+                  if (mounted) setState(() => _isSyncing = false);
+                }
+              },
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: _isSyncing
+                        ? SizedBox(
+                            width: 20, height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.success),
+                          )
+                        : const Icon(Icons.sync_rounded, color: AppColors.success, size: 20),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Sync Data',
+                          style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Refresh all data from the server',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, size: 20,
+                    color: isDark ? Colors.white.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.25)),
+                ],
+              ),
+            ).animate().fadeIn(duration: 420.ms, delay: (5 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (5 * 80).ms, curve: Curves.easeOutCubic),
+            const SizedBox(height: 24),
+
             // General section
             Text(
               'General',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
-            ).animate().fadeIn(duration: 420.ms, delay: (4 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (4 * 80).ms, curve: Curves.easeOutCubic),
+            ).animate().fadeIn(duration: 420.ms, delay: (6 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (6 * 80).ms, curve: Curves.easeOutCubic),
             const SizedBox(height: 12),
             NeuCard(
               child: Column(

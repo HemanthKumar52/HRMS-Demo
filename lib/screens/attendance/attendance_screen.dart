@@ -33,7 +33,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   // Day status: 0=none, 1=working, 2=absent, 3=leave, 4=holiday
   final Map<int, int> _dayStatuses = {};
+  List<Map<String, dynamic>> _dailyLog = [];
   bool _isLoading = true;
+
+  bool? _lastPunchedIn;
 
   @override
   void initState() {
@@ -41,6 +44,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     _today = DateTime.now();
     _currentMonth = DateTime(_today.year, _today.month);
     _loadAttendanceData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Auto-reload when punch status changes (user punched in/out)
+    final isPunchedIn = context.read<AppProvider>().isPunchedIn;
+    if (_lastPunchedIn != null && _lastPunchedIn != isPunchedIn) {
+      _loadAttendanceData();
+    }
+    _lastPunchedIn = isPunchedIn;
   }
 
   void _goToPreviousMonth() {
@@ -72,6 +86,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       _absentCount = (summary['absent'] ?? 0) as int;
       _leaveCount = (summary['leave'] ?? 0) as int;
       _holidayCount = (summary['holidays'] ?? 0) as int;
+
+      // Store raw daily data for log table (only present days, newest first)
+      _dailyLog = daily.where((d) =>
+        d['status'] == 'present' && d['punch_in'] != null
+      ).toList().reversed.toList();
 
       // Build day statuses from real data
       _dayStatuses.clear();
@@ -166,7 +185,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: _isLoading
+      body: RefreshIndicator(
+        onRefresh: _loadAttendanceData,
+        color: AppColors.primary,
+        child: _isLoading
           ? SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Column(
@@ -574,9 +596,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           leftTitles: AxisTitles(
                             sideTitles: SideTitles(
                               showTitles: true,
-                              reservedSize: 24,
-                              interval: 1,
+                              reservedSize: 28,
+                              interval: 5,
                               getTitlesWidget: (value, meta) {
+                                if (value % 5 != 0) return const SizedBox.shrink();
                                 return Text(
                                   '${value.toInt()}',
                                   style: tt.bodySmall?.copyWith(fontSize: 10),
@@ -625,12 +648,145 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ),
             ).animate().fadeIn(duration: 420.ms, delay: 480.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 480.ms, curve: Curves.easeOutCubic),
 
+            // ── Attendance Log Table ──
+            const SizedBox(height: 8),
+            Text('Attendance Log', style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700))
+                .animate().fadeIn(duration: 420.ms, delay: 560.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 560.ms, curve: Curves.easeOutCubic),
+            const SizedBox(height: 12),
+            _buildAttendanceLogTable(tt, isDark),
+
             const PPulseFooter(),
             const SizedBox(height: 80),
           ],
         ),
       ),
       ),
+      ),
+    );
+  }
+
+  Widget _buildAttendanceLogTable(TextTheme tt, bool isDark) {
+    if (_dailyLog.isEmpty) {
+      return NeuCard(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text('No attendance records this month',
+              style: tt.bodyMedium?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+          ),
+        ),
+      );
+    }
+
+    final borderColor = isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.25);
+    final headerBg = isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFF5F5F5);
+    final headerStyle = TextStyle(fontWeight: FontWeight.w700, fontSize: 11, color: isDark ? Colors.white : Colors.black87);
+    final cellStyle = TextStyle(fontSize: 11, color: isDark ? Colors.white70 : Colors.black87);
+
+    final rows = _dailyLog.take(15).toList();
+
+    return NeuCard(
+      padding: EdgeInsets.zero,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Table(
+            border: TableBorder(
+              verticalInside: BorderSide(color: borderColor, width: 1),
+              horizontalInside: BorderSide(color: borderColor, width: 0.5),
+              top: BorderSide(color: borderColor, width: 0.5),
+              bottom: BorderSide(color: borderColor, width: 0.5),
+              left: BorderSide.none,
+              right: BorderSide.none,
+            ),
+            defaultColumnWidth: const FixedColumnWidth(100),
+            columnWidths: const {
+              0: FixedColumnWidth(105), // Date
+              3: FixedColumnWidth(120), // Work Type
+            },
+            children: [
+              // Header row
+              TableRow(
+                decoration: BoxDecoration(color: headerBg),
+                children: [
+                  _tableHeaderCell('Date', Icons.calendar_today_outlined, headerStyle),
+                  _tableHeaderCell('Check-In', Icons.login_outlined, headerStyle),
+                  _tableHeaderCell('Check-Out', Icons.logout_outlined, headerStyle),
+                  _tableHeaderCell('Work Type', Icons.home_work_outlined, headerStyle),
+                  _tableHeaderCell('Shift', Icons.schedule_outlined, headerStyle),
+                  _tableHeaderCell('At Work', Icons.timer_outlined, headerStyle),
+                  _tableHeaderCell('Min Hour', Icons.hourglass_bottom_outlined, headerStyle),
+                  _tableHeaderCell('Overtime', Icons.more_time_outlined, headerStyle),
+                ],
+              ),
+              // Data rows
+              ...rows.map((d) {
+                final dateStr = d['date'] as String? ?? '';
+                final punchIn = d['punch_in'] as String? ?? '';
+                final punchOut = d['punch_out'] as String?;
+                final totalHours = d['total_hours'] as String? ?? '';
+                final shift = d['shift'] as String? ?? '';
+                final workType = d['work_type'] as String? ?? '';
+                final minHour = d['min_hour'] as String? ?? '00:00';
+                final overtime = d['overtime'] as String? ?? '00:00';
+
+                String fmtDate = dateStr;
+                try { fmtDate = DateFormat('dd/MM/yyyy').format(DateTime.parse(dateStr)); } catch (_) {}
+
+                String fmtIn = _fmtTime(punchIn);
+                String fmtOut = punchOut != null ? _fmtTime(punchOut) : '--';
+
+                return TableRow(
+                  children: [
+                    _tableCell(fmtDate, cellStyle, bold: true),
+                    _tableCell(fmtIn, cellStyle),
+                    _tableCell(fmtOut, cellStyle),
+                    _tableCell(workType.isNotEmpty ? workType : '-', cellStyle),
+                    _tableCell(shift.isNotEmpty ? shift : '-', cellStyle),
+                    _tableCell(totalHours.isNotEmpty ? totalHours : '-', cellStyle),
+                    _tableCell(minHour, cellStyle),
+                    _tableCell(overtime, cellStyle),
+                  ],
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    ).animate().fadeIn(duration: 420.ms, delay: 640.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 640.ms, curve: Curves.easeOutCubic);
+  }
+
+  String _fmtTime(String time) {
+    if (time.isEmpty) return '--';
+    try {
+      final parts = time.split(':');
+      final h = int.parse(parts[0]);
+      final m = int.parse(parts[1]);
+      final ampm = h >= 12 ? 'PM' : 'AM';
+      final h12 = h == 0 ? 12 : (h > 12 ? h - 12 : h);
+      return '$h12:${m.toString().padLeft(2, '0')} $ampm';
+    } catch (_) { return time; }
+  }
+
+  Widget _tableHeaderCell(String text, IconData icon, TextStyle style) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: style.color?.withValues(alpha: 0.6)),
+          const SizedBox(width: 4),
+          Flexible(child: Text(text, style: style, overflow: TextOverflow.ellipsis)),
+        ],
+      ),
+    );
+  }
+
+  Widget _tableCell(String text, TextStyle style, {bool bold = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      child: Text(text, style: bold ? style.copyWith(fontWeight: FontWeight.w600) : style),
     );
   }
 

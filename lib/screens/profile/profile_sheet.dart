@@ -68,21 +68,7 @@ class _ProfileSheet extends StatelessWidget {
               Center(
                 child: Stack(
                   children: [
-                    CircleAvatar(
-                      radius: 48,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                      child: Text(
-                        provider.userName
-                            .split(' ')
-                            .map((e) => e.isNotEmpty ? e[0] : '')
-                            .take(2)
-                            .join(),
-                        style: theme.textTheme.headlineLarge?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
+                    _buildAvatar(provider, theme, 48),
                     Positioned(
                       bottom: 0,
                       right: 0,
@@ -214,6 +200,27 @@ class _ProfileSheet extends StatelessWidget {
       },
     );
   }
+}
+
+Widget _buildAvatar(AppProvider provider, ThemeData theme, double radius) {
+  final avatarUrl = provider.userProfile['avatar_url'] as String?;
+  final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
+  final initials = provider.userName.split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join();
+
+  if (hasAvatar) {
+    return CircleAvatar(
+      radius: radius,
+      backgroundImage: NetworkImage(avatarUrl),
+      onBackgroundImageError: (_, __) {},
+      child: null,
+    );
+  }
+  return CircleAvatar(
+    radius: radius,
+    backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+    child: Text(initials, style: theme.textTheme.headlineLarge?.copyWith(
+      color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: radius * 0.6)),
+  );
 }
 
 class _MenuItem extends StatelessWidget {

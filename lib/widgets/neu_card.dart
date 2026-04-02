@@ -81,10 +81,28 @@ class _NeuCardState extends State<NeuCard> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final cardChild = AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: widget.pressed
+          ? NeuDecoration.pressed(context, radius: widget.radius)
+          : NeuDecoration.card(context, radius: widget.radius),
+      padding: widget.padding,
+      child: widget.child,
+    );
+
+    if (widget.onTap == null) return cardChild;
+
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTapDown: (_) => _handleDown(),
       onTapUp: (_) => _handleUp(),
       onTapCancel: _handleCancel,
+      onTap: () {
+        // Fallback: if onTapUp didn't fire (scroll conflict), ensure onTap works
+        if (!_isDown) {
+          widget.onTap?.call();
+        }
+      },
       child: AnimatedBuilder(
         animation: Listenable.merge([_downController, _upController]),
         builder: (context, child) {
@@ -96,19 +114,9 @@ class _NeuCardState extends State<NeuCard> with TickerProviderStateMixin {
           } else {
             scale = 1.0;
           }
-          return Transform.scale(
-            scale: scale,
-            child: child,
-          );
+          return Transform.scale(scale: scale, child: child);
         },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: widget.pressed
-              ? NeuDecoration.pressed(context, radius: widget.radius)
-              : NeuDecoration.card(context, radius: widget.radius),
-          padding: widget.padding,
-          child: widget.child,
-        ),
+        child: cardChild,
       ),
     );
   }

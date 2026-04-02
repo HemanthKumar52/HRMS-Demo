@@ -34,12 +34,21 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
     'Other',
   ];
 
-  final List<String> _employees = [
-    'Venkat Kumar',
-    'Priya Sharma',
-    'Rahul Verma',
-    'Anita Desai',
-  ];
+  List<String> _employees = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEmployees();
+  }
+
+  Future<void> _loadEmployees() async {
+    try {
+      final data = await ApiService.getEmployees();
+      if (!mounted) return;
+      setState(() { _employees = data.map<String>((e) => e['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList(); });
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -172,29 +181,35 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
               const FormLabel('Upload Images'),
               formLabelGap,
               if (_images.isNotEmpty) ...[
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
+                Column(
                   children: _images.asMap().entries.map((entry) {
-                    return NeuCard(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.image_rounded, size: 18, color: AppColors.success),
-                          const SizedBox(width: 6),
-                          Text(entry.value.name, style: textTheme.bodySmall),
-                          const SizedBox(width: 6),
-                          GestureDetector(
-                            onTap: () => setState(() => _images.removeAt(entry.key)),
-                            child: const Icon(Icons.close_rounded, size: 16, color: AppColors.danger),
-                          ),
-                        ],
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: NeuCard(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.image_rounded, size: 18, color: AppColors.success),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                entry.value.name,
+                                style: textTheme.bodySmall,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () => setState(() => _images.removeAt(entry.key)),
+                              child: const Icon(Icons.close_rounded, size: 16, color: AppColors.danger),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 4),
               ],
               NeuCard(
                 onTap: _addImage,

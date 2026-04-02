@@ -20,6 +20,7 @@ from .views import (
     EmployeesListView, EmployeeDetailView,
     DashboardSummaryView, DashboardAnnouncementsView, DashboardAnalyticsView,
     DepartmentsView, ShiftsListView, WorkTypesListView, LeaveTypesListView,
+    ManagerStatsView, OrgChartView,
     SettingsView
 )
 
@@ -101,6 +102,10 @@ urlpatterns = [
     path('shifts', ShiftsListView.as_view(), name='shifts'),
     path('work-types', WorkTypesListView.as_view(), name='work_types'),
     path('leave-types', LeaveTypesListView.as_view(), name='leave_types'),
+
+    # Manager Stats & Org Chart
+    path('dashboard/manager-stats', ManagerStatsView.as_view(), name='manager_stats'),
+    path('org-chart', OrgChartView.as_view(), name='org_chart'),
 
     # Settings
     path('settings', SettingsView.as_view(), name='settings'),

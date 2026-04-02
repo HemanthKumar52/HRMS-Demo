@@ -29,7 +29,11 @@ class _LoginScreenState extends State<LoginScreen>
   String? _errorText;
   bool _showLoginFields = false;
 
-  late AnimationController _orbController;
+  // Separate controllers matching web durations: floatOrb(12s), floatOrb2(14s), floatOrb3(16s), pulse(8s)
+  late AnimationController _orb1Controller; // 12s - bottom-left large orb
+  late AnimationController _orb2Controller; // 14s - top-left orb
+  late AnimationController _orb3Controller; // 16s - bottom-right orb
+  late AnimationController _orbPulseController; // 8s - center pulse glow
   late AnimationController _pulseController;
   late ShakeController _shakeController;
 
@@ -45,7 +49,10 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
-    _orbController = AnimationController(vsync: this, duration: const Duration(seconds: 14))..repeat();
+    _orb1Controller = AnimationController(vsync: this, duration: const Duration(seconds: 12))..repeat();
+    _orb2Controller = AnimationController(vsync: this, duration: const Duration(seconds: 14))..repeat();
+    _orb3Controller = AnimationController(vsync: this, duration: const Duration(seconds: 16))..repeat();
+    _orbPulseController = AnimationController(vsync: this, duration: const Duration(seconds: 8))..repeat(reverse: true);
     _pulseController = AnimationController(vsync: this, duration: const Duration(seconds: 5))..repeat(reverse: true);
     _shakeController = ShakeController(vsync: this);
   }
@@ -54,7 +61,10 @@ class _LoginScreenState extends State<LoginScreen>
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
-    _orbController.dispose();
+    _orb1Controller.dispose();
+    _orb2Controller.dispose();
+    _orb3Controller.dispose();
+    _orbPulseController.dispose();
     _pulseController.dispose();
     _shakeController.dispose();
     super.dispose();
@@ -80,8 +90,10 @@ class _LoginScreenState extends State<LoginScreen>
         final data = jsonDecode(response.body);
         final token = data['access_token'];
         final userData = data['user'];
+        final refreshToken = data['refresh_token'];
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', token);
+        if (refreshToken != null) await prefs.setString('refresh_token', refreshToken);
         await prefs.setString('employee_id', userData['employee_id'] ?? '');
         await prefs.setString('user_name', userData['name'] ?? '');
         await prefs.setString('user_email', userData['email'] ?? '');
@@ -93,6 +105,15 @@ class _LoginScreenState extends State<LoginScreen>
         provider.setDesignation(userData['designation'] ?? '');
         provider.setDepartment(userData['department'] ?? '');
         provider.setEmployeeId(userData['employee_id'] ?? '');
+        // Set role from API response
+        final roleStr = userData['role'] ?? 'employee';
+        if (roleStr == 'hr') {
+          provider.setRole(UserRole.hr);
+        } else if (roleStr == 'manager') {
+          provider.setRole(UserRole.manager);
+        } else {
+          provider.setRole(UserRole.employee);
+        }
         provider.login();
         await provider.fetchDashboardData();
         Navigator.pushReplacement(
@@ -138,32 +159,46 @@ class _LoginScreenState extends State<LoginScreen>
           // ═══ DARK BACKGROUND ═══
           Container(width: size.width, height: size.height, color: const Color(0xFF0F0F1A)),
 
-          // ═══ LARGE PURPLE GRADIENT CIRCLES (matching web screenshot exactly) ═══
+          // ═══ ANIMATED PURPLE ORBS (matching web floatOrb keyframes) ═══
 
-          // Top-right large purple circle
+          // Orb 1: Top-left large purple orb (web: gradient-orb-1, floatOrb2 14s)
+          // Web keyframes: translate(0,0)→(-70px,90px)→(90px,-70px)→back
           AnimatedBuilder(
-            animation: _orbController,
+            animation: _orb2Controller,
             builder: (_, __) {
-              final t = _orbController.value;
-              final dx = sin(t * 2 * pi) * 30;
-              final dy = cos(t * 2 * pi) * 20;
+              final t = _orb2Controller.value;
+              // 4-step path matching floatOrb2 keyframes
+              double dx, dy;
+              if (t < 0.33) {
+                final p = t / 0.33;
+                dx = lerpDouble(0, -70, p)!;
+                dy = lerpDouble(0, 90, p)!;
+              } else if (t < 0.66) {
+                final p = (t - 0.33) / 0.33;
+                dx = lerpDouble(-70, 90, p)!;
+                dy = lerpDouble(90, -70, p)!;
+              } else {
+                final p = (t - 0.66) / 0.34;
+                dx = lerpDouble(90, 0, p)!;
+                dy = lerpDouble(-70, 0, p)!;
+              }
+              final orbSize = size.width * 1.2;
               return Positioned(
-                top: -size.height * 0.15 + dy,
-                right: -size.width * 0.25 + dx,
+                top: -size.height * 0.08 + dy,
+                left: -size.width * 0.25 + dx,
                 child: Container(
-                  width: size.width * 1.1,
-                  height: size.width * 1.1,
+                  width: orbSize,
+                  height: orbSize,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
-                      center: Alignment.center,
                       colors: [
-                        const Color(0xFF6B3FA0).withValues(alpha: 0.6),
-                        const Color(0xFF5B2D8E).withValues(alpha: 0.35),
-                        const Color(0xFF3D1F6D).withValues(alpha: 0.12),
+                        const Color(0xFF6B3FA0).withValues(alpha: 0.7),
+                        const Color(0xFF5B2D8E).withValues(alpha: 0.4),
+                        const Color(0xFF3D1F6D).withValues(alpha: 0.15),
                         Colors.transparent,
                       ],
-                      stops: const [0.0, 0.35, 0.6, 1.0],
+                      stops: const [0.0, 0.3, 0.6, 1.0],
                     ),
                   ),
                 ),
@@ -171,29 +206,54 @@ class _LoginScreenState extends State<LoginScreen>
             },
           ),
 
-          // Bottom-left large purple circle
+          // Orb 2: Bottom-right large purple orb (web: gradient-orb-2, floatOrb3 16s)
+          // Web keyframes: translate(0,0)→(100px,100px)scale(1.2)→(-50px,-80px)scale(0.95)→(70px,50px)scale(1.15)→back
           AnimatedBuilder(
-            animation: _orbController,
+            animation: _orb3Controller,
             builder: (_, __) {
-              final t = _orbController.value;
-              final dx = cos(t * 2 * pi + 2) * 25;
-              final dy = sin(t * 2 * pi + 2) * 20;
+              final t = _orb3Controller.value;
+              double dx, dy, scale;
+              if (t < 0.25) {
+                final p = t / 0.25;
+                dx = lerpDouble(0, 100, p)!;
+                dy = lerpDouble(0, 100, p)!;
+                scale = lerpDouble(1.0, 1.2, p)!;
+              } else if (t < 0.5) {
+                final p = (t - 0.25) / 0.25;
+                dx = lerpDouble(100, -50, p)!;
+                dy = lerpDouble(100, -80, p)!;
+                scale = lerpDouble(1.2, 0.95, p)!;
+              } else if (t < 0.75) {
+                final p = (t - 0.5) / 0.25;
+                dx = lerpDouble(-50, 70, p)!;
+                dy = lerpDouble(-80, 50, p)!;
+                scale = lerpDouble(0.95, 1.15, p)!;
+              } else {
+                final p = (t - 0.75) / 0.25;
+                dx = lerpDouble(70, 0, p)!;
+                dy = lerpDouble(50, 0, p)!;
+                scale = lerpDouble(1.15, 1.0, p)!;
+              }
+              final baseSize = size.width * 1.1;
               return Positioned(
-                bottom: -size.height * 0.12 + dy,
-                left: -size.width * 0.3 + dx,
-                child: Container(
-                  width: size.width * 1.0,
-                  height: size.width * 1.0,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        const Color(0xFF6B3FA0).withValues(alpha: 0.55),
-                        const Color(0xFF5B2D8E).withValues(alpha: 0.3),
-                        const Color(0xFF3D1F6D).withValues(alpha: 0.1),
-                        Colors.transparent,
-                      ],
-                      stops: const [0.0, 0.35, 0.6, 1.0],
+                bottom: -size.height * 0.1 + dy,
+                right: -size.width * 0.2 + dx,
+                child: Transform.scale(
+                  scale: scale,
+                  child: Container(
+                    width: baseSize,
+                    height: baseSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          const Color(0xFF6B3FA0).withValues(alpha: 0.65),
+                          const Color(0xFF5B2D8E).withValues(alpha: 0.35),
+                          const Color(0xFF3D1F6D).withValues(alpha: 0.12),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.3, 0.6, 1.0],
+                      ),
                     ),
                   ),
                 ),
@@ -201,26 +261,86 @@ class _LoginScreenState extends State<LoginScreen>
             },
           ),
 
-          // Center-right medium purple circle
+          // Orb 3: Bottom-left extra large orb (web: gradient-orb-4, floatOrb 12s)
+          // Web keyframes: translate(0,0)→(100px,-80px)scale(1.15)→(-60px,60px)scale(0.85)→(80px,40px)scale(1.1)→back
           AnimatedBuilder(
-            animation: _orbController,
+            animation: _orb1Controller,
             builder: (_, __) {
-              final t = _orbController.value;
-              final dx = sin(t * 2 * pi + 4) * 20;
+              final t = _orb1Controller.value;
+              double dx, dy, scale;
+              if (t < 0.25) {
+                final p = t / 0.25;
+                dx = lerpDouble(0, 100, p)!;
+                dy = lerpDouble(0, -80, p)!;
+                scale = lerpDouble(1.0, 1.15, p)!;
+              } else if (t < 0.5) {
+                final p = (t - 0.25) / 0.25;
+                dx = lerpDouble(100, -60, p)!;
+                dy = lerpDouble(-80, 60, p)!;
+                scale = lerpDouble(1.15, 0.85, p)!;
+              } else if (t < 0.75) {
+                final p = (t - 0.5) / 0.25;
+                dx = lerpDouble(-60, 80, p)!;
+                dy = lerpDouble(60, 40, p)!;
+                scale = lerpDouble(0.85, 1.1, p)!;
+              } else {
+                final p = (t - 0.75) / 0.25;
+                dx = lerpDouble(80, 0, p)!;
+                dy = lerpDouble(40, 0, p)!;
+                scale = lerpDouble(1.1, 1.0, p)!;
+              }
+              final baseSize = size.width * 1.4;
               return Positioned(
-                top: size.height * 0.3,
-                right: -size.width * 0.15 + dx,
-                child: Container(
-                  width: size.width * 0.7,
-                  height: size.width * 0.7,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        const Color(0xFF7B4FB5).withValues(alpha: 0.4),
-                        const Color(0xFF5B2D8E).withValues(alpha: 0.15),
-                        Colors.transparent,
-                      ],
+                bottom: -size.height * 0.25 + dy,
+                left: -size.width * 0.4 + dx,
+                child: Transform.scale(
+                  scale: scale,
+                  child: Container(
+                    width: baseSize,
+                    height: baseSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          const Color(0xFF5B2D8E).withValues(alpha: 0.5),
+                          const Color(0xFF3D1F6D).withValues(alpha: 0.25),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.5, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // Orb 4: Center pulse glow (web: gradient-orb-3, pulse 8s, scale 1→1.3)
+          AnimatedBuilder(
+            animation: _orbPulseController,
+            builder: (_, __) {
+              final t = _orbPulseController.value;
+              final scale = lerpDouble(1.0, 1.3, t)!;
+              final alpha = lerpDouble(0.15, 0.3, t)!;
+              final orbSize = size.width * 0.9;
+              return Positioned(
+                top: size.height * 0.5 - orbSize / 2,
+                left: size.width * 0.5 - orbSize / 2,
+                child: Transform.scale(
+                  scale: scale,
+                  child: Container(
+                    width: orbSize,
+                    height: orbSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          Color.fromRGBO(107, 63, 160, alpha),
+                          Color.fromRGBO(91, 45, 142, alpha * 0.5),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.4, 1.0],
+                      ),
                     ),
                   ),
                 ),
@@ -450,29 +570,35 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _buildSkeletonOverlay(Size size) {
     return Positioned.fill(
       child: Container(
-        color: const Color(0xFF0F0F1A).withValues(alpha: 0.9),
+        color: const Color(0xFF0F0F1A),
         child: Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              width: size.width * 0.85, constraints: const BoxConstraints(maxWidth: 380),
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(color: const Color(0xFF1A1A2E).withValues(alpha: 0.6), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withValues(alpha: 0.06))),
-              child: Column(children: [
-                _SkeletonBox(width: 60, height: 60, borderRadius: 30),
-                const SizedBox(height: 20),
-                _SkeletonBox(width: 140, height: 16),
-                const SizedBox(height: 12),
-                _SkeletonBox(width: 200, height: 12),
-                const SizedBox(height: 30),
-                _SkeletonBox(width: double.infinity, height: 48, borderRadius: 12),
-                const SizedBox(height: 14),
-                _SkeletonBox(width: double.infinity, height: 48, borderRadius: 12),
-                const SizedBox(height: 20),
-                _SkeletonBox(width: double.infinity, height: 50, borderRadius: 12),
-              ]),
+            // Pulsing purple icon
+            AnimatedBuilder(
+              animation: _pulseController,
+              builder: (_, __) {
+                final glow = 16 + _pulseController.value * 20;
+                return Container(
+                  width: 72, height: 72,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                      colors: [Color(0xFF9B6DFF), Color(0xFF6B3FA0)],
+                    ),
+                    boxShadow: [BoxShadow(color: const Color(0xFF9B6DFF).withValues(alpha: 0.4), blurRadius: glow)],
+                  ),
+                  child: const Icon(Icons.person, color: Colors.white, size: 36),
+                );
+              },
             ),
-            const SizedBox(height: 24),
-            Text('Signing in...', style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14)),
+            const SizedBox(height: 28),
+            const SizedBox(
+              width: 24, height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF9B6DFF)),
+            ),
+            const SizedBox(height: 16),
+            Text('Signing in...', style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14, fontWeight: FontWeight.w500)),
           ]),
         ),
       ),
@@ -509,19 +635,6 @@ class _GlassInput extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-// ═══════════════════════════════════════════
-// SKELETON SHIMMER
-// ═══════════════════════════════════════════
-class _SkeletonBox extends StatelessWidget {
-  final double width, height, borderRadius;
-  const _SkeletonBox({required this.width, required this.height, this.borderRadius = 8});
-  @override
-  Widget build(BuildContext context) {
-    return Container(width: width, height: height, decoration: BoxDecoration(borderRadius: BorderRadius.circular(borderRadius), color: Colors.white.withValues(alpha: 0.06)))
-        .animate(onPlay: (c) => c.repeat()).shimmer(duration: 1500.ms, color: Colors.white.withValues(alpha: 0.05));
   }
 }
 

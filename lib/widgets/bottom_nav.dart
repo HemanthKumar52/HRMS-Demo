@@ -14,10 +14,10 @@ class FloatingBottomNav extends StatelessWidget {
 
     // Unified nav items for all roles
     final items = [
-      _NavItem(Icons.dashboard_rounded, 'Dashboard'),
-      _NavItem(Icons.description_outlined, 'Requests'),
-      _NavItem(Icons.access_time_rounded, 'Attendance'),
-      _NavItem(Icons.receipt_long_rounded, 'Payroll'),
+      _NavItem(Icons.grid_view_rounded, 'Dashboard'),
+      _NavItem(Icons.assignment_outlined, 'Requests'),
+      _NavItem(Icons.fingerprint_rounded, 'Attendance'),
+      _NavItem(Icons.account_balance_wallet_outlined, 'Payroll'),
     ];
 
     return Positioned(

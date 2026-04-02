@@ -426,7 +426,7 @@ class _LeaveRow extends StatelessWidget {
           ),
         ),
         record.status == 'Approved'
-            ? StatusChip.approved()
+            ? StatusChip.accepted()
             : StatusChip.rejected(),
       ],
     );

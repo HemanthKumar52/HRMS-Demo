@@ -13,10 +13,7 @@ class NotificationService {
   bool _initialized = false;
   int _notifId = 0;
 
-  /// Set by main.dart so notification taps can navigate.
   GlobalKey<NavigatorState>? navigatorKey;
-
-  /// Called by main.dart so we can read/write provider state on tap.
   VoidCallback? onNotificationTap;
 
   Future<void> init() async {
@@ -24,19 +21,22 @@ class NotificationService {
 
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings(
+
+    // iOS: request permissions AND enable foreground presentation
+    final iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+      notificationCategories: [],
+    );
+
+    final macOSSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
 
-    const macOSSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-
-    const settings = InitializationSettings(
+    final settings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
       macOS: macOSSettings,
@@ -47,17 +47,45 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
-    // Request notification permission on Android 13+
-    await _plugin
+    // Android 13+: request notification permission
+    final androidPlugin = _plugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
+            AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin != null) {
+      await androidPlugin.requestNotificationsPermission();
+      // Create notification channel explicitly
+      await androidPlugin.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'hrms_channel',
+          'HRMS Notifications',
+          description: 'Notifications for requests, approvals & alerts',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+          showBadge: true,
+        ),
+      );
+    }
+
+    // iOS: request permission explicitly
+    final iosPlugin = _plugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>();
+    if (iosPlugin != null) {
+      await iosPlugin.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+        critical: false,
+      );
+    }
 
     _initialized = true;
+    debugPrint('NOTIF_SERVICE: Initialized successfully');
   }
 
   void _onNotificationTap(NotificationResponse response) {
-    // Delegate to the callback set by main.dart
+    debugPrint('NOTIF_TAP: payload=${response.payload}');
     onNotificationTap?.call();
   }
 
@@ -67,36 +95,74 @@ class NotificationService {
     String? payload,
     bool vibrate = true,
   }) async {
+    debugPrint('PUSH_NOTIF: Firing "$title" - "$body"');
     if (!_initialized) await init();
 
+    // Android: max importance, heads-up, full screen intent for guaranteed visibility
     const androidDetails = AndroidNotificationDetails(
       'hrms_channel',
       'HRMS Notifications',
-      channelDescription: 'Notifications for clock in/out, requests & salary',
-      importance: Importance.high,
-      priority: Priority.high,
+      channelDescription: 'Notifications for requests, approvals & alerts',
+      importance: Importance.max,
+      priority: Priority.max,
       enableVibration: true,
       playSound: true,
+      showWhen: true,
+      enableLights: true,
+      ledColor: Color(0xFF6B3FA0),
+      ledOnMs: 1000,
+      ledOffMs: 500,
+      ticker: 'PPulse HRMS',
+      styleInformation: BigTextStyleInformation(
+        '',
+        contentTitle: null,
+        summaryText: 'PPulse HRMS',
+      ),
+      category: AndroidNotificationCategory.message,
+      visibility: NotificationVisibility.public,
+      fullScreenIntent: true,
+    );
+
+    // iOS: show alert, badge, sound even when app is in foreground
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+      presentBanner: true,
+      presentList: true,
+      interruptionLevel: InterruptionLevel.timeSensitive,
+    );
+
+    const macDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+      presentBanner: true,
     );
 
     const details = NotificationDetails(
       android: androidDetails,
-      iOS: DarwinNotificationDetails(),
-      macOS: DarwinNotificationDetails(),
+      iOS: iosDetails,
+      macOS: macDetails,
     );
 
-    await _plugin.show(
-      id: _notifId++,
-      title: title,
-      body: body,
-      notificationDetails: details,
-      payload: payload ?? 'requested',
-    );
+    try {
+      await _plugin.show(
+        id: _notifId++,
+        title: title,
+        body: body,
+        notificationDetails: details,
+        payload: payload ?? 'requested',
+      );
+      debugPrint('PUSH_NOTIF: Shown successfully (id=${_notifId - 1})');
+    } catch (e) {
+      debugPrint('PUSH_NOTIF ERROR: $e');
+    }
 
     if (vibrate) {
       try {
         final hasVibrator = await Vibration.hasVibrator();
-        if (hasVibrator) {
+        if (hasVibrator == true) {
           Vibration.vibrate(duration: 300);
         }
       } catch (e) {
@@ -110,30 +176,30 @@ class NotificationService {
   Future<void> showPunchIn() => show(
         title: 'Punched In',
         body: 'You have successfully punched in. Have a productive day!',
-        payload: 'requested',
+        payload: 'punch_in',
       );
 
   Future<void> showPunchOut() => show(
         title: 'Punched Out',
         body: 'You have successfully punched out. See you tomorrow!',
-        payload: 'requested',
+        payload: 'punch_out',
       );
 
   Future<void> showRequestApplied(String type) => show(
         title: '$type Submitted',
         body: 'Your $type request has been submitted successfully.',
-        payload: 'requested',
+        payload: 'request_submitted',
       );
 
   Future<void> showRequestAssigned(String type) => show(
         title: 'New $type Assigned',
         body: 'A new $type request has been assigned to you for approval.',
-        payload: 'requested',
+        payload: 'request_assigned',
       );
 
   Future<void> showSalaryCredit({required String month}) => show(
         title: 'Salary Credited',
         body: 'Your salary for $month has been credited to your account.',
-        payload: 'requested',
+        payload: 'salary',
       );
 }

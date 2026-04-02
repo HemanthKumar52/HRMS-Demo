@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/status_chip.dart';
+import '../../widgets/styled_donut_chart.dart';
 
 class TeamAttendanceScreen extends StatefulWidget {
   const TeamAttendanceScreen({super.key});
@@ -115,136 +115,22 @@ class _PeriodToggle extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Attendance Donut Chart
 // ---------------------------------------------------------------------------
-class _AttendanceDonutChart extends StatefulWidget {
+class _AttendanceDonutChart extends StatelessWidget {
   const _AttendanceDonutChart();
-
-  @override
-  State<_AttendanceDonutChart> createState() => _AttendanceDonutChartState();
-}
-
-class _AttendanceDonutChartState extends State<_AttendanceDonutChart> {
-  int _touchedIndex = -1;
 
   @override
   Widget build(BuildContext context) {
     return NeuCard(
-      child: Column(
-        children: [
-          SizedBox(
-            height: 200,
-            child: PieChart(
-              PieChartData(
-                pieTouchData: PieTouchData(
-                  touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                    setState(() {
-                      if (!event.isInterestedForInteractions || pieTouchResponse == null || pieTouchResponse.touchedSection == null) {
-                        _touchedIndex = -1;
-                        return;
-                      }
-                      _touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
-                    });
-                  },
-                ),
-                sectionsSpace: 3,
-                centerSpaceRadius: 50,
-                sections: [
-                  PieChartSectionData(
-                    value: 18,
-                    title: '18',
-                    color: AppColors.success,
-                    radius: _touchedIndex == 0 ? 55.0 : 45.0,
-                    titleStyle: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                  ),
-                  PieChartSectionData(
-                    value: 3,
-                    title: '3',
-                    color: AppColors.danger,
-                    radius: _touchedIndex == 1 ? 55.0 : 45.0,
-                    titleStyle: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                  ),
-                  PieChartSectionData(
-                    value: 4,
-                    title: '4',
-                    color: AppColors.warning,
-                    radius: _touchedIndex == 2 ? 55.0 : 45.0,
-                    titleStyle: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                  ),
-                  PieChartSectionData(
-                    value: 2,
-                    title: '2',
-                    color: AppColors.secondary,
-                    radius: _touchedIndex == 3 ? 55.0 : 45.0,
-                    titleStyle: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-              duration: const Duration(milliseconds: 800),
-              curve: Curves.easeInOutCubic,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: const [
-              _ChartLegend(label: 'Present', color: AppColors.success),
-              _ChartLegend(label: 'Absent', color: AppColors.danger),
-              _ChartLegend(label: 'Late', color: AppColors.warning),
-              _ChartLegend(label: 'Leave', color: AppColors.secondary),
-            ],
-          ),
+      child: StyledDonutChart(
+        segments: const [
+          DonutSegment(label: 'Present', value: 18, color: AppColors.success),
+          DonutSegment(label: 'Absent', value: 3, color: AppColors.danger),
+          DonutSegment(label: 'Late', value: 4, color: AppColors.warning),
+          DonutSegment(label: 'Leave', value: 2, color: AppColors.secondary),
         ],
+        centerLabel: 'Team',
+        size: 200,
       ),
-    );
-  }
-}
-
-class _ChartLegend extends StatelessWidget {
-  final String label;
-  final Color color;
-
-  const _ChartLegend({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(3),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: Theme.of(context).brightness == Brightness.dark
-                ? AppColors.darkSubtext
-                : AppColors.lightSubtext,
-          ),
-        ),
-      ],
     );
   }
 }

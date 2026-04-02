@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
+import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/dynamic_island.dart';
 import '../theme/app_theme.dart';
@@ -10,8 +13,81 @@ import 'attendance/attendance_screen.dart';
 import 'payslip/payslip_screen.dart';
 import 'profile/profile_sheet.dart';
 
-class ShellScreen extends StatelessWidget {
+class ShellScreen extends StatefulWidget {
   const ShellScreen({super.key});
+
+  @override
+  State<ShellScreen> createState() => _ShellScreenState();
+}
+
+class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
+  Timer? _pollTimer;
+  int _lastKnownUnread = -1;
+  Set<int> _seenNotifIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Sync attendance + notifications on every app open
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AppProvider>().fetchDashboardData();
+    });
+    _checkForNewNotifications();
+    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) => _checkForNewNotifications());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // When app comes back to foreground, refresh attendance status
+    if (state == AppLifecycleState.resumed && mounted) {
+      context.read<AppProvider>().fetchDashboardData();
+    }
+  }
+
+  Future<void> _checkForNewNotifications() async {
+    try {
+      final data = await ApiService.getNotifications();
+      final unread = (data['unread_count'] ?? 0) as int;
+      final notifications = List<Map<String, dynamic>>.from(
+        ((data['notifications'] as List?) ?? []).map((n) => Map<String, dynamic>.from(n))
+      );
+
+      // Fire local push for any NEW unread notifications we haven't seen
+      if (_lastKnownUnread >= 0) {
+        for (final n in notifications) {
+          final id = n['id'];
+          final isRead = n['read'] == true;
+          if (!isRead && id != null && !_seenNotifIds.contains(id)) {
+            // This is a new unread notification — fire push
+            NotificationService.instance.show(
+              title: n['title'] as String? ?? 'New Notification',
+              body: n['body'] as String? ?? '',
+              payload: 'notification',
+            );
+          }
+        }
+      }
+
+      // Track all notification IDs we've seen
+      _seenNotifIds = notifications.map((n) => n['id'] as int? ?? 0).toSet();
+      _lastKnownUnread = unread;
+
+      // Update provider
+      if (mounted) {
+        context.read<AppProvider>().updateNotifications(notifications, unread);
+      }
+    } catch (e) {
+      debugPrint('NOTIF_POLL ERROR: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,22 +157,28 @@ class ShellScreen extends StatelessWidget {
                   alignment: Alignment.center,
                   children: [
                     const Icon(Icons.notifications_outlined, size: 22),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: AppColors.danger,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isDark ? const Color(0xFF1A1B2E) : const Color(0xFFE4E8EE),
-                            width: 1.5,
+                    if (provider.unreadNotifications > 0)
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                          decoration: BoxDecoration(
+                            color: AppColors.danger,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF1A1B2E) : const Color(0xFFE4E8EE),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Text(
+                            '${provider.unreadNotifications > 9 ? '9+' : provider.unreadNotifications}',
+                            style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -107,42 +189,7 @@ class ShellScreen extends StatelessWidget {
             padding: const EdgeInsets.only(right: 16),
             child: GestureDetector(
               onTap: () => showProfileSheet(context),
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFFD4A574), Color(0xFFA0785A)],
-                  ),
-                  boxShadow: isDark
-                      ? null
-                      : [
-                          BoxShadow(
-                            color: const Color(0xFFBEC3CE).withValues(alpha: 0.5),
-                            offset: const Offset(3, 3),
-                            blurRadius: 6,
-                          ),
-                          const BoxShadow(
-                            color: Color(0xFFFDFFFF),
-                            offset: Offset(-2, -2),
-                            blurRadius: 6,
-                          ),
-                        ],
-                ),
-                child: Center(
-                  child: Text(
-                    provider.userName.isNotEmpty ? provider.userName[0] : 'U',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
+              child: _buildProfileAvatar(provider, isDark, 38),
             ),
           ),
         ],
@@ -160,6 +207,41 @@ class ShellScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildProfileAvatar(AppProvider provider, bool isDark, double size) {
+    final avatarUrl = provider.userProfile['avatar_url'] as String?;
+    final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: hasAvatar ? null : const LinearGradient(
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [Color(0xFFD4A574), Color(0xFFA0785A)],
+        ),
+        boxShadow: isDark ? null : [
+          BoxShadow(color: const Color(0xFFBEC3CE).withValues(alpha: 0.5), offset: const Offset(3, 3), blurRadius: 6),
+          const BoxShadow(color: Color(0xFFFDFFFF), offset: Offset(-2, -2), blurRadius: 6),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: hasAvatar
+          ? Image.network(avatarUrl, fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _avatarInitial(provider, size))
+          : _avatarInitial(provider, size),
+    );
+  }
+
+  Widget _avatarInitial(AppProvider provider, double size) {
+    return Center(
+      child: Text(
+        provider.userName.isNotEmpty ? provider.userName[0] : 'U',
+        style: TextStyle(color: Colors.white, fontSize: size * 0.47, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'Morning';
@@ -169,12 +251,15 @@ class ShellScreen extends StatelessWidget {
 
   void _showNotifications(BuildContext context) {
     final theme = Theme.of(context);
+    final provider = context.read<AppProvider>();
+    final notifications = provider.notifications;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.5,
+        height: MediaQuery.of(context).size.height * 0.55,
         decoration: BoxDecoration(
           color: theme.cardColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -183,12 +268,8 @@ class ShellScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 12),
             Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[400],
-                borderRadius: BorderRadius.circular(2),
-              ),
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: Colors.grey[400], borderRadius: BorderRadius.circular(2)),
             ),
             const SizedBox(height: 16),
             Padding(
@@ -196,19 +277,26 @@ class ShellScreen extends StatelessWidget {
               child: Row(
                 children: [
                   Text('Notifications', style: theme.textTheme.titleLarge),
+                  if (provider.unreadNotifications > 0) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(color: AppColors.danger, borderRadius: BorderRadius.circular(10)),
+                      child: Text('${provider.unreadNotifications}',
+                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                    ),
+                  ],
                   const Spacer(),
                   TextButton(
                     onPressed: () {
+                      // Update local state first so UI updates immediately
+                      for (var n in provider.notifications) {
+                        n['read'] = true;
+                      }
+                      provider.updateNotifications(provider.notifications, 0);
+                      // Then call API in background
+                      ApiService.markAllNotificationsRead().catchError((_) {});
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('All notifications marked as read'),
-                          backgroundColor: AppColors.primary,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
                     },
                     child: const Text('Mark all read', style: TextStyle(color: AppColors.primary)),
                   ),
@@ -216,87 +304,77 @@ class ShellScreen extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // Alerts
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Text('Alerts', style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.danger,
-                      letterSpacing: 0.5,
-                    )),
-                  ),
-                  _NotifItem(
-                    icon: Icons.check_circle,
-                    color: AppColors.success,
-                    title: 'Leave Approved',
-                    subtitle: 'Your leave request for Mar 20 has been approved',
-                    time: '2 min ago',
-                  ),
-                  _NotifItem(
-                    icon: Icons.warning_amber_rounded,
-                    color: AppColors.warning,
-                    title: 'Low Leave Balance',
-                    subtitle: 'You have only 2 casual leaves remaining',
-                    time: '30 min ago',
-                  ),
-                  // Updates
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12, top: 4),
-                    child: Text('Updates', style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary,
-                      letterSpacing: 0.5,
-                    )),
-                  ),
-                  _NotifItem(
-                    icon: Icons.schedule,
-                    color: AppColors.warning,
-                    title: 'Shift Updated',
-                    subtitle: 'Your shift for next week has been updated',
-                    time: '3 hours ago',
-                  ),
-                  _NotifItem(
-                    icon: Icons.receipt_long,
-                    color: AppColors.secondary,
-                    title: 'Payslip Available',
-                    subtitle: 'Your February payslip is ready to view',
-                    time: 'Yesterday',
-                  ),
-                  // Announcements
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12, top: 4),
-                    child: Text('Announcements', style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.orange,
-                      letterSpacing: 0.5,
-                    )),
-                  ),
-                  _NotifItem(
-                    icon: Icons.campaign,
-                    color: AppColors.orange,
-                    title: 'Company Town Hall',
-                    subtitle: 'Scheduled for March 15, 2026 at 3:00 PM',
-                    time: '1 hour ago',
-                  ),
-                  _NotifItem(
-                    icon: Icons.policy_rounded,
-                    color: AppColors.primary,
-                    title: 'New Leave Policy Update',
-                    subtitle: 'Effective from April 1, 2026',
-                    time: '2 days ago',
-                  ),
-                  _NotifItem(
-                    icon: Icons.assessment_rounded,
-                    color: AppColors.secondary,
-                    title: 'Quarterly Review Deadline',
-                    subtitle: 'Submit reviews by March 25, 2026',
-                    time: '3 days ago',
-                  ),
-                ],
-              ),
+              child: notifications.isEmpty
+                  ? Center(
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.notifications_off_outlined, size: 48,
+                          color: theme.brightness == Brightness.dark ? Colors.white24 : Colors.grey.shade300),
+                        const SizedBox(height: 12),
+                        Text('No notifications yet', style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.brightness == Brightness.dark ? Colors.white38 : Colors.grey)),
+                      ]),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: () => provider.fetchDashboardData(),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: notifications.length,
+                        itemBuilder: (context, index) {
+                          final n = notifications[index];
+                          final title = n['title'] as String? ?? '';
+                          final body = n['body'] as String? ?? '';
+                          final isRead = n['read'] == true;
+                          final timestamp = n['timestamp'] as String?;
+
+                          IconData icon = Icons.notifications_outlined;
+                          Color color = AppColors.primary;
+                          if (title.toLowerCase().contains('approved')) {
+                            icon = Icons.check_circle; color = AppColors.success;
+                          } else if (title.toLowerCase().contains('rejected')) {
+                            icon = Icons.cancel; color = AppColors.danger;
+                          } else if (title.toLowerCase().contains('submitted') || title.toLowerCase().contains('new')) {
+                            icon = Icons.add_circle_outline; color = AppColors.orange;
+                          } else if (title.toLowerCase().contains('leave')) {
+                            icon = Icons.event_busy; color = AppColors.warning;
+                          } else if (title.toLowerCase().contains('claim')) {
+                            icon = Icons.receipt_long; color = AppColors.secondary;
+                          }
+
+                          String timeAgo = '';
+                          if (timestamp != null) {
+                            try {
+                              final dt = DateTime.parse(timestamp);
+                              final diff = DateTime.now().difference(dt);
+                              if (diff.inMinutes < 1) timeAgo = 'Just now';
+                              else if (diff.inMinutes < 60) timeAgo = '${diff.inMinutes}m ago';
+                              else if (diff.inHours < 24) timeAgo = '${diff.inHours}h ago';
+                              else if (diff.inDays < 7) timeAgo = '${diff.inDays}d ago';
+                              else timeAgo = '${dt.day}/${dt.month}';
+                            } catch (_) {}
+                          }
+
+                          final notifId = n['id'];
+                          return GestureDetector(
+                            onTap: () {
+                              // Mark as read
+                              if (!isRead && notifId != null) {
+                                final id = notifId is int ? notifId : int.tryParse(notifId.toString()) ?? 0;
+                                provider.markNotificationRead(id);
+                              }
+                              // Close bottom sheet and go to Requests tab
+                              Navigator.pop(context);
+                              provider.setBottomNavIndex(1);
+                              provider.setRequestsTabIndex(0);
+                            },
+                            child: _NotifItem(
+                              icon: icon, color: color,
+                              title: title, subtitle: body, time: timeAgo,
+                              isUnread: !isRead,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
             ),
           ],
         ),
@@ -311,6 +389,7 @@ class _NotifItem extends StatelessWidget {
   final String title;
   final String subtitle;
   final String time;
+  final bool isUnread;
 
   const _NotifItem({
     required this.icon,
@@ -318,12 +397,22 @@ class _NotifItem extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.time,
+    this.isUnread = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isUnread
+            ? (isDark ? Colors.white.withValues(alpha: 0.04) : AppColors.primary.withValues(alpha: 0.04))
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        border: isUnread ? Border.all(color: AppColors.primary.withValues(alpha: 0.1)) : null,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -340,9 +429,17 @@ class _NotifItem extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                Row(
+                  children: [
+                    Expanded(child: Text(title, style: TextStyle(
+                      fontWeight: isUnread ? FontWeight.w700 : FontWeight.w600, fontSize: 14))),
+                    if (isUnread)
+                      Container(width: 8, height: 8,
+                        decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
+                  ],
+                ),
                 const SizedBox(height: 2),
-                Text(subtitle, style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+                Text(subtitle, style: TextStyle(color: Colors.grey[500], fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 4),
                 Text(time, style: TextStyle(color: Colors.grey[400], fontSize: 11)),
               ],

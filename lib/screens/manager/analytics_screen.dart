@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
+import '../../widgets/styled_donut_chart.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -13,72 +15,129 @@ class AnalyticsScreen extends StatefulWidget {
 
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
   int _selectedPeriod = 0; // 0 = Week, 1 = Month, 2 = Quarter
+  bool _isLoading = true;
+
+  // Data from API
+  List<Map<String, dynamic>> _departments = [];
+  int _totalEmployees = 0;
+  int _newJoiners = 0;
+  double _attritionRate = 0;
+  String _mostUsedLeaveType = '';
+  double _avgLeavesPerEmployee = 0;
+
+  // Chart colors
+  static const _chartColors = [
+    AppColors.primary,
+    AppColors.secondary,
+    AppColors.success,
+    AppColors.orange,
+    AppColors.pink,
+    AppColors.warning,
+    AppColors.neonPurple,
+    Color(0xFF00BCD4),
+    Color(0xFF795548),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAnalytics();
+  }
+
+  Future<void> _loadAnalytics() async {
+    try {
+      final data = await ApiService.getDashboardAnalytics();
+      if (!mounted) return;
+      final deptBreakdown = (data['department_breakdown'] as List?) ?? [];
+      final leaveAnalytics = data['leave_analytics'] as Map<String, dynamic>? ?? {};
+
+      setState(() {
+        _departments = deptBreakdown
+            .map<Map<String, dynamic>>((d) => Map<String, dynamic>.from(d))
+            .toList();
+        _totalEmployees = (data['total_employees'] ?? 0) as int;
+        _newJoiners = (data['new_joiners'] ?? 0) as int;
+        _attritionRate = ((data['attrition_rate'] ?? 0) as num).toDouble();
+        _mostUsedLeaveType = leaveAnalytics['most_used_type']?.toString() ?? 'N/A';
+        _avgLeavesPerEmployee = ((leaveAnalytics['avg_leaves_per_employee'] ?? 0) as num).toDouble();
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Period Selector
-          _buildPeriodSelector(isDark)
-              .animate()
-              .fadeIn(duration: 420.ms)
-              .slideY(begin: 0.12, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
-          const SizedBox(height: 20),
+    return RefreshIndicator(
+      onRefresh: _loadAnalytics,
+      color: AppColors.primary,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Period Selector
+            _buildPeriodSelector(isDark)
+                .animate()
+                .fadeIn(duration: 420.ms)
+                .slideY(begin: 0.12, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
+            const SizedBox(height: 20),
 
-          // Headcount Overview
-          Text('Headcount Overview', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))
-              .animate()
-              .fadeIn(duration: 420.ms, delay: 80.ms)
-              .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 80.ms, curve: Curves.easeOutCubic),
-          const SizedBox(height: 12),
-          _buildHeadcountChart(isDark)
-              .animate()
-              .fadeIn(duration: 420.ms, delay: 160.ms)
-              .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 160.ms, curve: Curves.easeOutCubic),
-          const SizedBox(height: 24),
+            // Headcount Overview
+            Text('Headcount Overview', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 80.ms)
+                .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 80.ms, curve: Curves.easeOutCubic),
+            const SizedBox(height: 12),
+            _buildHeadcountChart(isDark)
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 160.ms)
+                .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 160.ms, curve: Curves.easeOutCubic),
+            const SizedBox(height: 24),
 
-          // Attendance Trend
-          Text('Attendance Trend', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))
-              .animate()
-              .fadeIn(duration: 420.ms, delay: 240.ms)
-              .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 240.ms, curve: Curves.easeOutCubic),
-          const SizedBox(height: 12),
-          _buildAttendanceTrendChart(isDark)
-              .animate()
-              .fadeIn(duration: 420.ms, delay: 320.ms)
-              .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 320.ms, curve: Curves.easeOutCubic),
-          const SizedBox(height: 24),
+            // Attendance Trend
+            Text('Attendance Trend', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 240.ms)
+                .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 240.ms, curve: Curves.easeOutCubic),
+            const SizedBox(height: 12),
+            _buildAttendanceTrendChart(isDark)
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 320.ms)
+                .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 320.ms, curve: Curves.easeOutCubic),
+            const SizedBox(height: 24),
 
-          // Department Distribution
-          Text('Department Distribution', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))
-              .animate()
-              .fadeIn(duration: 420.ms, delay: 400.ms)
-              .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 400.ms, curve: Curves.easeOutCubic),
-          const SizedBox(height: 12),
-          _buildDepartmentPieChart(isDark)
-              .animate()
-              .fadeIn(duration: 420.ms, delay: 480.ms)
-              .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 480.ms, curve: Curves.easeOutCubic),
-          const SizedBox(height: 24),
+            // Department Distribution
+            Text('Department Distribution', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 400.ms)
+                .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 400.ms, curve: Curves.easeOutCubic),
+            const SizedBox(height: 12),
+            _buildDepartmentPieChart(isDark)
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 480.ms)
+                .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 480.ms, curve: Curves.easeOutCubic),
+            const SizedBox(height: 24),
 
-          // Key Metrics
-          Text('Key Metrics', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))
-              .animate()
-              .fadeIn(duration: 420.ms, delay: 560.ms)
-              .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 560.ms, curve: Curves.easeOutCubic),
-          const SizedBox(height: 12),
-          _buildKeyMetrics(theme, isDark)
-              .animate()
-              .fadeIn(duration: 420.ms, delay: 640.ms)
-              .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 640.ms, curve: Curves.easeOutCubic),
-          const SizedBox(height: 20),
-        ],
+            // Key Metrics
+            Text('Key Metrics', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 560.ms)
+                .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 560.ms, curve: Curves.easeOutCubic),
+            const SizedBox(height: 12),
+            _buildKeyMetrics(theme, isDark)
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 640.ms)
+                .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 640.ms, curve: Curves.easeOutCubic),
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }
@@ -148,6 +207,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   showTitles: true,
                   getTitlesWidget: (value, meta) {
                     const titles = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+                    if (value.toInt() >= titles.length) return const SizedBox.shrink();
                     return Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
@@ -275,73 +335,34 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Widget _buildDepartmentPieChart(bool isDark) {
+    final hasDepts = _departments.isNotEmpty;
+
     return NeuCard(
       padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          SizedBox(
-            height: 200,
-            child: PieChart(
-              PieChartData(
-                sectionsSpace: 3,
-                centerSpaceRadius: 50,
-                sections: [
-                  PieChartSectionData(
-                    value: 480,
-                    title: '39%',
-                    color: AppColors.primary,
-                    radius: 45,
-                    titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
-                  ),
-                  PieChartSectionData(
-                    value: 280,
-                    title: '23%',
-                    color: AppColors.secondary,
-                    radius: 45,
-                    titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
-                  ),
-                  PieChartSectionData(
-                    value: 200,
-                    title: '16%',
-                    color: AppColors.success,
-                    radius: 45,
-                    titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
-                  ),
-                  PieChartSectionData(
-                    value: 180,
-                    title: '14%',
-                    color: AppColors.orange,
-                    radius: 45,
-                    titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
-                  ),
-                  PieChartSectionData(
-                    value: 100,
-                    title: '8%',
-                    color: AppColors.pink,
-                    radius: 45,
-                    titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
-                  ),
-                ],
-              ),
-              duration: const Duration(milliseconds: 800),
-              curve: Curves.easeInOutCubic,
+      child: _isLoading
+          ? const SizedBox(height: 260, child: Center(child: CircularProgressIndicator()))
+          : StyledDonutChart(
+              segments: hasDepts
+                  ? _departments.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final dept = entry.value;
+                      final count = ((dept['count'] ?? 0) as num).toDouble();
+                      final color = _chartColors[i % _chartColors.length];
+                      return DonutSegment(
+                        label: dept['department'] as String? ?? 'Unknown',
+                        value: count,
+                        color: color,
+                      );
+                    }).toList()
+                  : const [
+                      DonutSegment(label: 'Engineering', value: 5, color: AppColors.primary),
+                      DonutSegment(label: 'Design', value: 3, color: AppColors.secondary),
+                      DonutSegment(label: 'Marketing', value: 4, color: AppColors.success),
+                      DonutSegment(label: 'HR', value: 2, color: AppColors.orange),
+                      DonutSegment(label: 'Finance', value: 3, color: AppColors.pink),
+                    ],
+              centerLabel: 'Employees',
             ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 16,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
-            children: const [
-              _Legend(label: 'Engineering', color: AppColors.primary),
-              _Legend(label: 'Design', color: AppColors.secondary),
-              _Legend(label: 'Marketing', color: AppColors.success),
-              _Legend(label: 'HR', color: AppColors.orange),
-              _Legend(label: 'Finance', color: AppColors.pink),
-            ],
-          ),
-        ],
-      ),
     );
   }
 
@@ -351,20 +372,20 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         Row(
           children: [
             Expanded(child: _MetricCard(
-              title: 'Avg. Work Hours',
-              value: '8.2h',
-              change: '+0.3h',
+              title: 'Total Employees',
+              value: _isLoading ? '...' : '$_totalEmployees',
+              change: '$_newJoiners new',
               changeColor: AppColors.success,
-              icon: Icons.schedule,
+              icon: Icons.people_outline,
               iconColor: AppColors.primary,
               isDark: isDark,
             )),
             const SizedBox(width: 12),
             Expanded(child: _MetricCard(
-              title: 'Turnover Rate',
-              value: '2.1%',
-              change: '-0.5%',
-              changeColor: AppColors.success,
+              title: 'Attrition Rate',
+              value: _isLoading ? '...' : '${_attritionRate.toStringAsFixed(1)}%',
+              change: _attritionRate <= 3 ? 'Healthy' : 'High',
+              changeColor: _attritionRate <= 3 ? AppColors.success : AppColors.warning,
               icon: Icons.trending_down,
               iconColor: AppColors.success,
               isDark: isDark,
@@ -375,21 +396,21 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         Row(
           children: [
             Expanded(child: _MetricCard(
-              title: 'Open Positions',
-              value: '12',
-              change: '3 urgent',
-              changeColor: AppColors.warning,
-              icon: Icons.work_outline,
+              title: 'Top Leave Type',
+              value: _isLoading ? '...' : _mostUsedLeaveType,
+              change: 'Most used',
+              changeColor: AppColors.orange,
+              icon: Icons.event_busy_outlined,
               iconColor: AppColors.orange,
               isDark: isDark,
             )),
             const SizedBox(width: 12),
             Expanded(child: _MetricCard(
-              title: 'Satisfaction',
-              value: '4.3/5',
-              change: '+0.2',
-              changeColor: AppColors.success,
-              icon: Icons.sentiment_satisfied,
+              title: 'Avg. Leaves',
+              value: _isLoading ? '...' : _avgLeavesPerEmployee.toStringAsFixed(1),
+              change: 'Per employee',
+              changeColor: AppColors.secondary,
+              icon: Icons.analytics_outlined,
               iconColor: AppColors.secondary,
               isDark: isDark,
             )),
@@ -400,34 +421,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 }
 
-class _Legend extends StatelessWidget {
-  final String label;
-  final Color color;
-  const _Legend({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3)),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkSubtext : AppColors.lightSubtext,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _MetricCard extends StatelessWidget {
   final String title;
@@ -466,7 +459,7 @@ class _MetricCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(title, style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
           const SizedBox(height: 4),
-          Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: isDark ? AppColors.darkText : AppColors.lightText)),
+          Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: isDark ? AppColors.darkText : AppColors.lightText), overflow: TextOverflow.ellipsis),
           const SizedBox(height: 4),
           Text(change, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: changeColor)),
         ],

@@ -32,7 +32,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'horilla_auth_horillauser'
 
     USERNAME_FIELD = 'username'
@@ -70,7 +70,7 @@ class Employee(models.Model):
     experience = models.FloatField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'employee_employee'
 
     @property
@@ -110,7 +110,7 @@ class EmployeeWorkInformation(models.Model):
     ai_recruitment_role = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'employee_employeeworkinformation'
 
 
@@ -118,7 +118,7 @@ class Department(models.Model):
     department = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'base_department'
 
     def __str__(self):
@@ -129,7 +129,7 @@ class JobPosition(models.Model):
     job_position = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'base_jobposition'
 
     def __str__(self):
@@ -141,7 +141,7 @@ class Shift(models.Model):
     full_time = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'base_employeeshift'
 
     def __str__(self):
@@ -152,7 +152,7 @@ class WorkType(models.Model):
     work_type = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'base_worktype'
 
     def __str__(self):
@@ -164,7 +164,7 @@ class LeaveType(models.Model):
     color = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'leave_leavetype'
 
     def __str__(self):
@@ -180,7 +180,7 @@ class AvailableLeave(models.Model):
     leave_type_id_id = models.BigIntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'leave_availableleave'
 
     @property
@@ -217,7 +217,7 @@ class LeaveRequest(models.Model):
     compensatory_work_date = models.DateField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'leave_leaverequest'
 
 
@@ -255,7 +255,7 @@ class Attendance(models.Model):
     attendance_attachment = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'attendance_attendance'
 
     @property
@@ -288,7 +288,7 @@ class Ticket(models.Model):
     ticket_type_id = models.BigIntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'helpdesk_ticket'
 
 
@@ -296,7 +296,7 @@ class TicketType(models.Model):
     title = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'helpdesk_tickettype'
 
 
@@ -309,7 +309,7 @@ class ClaimRequest(models.Model):
     ticket_id_id = models.BigIntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'helpdesk_claimrequest'
 
     @property
@@ -346,7 +346,7 @@ class AssetRequest(models.Model):
     requested_employee_id_id = models.BigIntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'asset_assetrequest'
 
     @property
@@ -376,7 +376,7 @@ class ShiftRequest(models.Model):
     shift_id_id = models.BigIntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'base_shiftrequest'
 
     @property
@@ -401,7 +401,7 @@ class WorkTypeRequest(models.Model):
     work_type_id_id = models.BigIntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'base_worktyperequest'
 
     @property
@@ -424,7 +424,7 @@ class AttendanceRequest(models.Model):
     created_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'attendance_permission_request'
 
     @property
@@ -451,7 +451,7 @@ class Payslip(models.Model):
     employee_id_id = models.BigIntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'payroll_payslip'
 
     @property
@@ -471,7 +471,7 @@ class Notification(models.Model):
     recipient_id = models.BigIntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'notifications_notification'
 
     @property
@@ -498,7 +498,7 @@ class Announcement(models.Model):
     expire_date = models.DateField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'base_announcement'
 
     @property
@@ -517,7 +517,7 @@ class DeviceToken(models.Model):
     employee_id_id = models.BigIntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'device_token'
 
 
@@ -529,7 +529,7 @@ class UserSettings(models.Model):
     employee_id_id = models.BigIntegerField(unique=True, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'user_settings'
 
 

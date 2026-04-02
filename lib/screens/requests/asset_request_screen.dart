@@ -19,24 +19,26 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
   String? _selectedCategory;
   bool _isSubmitting = false;
 
-  final List<String> _users = [
-    'Venkat Kumar',
-    'Priya Sharma',
-    'Rahul Verma',
-    'Anita Desai',
-  ];
+  List<String> _users = [];
 
   final List<String> _categories = [
-    'Laptop',
-    'Monitor',
-    'Keyboard & Mouse',
-    'Headset',
-    'Mobile Phone',
-    'ID Card',
-    'Access Card',
-    'Furniture',
-    'Other',
+    'Laptop', 'Monitor', 'Keyboard & Mouse', 'Headset',
+    'Mobile Phone', 'ID Card', 'Access Card', 'Furniture', 'Other',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEmployees();
+  }
+
+  Future<void> _loadEmployees() async {
+    try {
+      final emps = await ApiService.getEmployees();
+      if (!mounted) return;
+      setState(() { _users = emps.map<String>((e) => e['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList(); });
+    } catch (_) {}
+  }
 
   @override
   void dispose() {

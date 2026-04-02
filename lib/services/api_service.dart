@@ -21,41 +21,72 @@ class ApiService {
   }
 
   static Future<dynamic> get(String endpoint) async {
-    final headers = await _getHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl$endpoint'),
-      headers: headers,
-    );
+    var headers = await _getHeaders();
+    var response = await http.get(Uri.parse('$baseUrl$endpoint'), headers: headers);
+    if (response.statusCode == 401 && await _tryRefreshToken()) {
+      headers = await _getHeaders();
+      response = await http.get(Uri.parse('$baseUrl$endpoint'), headers: headers);
+    }
     return _handleResponse(response);
   }
 
   static Future<dynamic> post(String endpoint, Map<String, dynamic> data) async {
-    final headers = await _getHeaders();
-    final response = await http.post(
-      Uri.parse('$baseUrl$endpoint'),
-      headers: headers,
-      body: jsonEncode(data),
-    );
+    var headers = await _getHeaders();
+    var response = await http.post(Uri.parse('$baseUrl$endpoint'), headers: headers, body: jsonEncode(data));
+    if (response.statusCode == 401 && await _tryRefreshToken()) {
+      headers = await _getHeaders();
+      response = await http.post(Uri.parse('$baseUrl$endpoint'), headers: headers, body: jsonEncode(data));
+    }
     return _handleResponse(response);
   }
 
   static Future<dynamic> put(String endpoint, Map<String, dynamic> data) async {
-    final headers = await _getHeaders();
-    final response = await http.put(
-      Uri.parse('$baseUrl$endpoint'),
-      headers: headers,
-      body: jsonEncode(data),
-    );
+    var headers = await _getHeaders();
+    var response = await http.put(Uri.parse('$baseUrl$endpoint'), headers: headers, body: jsonEncode(data));
+    if (response.statusCode == 401 && await _tryRefreshToken()) {
+      headers = await _getHeaders();
+      response = await http.put(Uri.parse('$baseUrl$endpoint'), headers: headers, body: jsonEncode(data));
+    }
     return _handleResponse(response);
   }
 
   static Future<dynamic> delete(String endpoint) async {
-    final headers = await _getHeaders();
-    final response = await http.delete(
-      Uri.parse('$baseUrl$endpoint'),
-      headers: headers,
-    );
+    var headers = await _getHeaders();
+    var response = await http.delete(Uri.parse('$baseUrl$endpoint'), headers: headers);
+    if (response.statusCode == 401 && await _tryRefreshToken()) {
+      headers = await _getHeaders();
+      response = await http.delete(Uri.parse('$baseUrl$endpoint'), headers: headers);
+    }
     return _handleResponse(response);
+  }
+
+  static bool _isRefreshing = false;
+
+  static Future<bool> _tryRefreshToken() async {
+    if (_isRefreshing) return false;
+    _isRefreshing = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final refreshToken = prefs.getString('refresh_token');
+      if (refreshToken == null) return false;
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/refresh'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'refresh_token': refreshToken}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        await prefs.setString('auth_token', data['access_token']);
+        if (data['refresh_token'] != null) {
+          await prefs.setString('refresh_token', data['refresh_token']);
+        }
+        return true;
+      }
+    } catch (_) {}
+    finally { _isRefreshing = false; }
+    return false;
   }
 
   static dynamic _handleResponse(http.Response response) {
@@ -67,8 +98,17 @@ class ApiService {
     } else {
       try {
         final body = jsonDecode(response.body);
-        final msg = body['detail'] ?? body['error'] ?? body['non_field_errors']?[0] ?? 'Request failed';
-        throw Exception(msg is String ? msg : msg.toString());
+        // Extract a readable error message from various response formats
+        dynamic raw = body['detail'] ?? body['error'] ?? body['non_field_errors']?[0] ?? 'Request failed';
+        String msg;
+        if (raw is Map) {
+          msg = raw['message'] ?? raw['detail'] ?? raw.values.first?.toString() ?? 'Request failed';
+        } else if (raw is List) {
+          msg = raw.first?.toString() ?? 'Request failed';
+        } else {
+          msg = raw.toString();
+        }
+        throw Exception(msg);
       } catch (e) {
         if (e is Exception) rethrow;
         throw Exception('Request failed (${response.statusCode})');
@@ -268,15 +308,15 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> acceptRequest(int id) async {
-    return await post('/requests/$id/accept', {});
+    return await put('/requests/$id/accept', {});
   }
 
   static Future<Map<String, dynamic>> rejectRequest(int id, {String? reason}) async {
-    return await post('/requests/$id/reject', reason != null ? {'reason': reason} : {});
+    return await put('/requests/$id/reject', reason != null ? {'rejection_reason': reason} : {});
   }
 
-  static Future<Map<String, dynamic>> cancelRequest(int id) async {
-    return await post('/requests/$id/cancel', {});
+  static Future<void> cancelRequest(int id) async {
+    await delete('/requests/$id/cancel');
   }
 
   // ═══════════════════════════════════════════════════════
@@ -312,11 +352,11 @@ class ApiService {
   }
 
   static Future<void> markNotificationRead(int id) async {
-    await post('/notifications/$id/read', {});
+    await put('/notifications/$id/read', {});
   }
 
   static Future<void> markAllNotificationsRead() async {
-    await post('/notifications/read-all', {});
+    await put('/notifications/read-all', {});
   }
 
   static Future<void> registerDevice(String token, String platform) async {
