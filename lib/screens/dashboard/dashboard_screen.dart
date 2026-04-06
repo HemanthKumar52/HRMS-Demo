@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../animations/motion.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/ppulse_footer.dart';
 import '../../services/api_service.dart';
@@ -32,9 +33,16 @@ class DashboardScreen extends StatelessWidget {
     final role = provider.role;
     final isManagerOrHr = role == UserRole.manager || role == UserRole.hr;
 
+    final gridCols = Responsive.gridColumns(context, phoneCols: 3, tabletCols: 4, desktopCols: 6);
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
-      child: Column(
+      padding: Responsive.value(
+        context,
+        phone: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+        tablet: const EdgeInsets.fromLTRB(40, 16, 40, 100),
+      ),
+      child: ResponsiveContent(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── 1. Attendance Timer ───────────────────────────────────────
@@ -53,7 +61,7 @@ class DashboardScreen extends StatelessWidget {
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 3,
+            crossAxisCount: gridCols,
             childAspectRatio: 1.1,
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
@@ -405,6 +413,7 @@ class DashboardScreen extends StatelessWidget {
 
           const PPulseFooter(),
         ],
+      ),
       ),
     );
   }

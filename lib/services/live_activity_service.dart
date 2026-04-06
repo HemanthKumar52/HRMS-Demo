@@ -254,7 +254,7 @@ class LiveActivityService {
         notificationDetails: const NotificationDetails(android: details),
       );
     } else {
-      await _notifications.cancel(_androidNotifId);
+      await _notifications.cancel(id: _androidNotifId);
     }
     debugPrint('ANDROID_LIVE: Stopped');
   }

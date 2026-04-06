@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/live_activity_service.dart';
 import '../services/notification_service.dart';
 import '../services/api_service.dart';
 
@@ -192,6 +193,7 @@ class AppProvider extends ChangeNotifier {
       _punchInTime = DateTime.now();
       triggerDynamicIsland('Punched In Successfully', Icons.login, const Color(0xFF34D399));
       NotificationService.instance.showPunchIn();
+      LiveActivityService.instance.startPunchIn(userName: _userName, punchTime: _punchInTime!);
       notifyListeners();
     } catch (e) {
       final msg = e.toString();
@@ -209,11 +211,13 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> punchOut() async {
     try {
+      final workedDuration = _punchInTime != null ? DateTime.now().difference(_punchInTime!) : null;
       await ApiService.punchOut();
       _isPunchedIn = false;
       _punchInTime = null;
       triggerDynamicIsland('Punched Out Successfully', Icons.logout, const Color(0xFFFF8C42));
       NotificationService.instance.showPunchOut();
+      LiveActivityService.instance.stopPunchOut(totalWorked: workedDuration);
       notifyListeners();
     } catch (e) {
       final msg = e.toString();
