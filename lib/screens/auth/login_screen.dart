@@ -27,7 +27,7 @@ class _LoginScreenState extends State<LoginScreen>
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorText;
-  bool _showLoginFields = false;
+  bool _showLoginFields = true;
 
   // Separate controllers matching web durations: floatOrb(12s), floatOrb2(14s), floatOrb3(16s), pulse(8s)
   late AnimationController _orb1Controller; // 12s - bottom-left large orb
@@ -426,15 +426,9 @@ class _LoginScreenState extends State<LoginScreen>
                               ).animate().fadeIn(duration: 500.ms, delay: 450.ms),
                               const SizedBox(height: 36),
 
-                              // ═══ ANIMATED CONTENT ═══
-                              AnimatedSize(
-                                duration: const Duration(milliseconds: 500),
-                                curve: Curves.easeInOut,
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 400),
-                                  child: _showLoginFields ? _buildLoginForm() : _buildWelcomeActions(),
-                                ),
-                              ).animate().fadeIn(duration: 500.ms, delay: 550.ms),
+                              // ═══ LOGIN FORM ═══
+                              _buildLoginForm()
+                                  .animate().fadeIn(duration: 500.ms, delay: 550.ms),
                             ],
                           ),
                         ),
@@ -560,8 +554,6 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         ),
         const SizedBox(height: 8),
-        TextButton(onPressed: () => setState(() => _showLoginFields = false),
-          child: Text('Back', style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 14))),
       ],
     ),
     );

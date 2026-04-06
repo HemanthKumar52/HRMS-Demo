@@ -9,7 +9,8 @@ class DynamicIslandOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AppProvider>(
       builder: (context, provider, _) {
-        return AnimatedPositioned(
+        return IgnorePointer(
+          child: AnimatedPositioned(
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeOutBack,
           top: provider.showDynamicIsland ? 8 : -80,
@@ -52,6 +53,7 @@ class DynamicIslandOverlay extends StatelessWidget {
               ),
             ),
           ),
+        ),
         );
       },
     );
