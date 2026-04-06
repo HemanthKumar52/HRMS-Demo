@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
@@ -1007,6 +1008,7 @@ class _AttendanceTimerCardState extends State<_AttendanceTimerCard> {
                 height: 52,
                 child: ElevatedButton(
                   onPressed: () {
+                    HapticFeedback.mediumImpact();
                     // Navigate to Attendance tab (index 2)
                     widget.provider.setBottomNavIndex(2);
                   },

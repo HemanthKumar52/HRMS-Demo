@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
@@ -129,7 +130,10 @@ class _NavButtonState extends State<_NavButton>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: widget.onTap,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        widget.onTap();
+      },
       behavior: HitTestBehavior.opaque,
       child: ScaleTransition(
         scale: _bounceAnimation,

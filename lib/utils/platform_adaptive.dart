@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 
 /// Returns true if the current platform is iOS or macOS
@@ -167,7 +168,10 @@ class GlassTabBar extends StatelessWidget {
                     final isActive = currentIndex == index;
                     return GestureDetector(
                       behavior: HitTestBehavior.opaque,
-                      onTap: () => onTap(index),
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        onTap(index);
+                      },
                       child: SizedBox(
                         width: 70,
                         child: Column(

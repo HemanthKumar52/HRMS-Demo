@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../services/api_service.dart';
@@ -252,7 +253,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     return Padding(
       padding: const EdgeInsets.only(right: 4),
       child: GestureDetector(
-        onTap: () => _showNotifications(context),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          _showNotifications(context);
+        },
         child: Container(
           width: 38,
           height: 38,

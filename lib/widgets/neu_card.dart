@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 
 class NeuCard extends StatefulWidget {
@@ -71,6 +72,7 @@ class _NeuCardState extends State<NeuCard> with TickerProviderStateMixin {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
+        HapticFeedback.lightImpact();
         _downController.forward().then((_) {
           _upController.forward(from: 0);
         });
@@ -112,7 +114,10 @@ class GlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap?.call();
+      },
       child: Container(
         decoration: NeuDecoration.glass(context, radius: radius),
         padding: padding,

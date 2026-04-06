@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -1253,6 +1254,7 @@ class _ClockInCard extends StatelessWidget {
               // Clock In / Clock Out button
               GestureDetector(
                 onTap: () {
+                  HapticFeedback.heavyImpact();
                   if (!isPunchedIn) {
                     showDialog(context: context, builder: (_) => const FaceVerificationDialog());
                   } else {
