@@ -4,6 +4,7 @@ import '../../animations/success_overlay.dart';
 import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/form_fields.dart';
 import '../../widgets/neu_card.dart';
 
@@ -121,7 +122,7 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(title: const Text('Submit Claim')),
+      appBar: adaptiveAppBar(context: context, title: 'Submit Claim', showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Form(

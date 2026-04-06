@@ -7,6 +7,7 @@ import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/status_chip.dart';
 
 class RequestDetailScreen extends StatefulWidget {
@@ -163,10 +164,10 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text(isManagerViewingEmployee
-            ? 'Employee Request'
-            : 'Request Details'),
+      appBar: adaptiveAppBar(
+        context: context,
+        title: isManagerViewingEmployee ? 'Employee Request' : 'Request Details',
+        showBackButton: true,
         actions: [
           // Only show edit icon for employee viewing their own pending request
           if (!isManagerViewingEmployee && isPending)

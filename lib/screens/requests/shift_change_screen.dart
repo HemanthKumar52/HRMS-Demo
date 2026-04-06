@@ -3,6 +3,7 @@ import '../../animations/success_overlay.dart';
 import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/form_fields.dart';
 
 class ShiftChangeScreen extends StatefulWidget {
@@ -82,7 +83,7 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(title: const Text('Shift Change')),
+      appBar: adaptiveAppBar(context: context, title: 'Shift Change', showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Form(

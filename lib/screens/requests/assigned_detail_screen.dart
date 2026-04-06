@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/status_chip.dart';
 
 class AssignedDetailScreen extends StatefulWidget {
@@ -98,7 +99,7 @@ class _AssignedDetailScreenState extends State<AssignedDetailScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(title: const Text('Assigned Request')),
+      appBar: adaptiveAppBar(context: context, title: 'Assigned Request', showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Column(

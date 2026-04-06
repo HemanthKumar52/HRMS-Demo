@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 
 class OrgChartScreen extends StatefulWidget {
@@ -38,7 +39,7 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Organisation Chart'), centerTitle: true),
+      appBar: adaptiveAppBar(context: context, title: 'Organisation Chart', showBackButton: true),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : RefreshIndicator(

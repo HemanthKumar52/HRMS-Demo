@@ -31,6 +31,7 @@
 
 ---
 
+
 ## 2. ATTENDANCE
 
 | Action | Web Endpoint | Mobile Endpoint | Mobile Status | Web Animation | Mobile Animation |
