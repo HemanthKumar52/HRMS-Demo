@@ -6,6 +6,7 @@ import '../../providers/app_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/form_fields.dart';
 import '../../widgets/neu_card.dart';
 import '../../utils/platform_adaptive.dart';
 import '../../widgets/status_chip.dart';
@@ -673,43 +674,19 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   width: double.infinity,
                   height: 50,
                   child: OutlinedButton(
-                    onPressed: () {
-                      showDialog(
+                    onPressed: () async {
+                      final confirmed = await showAdaptiveConfirmDialog(
                         context: context,
-                        builder: (ctx) => AlertDialog(
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20)),
-                          title: const Text('Cancel Request?'),
-                          content: const Text(
-                              'Are you sure you want to cancel this request? This action cannot be undone.'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('No, Keep It'),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content:
-                                        const Text('Request cancelled'),
-                                    backgroundColor: AppColors.danger,
-                                    behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12)),
-                                  ),
-                                );
-                              },
-                              child: const Text('Yes, Cancel',
-                                  style:
-                                      TextStyle(color: AppColors.danger)),
-                            ),
-                          ],
-                        ),
+                        title: 'Cancel Request?',
+                        content: 'Are you sure you want to cancel this request? This action cannot be undone.',
+                        cancelText: 'No, Keep It',
+                        confirmText: 'Yes, Cancel',
+                        isDestructive: true,
                       );
+                      if (confirmed == true && context.mounted) {
+                        Navigator.pop(context);
+                        showErrorSnackbar(context, 'Request cancelled');
+                      }
                     },
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: AppColors.danger),
