@@ -141,19 +141,19 @@ class GlassTabBar extends StatelessWidget {
       bottom: 0,
       left: 0,
       right: 0,
-      child: ClipRRect(
+      child: ClipRect(
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
           child: Container(
             decoration: BoxDecoration(
               color: isDark
-                  ? Colors.black.withValues(alpha: 0.45)
-                  : Colors.white.withValues(alpha: 0.65),
+                  ? Colors.black.withValues(alpha: 0.5)
+                  : Colors.white.withValues(alpha: 0.7),
               border: Border(
                 top: BorderSide(
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.12)
-                      : Colors.black.withValues(alpha: 0.08),
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.05),
                   width: 0.5,
                 ),
               ),
@@ -161,14 +161,14 @@ class GlassTabBar extends StatelessWidget {
             child: SafeArea(
               top: false,
               child: Padding(
-                padding: const EdgeInsets.only(top: 6, bottom: 4),
+                padding: const EdgeInsets.only(top: 4, bottom: 2),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: List.generate(items.length, (index) {
                     final isActive = currentIndex == index;
-                    return GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
+                    return CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () {
                         HapticFeedback.selectionClick();
                         onTap(index);
                       },
@@ -183,10 +183,10 @@ class GlassTabBar extends StatelessWidget {
                               color: isActive
                                   ? AppColors.primary
                                   : isDark
-                                      ? Colors.white.withValues(alpha: 0.45)
-                                      : Colors.black.withValues(alpha: 0.35),
+                                      ? Colors.white.withValues(alpha: 0.4)
+                                      : Colors.grey.shade500,
                             ),
-                            const SizedBox(height: 3),
+                            const SizedBox(height: 2),
                             Text(
                               items[index].label,
                               style: TextStyle(
@@ -195,8 +195,8 @@ class GlassTabBar extends StatelessWidget {
                                 color: isActive
                                     ? AppColors.primary
                                     : isDark
-                                        ? Colors.white.withValues(alpha: 0.45)
-                                        : Colors.black.withValues(alpha: 0.35),
+                                        ? Colors.white.withValues(alpha: 0.4)
+                                        : Colors.grey.shade500,
                               ),
                             ),
                           ],

@@ -18,7 +18,7 @@ import 'work_type_request_screen.dart';
 import 'attendance_request_screen.dart';
 import 'asset_request_screen.dart';
 import 'request_detail_screen.dart';
-import '../../widgets/ppulse_footer.dart';
+
 
 class RequestsScreen extends StatefulWidget {
   const RequestsScreen({super.key});
@@ -569,7 +569,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
             itemCount: filtered.length + 1,
             itemBuilder: (context, index) {
-              if (index == filtered.length) return const PPulseFooter();
+              if (index == filtered.length) return const SizedBox(height: 12);
               final type = filtered[index];
               return Padding(
                 padding: const EdgeInsets.only(bottom: 10),
@@ -622,7 +622,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                 )
               : ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-                  children: [...grouped, const PPulseFooter()],
+                  children: [...grouped, const SizedBox(height: 12)],
                 ),
         ),
       ],
@@ -652,7 +652,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                 )
               : ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-                  children: [...grouped, const PPulseFooter()],
+                  children: [...grouped, const SizedBox(height: 12)],
                 ),
         ),
       ],
@@ -682,7 +682,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                 )
               : ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-                  children: [...grouped, const PPulseFooter()],
+                  children: [...grouped, const SizedBox(height: 12)],
                 ),
         ),
       ],

@@ -32,6 +32,7 @@ class AppProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _claimRequests = [];
   List<Map<String, dynamic>> _tickets = [];
   List<Map<String, dynamic>> _recentActivity = [];
+  List<Map<String, dynamic>> _announcements = [];
   List<Map<String, dynamic>> _notifications = [];
   int _unreadNotifications = 0;
   Map<String, dynamic> _pendingApprovals = {};
@@ -127,6 +128,14 @@ class AppProvider extends ChangeNotifier {
         }
       } catch (e) {
         debugPrint('Error fetching leaves: $e');
+      }
+
+      // Fetch announcements
+      try {
+        final announcementData = await ApiService.getDashboardAnnouncements();
+        _announcements = List<Map<String, dynamic>>.from(announcementData['announcements'] ?? []);
+      } catch (e) {
+        debugPrint('Error fetching announcements: $e');
       }
 
       // Fetch user profile and update role
@@ -276,6 +285,7 @@ class AppProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get claimRequests => _claimRequests;
   List<Map<String, dynamic>> get tickets => _tickets;
   List<Map<String, dynamic>> get recentActivity => _recentActivity;
+  List<Map<String, dynamic>> get announcements => _announcements;
   List<Map<String, dynamic>> get notifications => _notifications;
   int get unreadNotifications => _unreadNotifications;
   Map<String, dynamic> get pendingApprovals => _pendingApprovals;
@@ -345,6 +355,17 @@ class AppProvider extends ChangeNotifier {
       _showDynamicIsland = false;
       notifyListeners();
     });
+  }
+
+  void setPunchState(bool isPunchedIn, DateTime? punchTime) {
+    _isPunchedIn = isPunchedIn;
+    _punchInTime = punchTime;
+    notifyListeners();
+  }
+
+  void setAnnouncements(List<Map<String, dynamic>> announcements) {
+    _announcements = announcements;
+    notifyListeners();
   }
 
   void setUserName(String name) {

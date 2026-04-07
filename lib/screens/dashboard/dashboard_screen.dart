@@ -9,7 +9,7 @@ import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/neu_card.dart';
-import '../../widgets/ppulse_footer.dart';
+
 import '../../services/api_service.dart';
 import '../requests/apply_leave_screen.dart';
 import '../requests/submit_claim_screen.dart';
@@ -305,7 +305,7 @@ class DashboardScreen extends StatelessWidget {
             _PerformanceSection(isDark: isDark, role: role),
           ],
 
-          // ── 9. Announcements ──────────────────────────────────────────
+          // ── 9. Announcements (from DB, posted by admin/HR) ─────────────
           NeuCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -323,22 +323,28 @@ class DashboardScreen extends StatelessWidget {
                     const SizedBox(width: 12),
                     Text('Announcements', style: theme.textTheme.titleMedium),
                     const Spacer(),
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(color: AppColors.danger, shape: BoxShape.circle),
-                    ),
+                    if (provider.announcements.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.danger,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${provider.announcements.length}',
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                if (provider.recentActivity.isNotEmpty)
-                  ...provider.recentActivity.take(3).map((a) {
-                    final status = a['status'] ?? '';
+                if (provider.announcements.isNotEmpty)
+                  ...provider.announcements.take(5).map((a) {
                     return Column(children: [
                       _AnnouncementItem(
-                        title: a['title'] ?? 'Activity',
-                        subtitle: '${a['date'] ?? ''} - ${status}',
-                        icon: status == 'approved' ? Icons.check_circle : status == 'rejected' ? Icons.cancel : Icons.pending,
+                        title: a['title'] ?? 'Announcement',
+                        subtitle: a['subtitle'] ?? '',
+                        icon: Icons.campaign_rounded,
                       ),
                       const Divider(height: 16),
                     ]);
@@ -346,7 +352,7 @@ class DashboardScreen extends StatelessWidget {
                 else
                   const Padding(
                     padding: EdgeInsets.all(8.0),
-                    child: Text('No recent activity', style: TextStyle(color: Colors.grey)),
+                    child: Text('No announcements', style: TextStyle(color: Colors.grey)),
                   ),
               ],
             ),
@@ -411,7 +417,7 @@ class DashboardScreen extends StatelessWidget {
             _HrAnalyticsSection(isDark: isDark),
           ],
 
-          const PPulseFooter(),
+
         ],
       ),
       ),

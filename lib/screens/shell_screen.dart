@@ -113,82 +113,92 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildIOSShell(BuildContext context, AppProvider provider, bool isDark, List<Widget> screens) {
+    final topPadding = MediaQuery.of(context).padding.top;
+
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
       extendBody: true,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(56),
-        child: ClipRRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark
-                    ? AppColors.darkBg.withValues(alpha: 0.72)
-                    : AppColors.lightBg.withValues(alpha: 0.72),
-                border: Border(
-                  bottom: BorderSide(
+      extendBodyBehindAppBar: true,
+      appBar: null,
+      body: Stack(
+        children: [
+          // Content scrolls behind the glass header
+          IndexedStack(
+            index: provider.bottomNavIndex.clamp(0, screens.length - 1),
+            children: screens,
+          ),
+
+          // Glass header — overlays content so blur is visible
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+                child: Container(
+                  padding: EdgeInsets.only(top: topPadding),
+                  decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.white.withValues(alpha: 0.08)
-                        : Colors.black.withValues(alpha: 0.06),
-                    width: 0.5,
+                        ? Colors.black.withValues(alpha: 0.5)
+                        : Colors.white.withValues(alpha: 0.7),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.1)
+                            : Colors.black.withValues(alpha: 0.05),
+                        width: 0.5,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              child: SafeArea(
-                bottom: false,
-                child: SizedBox(
-                  height: 56,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Good ${_getGreeting()},',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w400,
-                                  color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+                  child: SizedBox(
+                    height: 56,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Good ${_getGreeting()},',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w400,
+                                    color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                provider.userName.split(' ').first,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  color: isDark ? AppColors.darkText : AppColors.lightText,
-                                  letterSpacing: -0.3,
+                                Text(
+                                  provider.userName.split(' ').first,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark ? AppColors.darkText : AppColors.lightText,
+                                    letterSpacing: -0.3,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        _buildNotificationButton(provider, isDark),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () => showProfileSheet(context),
-                          child: _buildProfileAvatar(provider, isDark, 36),
-                        ),
-                      ],
+                          _buildNotificationButton(provider, isDark),
+                          const SizedBox(width: 8),
+                          CupertinoButton(
+                            padding: EdgeInsets.zero,
+                            onPressed: () => showProfileSheet(context),
+                            child: _buildProfileAvatar(provider, isDark, 36),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
-      body: Stack(
-        children: [
-          IndexedStack(
-            index: provider.bottomNavIndex.clamp(0, screens.length - 1),
-            children: screens,
-          ),
+
+          // Glass bottom tab bar
           GlassTabBar(
             currentIndex: provider.bottomNavIndex,
             onTap: (index) => provider.setBottomNavIndex(index),

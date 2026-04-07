@@ -9,7 +9,7 @@ import '../../providers/app_provider.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
-import '../../widgets/ppulse_footer.dart';
+
 import '../home/face_verification_dialog.dart';
 
 class AttendanceScreen extends StatefulWidget {
@@ -656,7 +656,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             const SizedBox(height: 12),
             _buildAttendanceLogTable(tt, isDark),
 
-            const PPulseFooter(),
+            const SizedBox(height: 12),
             const SizedBox(height: 80),
           ],
         ),
