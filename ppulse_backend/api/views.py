@@ -1,30 +1,56 @@
+from calendar import monthrange
+from datetime import date, datetime, timedelta
+
+from django.contrib.auth import get_user_model
+from django.db.models import Q, Sum
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import get_user_model
-from django.shortcuts import get_object_or_404
-from django.utils import timezone
-from django.db.models import Q
-from datetime import datetime, date, timedelta
-from calendar import monthrange
 
 from .models import (
-    Employee, Department, JobPosition, EmployeeWorkInformation,
-    Shift, WorkType, Attendance, LeaveType, AvailableLeave, LeaveRequest,
-    ClaimRequest, Ticket, TicketType, ShiftRequestModel, WorkTypeRequestModel,
-    AttendanceRequestModel, AssetRequestModel,
-    Payslip, NotificationModel, Announcement, DeviceTokenModel, UserSettingsModel
+    Announcement,
+    AssetRequestModel,
+    Attendance,
+    AttendanceRequestModel,
+    AvailableLeave,
+    ClaimRequest,
+    Department,
+    DeviceTokenModel,
+    Employee,
+    EmployeeWorkInformation,
+    JobPosition,
+    LeaveRequest,
+    LeaveType,
+    NotificationModel,
+    Payslip,
+    Shift,
+    ShiftRequestModel,
+    Ticket,
+    TicketType,
+    UserSettingsModel,
+    WorkType,
+    WorkTypeRequestModel,
 )
 from .serializers import (
-    PayslipSerializer, NotificationSerializer,
-    LoginSerializer, RefreshTokenSerializer, ChangePasswordSerializer,
-    UserProfileUpdateSerializer, PunchInSerializer, PunchOutSerializer,
-    LeaveApplySerializer, ClaimSubmitSerializer, TicketRaiseSerializer,
-    ShiftRequestCreateSerializer, WorkTypeRequestCreateSerializer,
-    AttendanceRegularizeSerializer, AssetRequestCreateSerializer,
-    RequestActionSerializer, DeviceRegisterSerializer
+    AssetRequestCreateSerializer,
+    AttendanceRegularizeSerializer,
+    ChangePasswordSerializer,
+    ClaimSubmitSerializer,
+    DeviceRegisterSerializer,
+    LeaveApplySerializer,
+    LoginSerializer,
+    PunchInSerializer,
+    PunchOutSerializer,
+    RefreshTokenSerializer,
+    RequestActionSerializer,
+    ShiftRequestCreateSerializer,
+    TicketRaiseSerializer,
+    UserProfileUpdateSerializer,
+    WorkTypeRequestCreateSerializer,
 )
 
 User = get_user_model()
@@ -45,7 +71,7 @@ def get_employee_by_id(employee_id_id):
 
 
 def get_request_id(prefix, obj_id):
-    return f"{prefix}-{str(obj_id).zfill(4)}"
+    return f'{prefix}-{str(obj_id).zfill(4)}'
 
 
 def create_notification(recipient_user_id, verb, description=''):
@@ -71,7 +97,7 @@ def notify_managers_of_request(employee, request_type, title):
             create_notification(
                 manager.employee_user_id_id,
                 f'New {request_type} Request',
-                f'{employee.name} submitted: {title}'
+                f'{employee.name} submitted: {title}',
             )
 
 
@@ -113,21 +139,23 @@ class AuthView(APIView):
 
         refresh = RefreshToken.for_user(user)
 
-        return Response({
-            'access_token': str(refresh.access_token),
-            'refresh_token': str(refresh),
-            'expires_in': 3600,
-            'user': {
-                'id': str(user.id),
-                'employee_id': employee.badge_id or str(employee.id),
-                'name': employee.name,
-                'email': user.email,
-                'designation': designation,
-                'department': department,
-                'avatar_url': employee.avatar_url,
-                'role': role
+        return Response(
+            {
+                'access_token': str(refresh.access_token),
+                'refresh_token': str(refresh),
+                'expires_in': 3600,
+                'user': {
+                    'id': str(user.id),
+                    'employee_id': employee.badge_id or str(employee.id),
+                    'name': employee.name,
+                    'email': user.email,
+                    'designation': designation,
+                    'department': department,
+                    'avatar_url': employee.avatar_url,
+                    'role': role,
+                },
             }
-        })
+        )
 
 
 class RefreshTokenView(APIView):
@@ -140,11 +168,9 @@ class RefreshTokenView(APIView):
 
         try:
             refresh = RefreshToken(refresh_token)
-            return Response({
-                'access_token': str(refresh.access_token),
-                'refresh_token': str(refresh),
-                'expires_in': 3600
-            })
+            return Response(
+                {'access_token': str(refresh.access_token), 'refresh_token': str(refresh), 'expires_in': 3600}
+            )
         except Exception:
             return Response({'error': 'Invalid refresh token'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -206,7 +232,7 @@ class UserMeView(APIView):
                     reporting_manager = {
                         'id': str(reporting_emp.id),
                         'name': reporting_emp.name,
-                        'employee_id': reporting_emp.badge_id or str(reporting_emp.id)
+                        'employee_id': reporting_emp.badge_id or str(reporting_emp.id),
                     }
 
         # Determine role: hr if is_staff, manager if has direct reports, else employee
@@ -238,36 +264,38 @@ class UserMeView(APIView):
             salary_hour = float(work_info.salary_hour) if work_info.salary_hour else None
             contract_end = work_info.contract_end_date.isoformat() if work_info.contract_end_date else None
 
-        return Response({
-            'id': str(user.id),
-            'employee_id': employee.badge_id or str(employee.id),
-            'name': employee.name,
-            'email': user.email,
-            'phone': employee.phone or '',
-            'role': role,
-            'designation': designation,
-            'department': department,
-            'date_of_joining': date_joining.isoformat() if date_joining else None,
-            'reporting_manager': reporting_manager,
-            'avatar_url': employee.avatar_url,
-            'dob': employee.dob.isoformat() if employee.dob else None,
-            'gender': employee.gender or '',
-            'address': employee.address or '',
-            'marital_status': employee.marital_status or '',
-            'qualification': employee.qualification or '',
-            'emergency_contact': employee.emergency_contact or '',
-            'emergency_contact_name': employee.emergency_contact_name or '',
-            'children': employee.children or '',
-            'experience': experience,
-            # Work information
-            'shift': shift_name,
-            'work_type': work_type_name,
-            'location': location,
-            'basic_salary': basic_salary,
-            'salary_per_hour': salary_hour,
-            'contract_end_date': contract_end,
-            'company': 'PPulse Technologies',
-        })
+        return Response(
+            {
+                'id': str(user.id),
+                'employee_id': employee.badge_id or str(employee.id),
+                'name': employee.name,
+                'email': user.email,
+                'phone': employee.phone or '',
+                'role': role,
+                'designation': designation,
+                'department': department,
+                'date_of_joining': date_joining.isoformat() if date_joining else None,
+                'reporting_manager': reporting_manager,
+                'avatar_url': employee.avatar_url,
+                'dob': employee.dob.isoformat() if employee.dob else None,
+                'gender': employee.gender or '',
+                'address': employee.address or '',
+                'marital_status': employee.marital_status or '',
+                'qualification': employee.qualification or '',
+                'emergency_contact': employee.emergency_contact or '',
+                'emergency_contact_name': employee.emergency_contact_name or '',
+                'children': employee.children or '',
+                'experience': experience,
+                # Work information
+                'shift': shift_name,
+                'work_type': work_type_name,
+                'location': location,
+                'basic_salary': basic_salary,
+                'salary_per_hour': salary_hour,
+                'contract_end_date': contract_end,
+                'company': 'PPulse Technologies',
+            }
+        )
 
     def put(self, request):
         serializer = UserProfileUpdateSerializer(data=request.data)
@@ -303,36 +331,156 @@ class AvatarUploadView(APIView):
 
         # employee_profile is a TextField, store the path as string
         uploaded_file = request.FILES['file']
-        file_path = f"media/avatars/{uploaded_file.name}"
+        file_path = f'media/avatars/{uploaded_file.name}'
         employee.employee_profile = file_path
         employee.save()
 
-        return Response({
-            'avatar_url': file_path
-        })
+        return Response({'avatar_url': file_path})
+
+
+def _is_mobile_source(source):
+    """Mobile sources can punch in/out via the app"""
+    return source in ('mobile_ios', 'mobile_android', 'mobile')
+
+
+def _is_biometric_source(source):
+    return source == 'biometric'
+
+
+# ── Office geofence ──────────────────────────────────────────────
+# Olympia Pinnacle (Smartworks), Thoraipakkam, Chennai
+OFFICE_LOCATIONS = [
+    {
+        'name': 'Olympia Pinnacle (Smartworks) - Thoraipakkam',
+        'latitude': 12.950602068524807,
+        'longitude': 80.2409548690872,
+        'radius_meters': 50,
+    },
+]
+
+# WFH (Work-From-Home) face-verified punch-in zones.
+# Empty list = WFH face punch-in allowed from anywhere outside the office geofence.
+# Populate this list with home/co-working locations to enforce specific zones.
+WFH_ALLOWED_LOCATIONS = []
+
+
+def _haversine_meters(lat1, lon1, lat2, lon2):
+    """Distance between two lat/lng points in meters."""
+    import math
+
+    R = 6371000.0  # Earth radius in meters
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+
+def _office_for_location(lat, lng):
+    """Return the office dict if (lat,lng) is within any office radius, else None."""
+    if lat is None or lng is None:
+        return None
+    try:
+        lat_f = float(lat)
+        lng_f = float(lng)
+    except (TypeError, ValueError):
+        return None
+    for office in OFFICE_LOCATIONS:
+        dist = _haversine_meters(lat_f, lng_f, office['latitude'], office['longitude'])
+        if dist <= office['radius_meters']:
+            return office
+    return None
+
+
+def _wfh_zone_for_location(lat, lng):
+    """Return the matching WFH zone dict.
+
+    If WFH_ALLOWED_LOCATIONS is empty, WFH is allowed from anywhere (returns a
+    default sentinel). Otherwise (lat,lng) must fall inside one of the configured
+    radii or this returns None.
+    """
+    if not WFH_ALLOWED_LOCATIONS:
+        return {'name': 'WFH (anywhere outside office)'}
+    if lat is None or lng is None:
+        return None
+    try:
+        lat_f = float(lat)
+        lng_f = float(lng)
+    except (TypeError, ValueError):
+        return None
+    for zone in WFH_ALLOWED_LOCATIONS:
+        dist = _haversine_meters(lat_f, lng_f, zone['latitude'], zone['longitude'])
+        if dist <= zone['radius_meters']:
+            return zone
+    return None
 
 
 class AttendancePunchInView(APIView):
     def post(self, request):
         serializer = PunchInSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
 
         employee = get_employee_from_user(request.user)
         if not employee:
             return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
 
         today = date.today()
+        source = data.get('source', 'mobile')
 
         existing = Attendance.objects.filter(employee_id_id=employee.id, attendance_date=today).first()
         if existing and existing.attendance_clock_in is not None:
-            return Response({'error': {'code': 'ALREADY_PUNCHED_IN', 'message': 'Already clocked in today'}},
-                           status=status.HTTP_400_BAD_REQUEST)
+            # Check if previous punch was via biometric — block mobile re-punch
+            if _is_biometric_source(existing.punch_in_source) and _is_mobile_source(source):
+                return Response(
+                    {
+                        'error': {
+                            'code': 'BIOMETRIC_PUNCH_ACTIVE',
+                            'message': 'You are already punched in via biometric device. Cannot punch in from mobile.',
+                            'source': existing.punch_in_source,
+                        }
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            return Response(
+                {'error': {'code': 'ALREADY_PUNCHED_IN', 'message': 'Already clocked in today'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Geofence check: block mobile punch-in when employee is physically in the office.
+        # They must use the biometric device on-site.
+        if _is_mobile_source(source):
+            office = _office_for_location(data.get('latitude'), data.get('longitude'))
+            if office is not None:
+                return Response(
+                    {
+                        'error': {
+                            'code': 'GEOFENCE_OFFICE',
+                            'message': f'You are at {office["name"]}. Please punch in using the biometric device.',
+                            'office': office['name'],
+                        }
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
         now = timezone.now()
+
+        # Capture metadata silently
+        meta = {
+            'punch_in_source': source,
+            'punch_in_lat': data.get('latitude'),
+            'punch_in_lng': data.get('longitude'),
+            'punch_in_location': data.get('location_name', ''),
+            'punch_in_device': data.get('device_info', ''),
+        }
 
         if existing:
             existing.attendance_clock_in = now.time()
             existing.attendance_clock_in_date = today
+            for k, v in meta.items():
+                setattr(existing, k, v)
             existing.save()
             attendance = existing
         else:
@@ -352,55 +500,252 @@ class AttendancePunchInView(APIView):
                 is_validate_request_approved=False,
                 is_holiday=False,
                 excluded_gaps='',
+                **meta,
             )
 
-        return Response({
-            'id': str(attendance.id),
-            'employee_id': employee.badge_id or str(employee.id),
-            'punch_in': attendance.attendance_clock_in.isoformat(),
-            'punch_out': attendance.attendance_clock_out.isoformat() if attendance.attendance_clock_out else None,
-            'status': attendance.computed_status,
-            'method': request.data.get('method', 'password')
-        })
+        return Response(
+            {
+                'id': str(attendance.id),
+                'employee_id': employee.badge_id or str(employee.id),
+                'punch_in': attendance.attendance_clock_in.isoformat(),
+                'punch_out': attendance.attendance_clock_out.isoformat()
+                if attendance.attendance_clock_out
+                else None,
+                'status': attendance.computed_status,
+                'source': attendance.punch_in_source,
+                'method': data.get('method', 'password'),
+            }
+        )
+
+
+class AttendanceFaceVerifyPunchInView(APIView):
+    """WFH face-verified punch-in.
+
+    Steps:
+      1. Validate payload (image required).
+      2. Block if user is currently inside the office geofence (must use biometric).
+      3. Require user is inside an allowed WFH zone.
+      4. Run face verification — must match the authenticated employee.
+      5. Reject duplicate / biometric-active sessions like the regular punch-in view.
+      6. Create / update today's Attendance row with method='face'.
+    """
+
+    def post(self, request):
+        from .face_verification import verify as face_verify
+        from .serializers import FaceVerifyPunchInSerializer
+
+        serializer = FaceVerifyPunchInSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        source = data.get('source', 'mobile')
+        lat = data.get('latitude')
+        lng = data.get('longitude')
+
+        # 1. Office geofence — same rule as the regular punch-in path.
+        if _is_mobile_source(source):
+            office = _office_for_location(lat, lng)
+            if office is not None:
+                return Response(
+                    {
+                        'error': {
+                            'code': 'GEOFENCE_OFFICE',
+                            'message': f'You are at {office["name"]}. Please punch in using the biometric device.',
+                            'office': office['name'],
+                        }
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        # 2. WFH zone enforcement.
+        zone = _wfh_zone_for_location(lat, lng)
+        if zone is None:
+            return Response(
+                {
+                    'error': {
+                        'code': 'WFH_OUT_OF_ZONE',
+                        'message': 'You are not within an authorized work-from-home zone.',
+                    }
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # 3. Duplicate / biometric-active session checks (mirror PunchInView).
+        today = date.today()
+        existing = Attendance.objects.filter(employee_id_id=employee.id, attendance_date=today).first()
+        if existing and existing.attendance_clock_in is not None:
+            if _is_biometric_source(existing.punch_in_source) and _is_mobile_source(source):
+                return Response(
+                    {
+                        'error': {
+                            'code': 'BIOMETRIC_PUNCH_ACTIVE',
+                            'message': 'You are already punched in via biometric device. Cannot punch in from mobile.',
+                            'source': existing.punch_in_source,
+                        }
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            return Response(
+                {'error': {'code': 'ALREADY_PUNCHED_IN', 'message': 'Already clocked in today'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 4. Face verification.
+        result = face_verify(data['image'])
+        if not result.matched:
+            return Response(
+                {
+                    'error': {
+                        'code': 'FACE_VERIFICATION_FAILED',
+                        'reason': result.reason,  # unknown_user / no_face / too_dark / liveness_failed / ...
+                        'confidence': round(result.confidence, 4),
+                        'elapsed_ms': round(result.elapsed_ms, 1),
+                    }
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if result.employee_id != employee.id:
+            # Face matched a different enrolled employee — reject as imposter.
+            return Response(
+                {
+                    'error': {
+                        'code': 'FACE_MISMATCH',
+                        'reason': 'face_does_not_match_user',
+                        'confidence': round(result.confidence, 4),
+                        'elapsed_ms': round(result.elapsed_ms, 1),
+                    }
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # 5. All checks passed — record the punch.
+        now = timezone.now()
+        meta = {
+            'punch_in_source': source,
+            'punch_in_lat': lat,
+            'punch_in_lng': lng,
+            'punch_in_location': data.get('location_name', '') or zone['name'],
+            'punch_in_device': data.get('device_info', ''),
+        }
+
+        if existing:
+            existing.attendance_clock_in = now.time()
+            existing.attendance_clock_in_date = today
+            for k, v in meta.items():
+                setattr(existing, k, v)
+            existing.save()
+            attendance = existing
+        else:
+            attendance = Attendance.objects.create(
+                employee_id_id=employee.id,
+                attendance_date=today,
+                attendance_clock_in=now.time(),
+                attendance_clock_in_date=today,
+                is_active=True,
+                minimum_hour='00:00',
+                attendance_overtime='00:00',
+                attendance_overtime_approve=False,
+                attendance_validated=False,
+                approved_overtime_second=0,
+                is_validate_request=False,
+                is_bulk_request=False,
+                is_validate_request_approved=False,
+                is_holiday=False,
+                excluded_gaps='',
+                **meta,
+            )
+
+        return Response(
+            {
+                'id': str(attendance.id),
+                'employee_id': employee.badge_id or str(employee.id),
+                'punch_in': attendance.attendance_clock_in.isoformat(),
+                'punch_out': attendance.attendance_clock_out.isoformat()
+                if attendance.attendance_clock_out
+                else None,
+                'status': attendance.computed_status,
+                'source': attendance.punch_in_source,
+                'method': 'face',
+                'face': {
+                    'confidence': round(result.confidence, 4),
+                    'elapsed_ms': round(result.elapsed_ms, 1),
+                    'zone': zone['name'],
+                },
+            }
+        )
 
 
 class AttendancePunchOutView(APIView):
     def post(self, request):
         serializer = PunchOutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
 
         employee = get_employee_from_user(request.user)
         if not employee:
             return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
 
         today = date.today()
+        source = data.get('source', 'mobile')
 
         attendance = Attendance.objects.filter(employee_id_id=employee.id, attendance_date=today).first()
         if not attendance or attendance.attendance_clock_in is None:
-            return Response({'error': {'code': 'NOT_PUNCHED_IN', 'message': 'Cannot punch out without punching in'}},
-                           status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': {'code': 'NOT_PUNCHED_IN', 'message': 'Cannot punch out without punching in'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Block mobile punch-out if punched in via biometric
+        if _is_biometric_source(attendance.punch_in_source) and _is_mobile_source(source):
+            return Response(
+                {
+                    'error': {
+                        'code': 'BIOMETRIC_PUNCH_ACTIVE',
+                        'message': 'You punched in via biometric device. Please punch out using the biometric device.',
+                        'source': attendance.punch_in_source,
+                    }
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         now = timezone.now()
         attendance.attendance_clock_out = now.time()
         attendance.attendance_clock_out_date = today
 
+        # Capture punch-out metadata silently
+        attendance.punch_out_source = source
+        attendance.punch_out_lat = data.get('latitude')
+        attendance.punch_out_lng = data.get('longitude')
+        attendance.punch_out_location = data.get('location_name', '')
+        attendance.punch_out_device = data.get('device_info', '')
+
         if attendance.attendance_clock_in:
-            in_seconds = attendance.attendance_clock_in.hour * 3600 + attendance.attendance_clock_in.minute * 60
+            in_seconds = (
+                attendance.attendance_clock_in.hour * 3600 + attendance.attendance_clock_in.minute * 60
+            )
             out_seconds = now.hour * 3600 + now.minute * 60
             worked_seconds = max(0, out_seconds - in_seconds)
             hours = worked_seconds // 3600
             minutes = (worked_seconds % 3600) // 60
-            attendance.attendance_worked_hour = f"{hours:02d}:{minutes:02d}"
+            attendance.attendance_worked_hour = f'{hours:02d}:{minutes:02d}'
 
         attendance.save()
 
-        return Response({
-            'id': str(attendance.id),
-            'punch_in': attendance.attendance_clock_in.isoformat(),
-            'punch_out': attendance.attendance_clock_out.isoformat(),
-            'total_hours': attendance.attendance_worked_hour or '00:00',
-            'status': attendance.computed_status
-        })
+        return Response(
+            {
+                'id': str(attendance.id),
+                'punch_in': attendance.attendance_clock_in.isoformat(),
+                'punch_out': attendance.attendance_clock_out.isoformat(),
+                'total_hours': attendance.attendance_worked_hour or '00:00',
+                'status': attendance.computed_status,
+                'source': attendance.punch_out_source,
+            }
+        )
 
 
 class AttendanceTodayView(APIView):
@@ -413,23 +758,39 @@ class AttendanceTodayView(APIView):
         attendance = Attendance.objects.filter(employee_id_id=employee.id, attendance_date=today).first()
 
         if not attendance:
-            return Response({
-                'id': None,
-                'punch_in': None,
-                'punch_out': None,
-                'status': 'not_clocked_in',
-                'total_hours': '00:00',
-                'method': None
-            })
+            return Response(
+                {
+                    'id': None,
+                    'punch_in': None,
+                    'punch_out': None,
+                    'status': 'not_clocked_in',
+                    'total_hours': '00:00',
+                    'method': None,
+                    'source': None,
+                    'can_punch_via_mobile': True,
+                }
+            )
 
-        return Response({
-            'id': str(attendance.id),
-            'punch_in': attendance.attendance_clock_in.isoformat() if attendance.attendance_clock_in else None,
-            'punch_out': attendance.attendance_clock_out.isoformat() if attendance.attendance_clock_out else None,
-            'status': attendance.computed_status,
-            'total_hours': attendance.attendance_worked_hour or '00:00',
-            'method': None
-        })
+        can_mobile = True
+        if attendance.is_checked_in and _is_biometric_source(attendance.punch_in_source):
+            can_mobile = False
+
+        return Response(
+            {
+                'id': str(attendance.id),
+                'punch_in': attendance.attendance_clock_in.isoformat()
+                if attendance.attendance_clock_in
+                else None,
+                'punch_out': attendance.attendance_clock_out.isoformat()
+                if attendance.attendance_clock_out
+                else None,
+                'status': attendance.computed_status,
+                'total_hours': attendance.attendance_worked_hour or '00:00',
+                'method': None,
+                'source': attendance.punch_in_source,
+                'can_punch_via_mobile': can_mobile,
+            }
+        )
 
 
 class AttendanceMonthlyView(APIView):
@@ -447,9 +808,7 @@ class AttendanceMonthlyView(APIView):
         end_date = date(year, month, days_in_month)
 
         attendances = Attendance.objects.filter(
-            employee_id_id=employee.id,
-            attendance_date__gte=start_date,
-            attendance_date__lte=end_date
+            employee_id_id=employee.id, attendance_date__gte=start_date, attendance_date__lte=end_date
         )
 
         attendances_dict = {att.attendance_date: att for att in attendances}
@@ -520,33 +879,37 @@ class AttendanceMonthlyView(APIView):
                     wt = WorkType.objects.filter(id=att.work_type_id_id).first()
                     work_type_name = wt.work_type if wt else ''
 
-            daily.append({
-                'date': day_date.isoformat(),
-                'status': status_val,
-                'punch_in': punch_in,
-                'punch_out': punch_out,
-                'out_date': out_date,
-                'total_hours': total_hours,
-                'shift': shift_name,
-                'work_type': work_type_name,
-                'min_hour': min_hour,
-                'overtime': overtime,
-            })
+            daily.append(
+                {
+                    'date': day_date.isoformat(),
+                    'status': status_val,
+                    'punch_in': punch_in,
+                    'punch_out': punch_out,
+                    'out_date': out_date,
+                    'total_hours': total_hours,
+                    'shift': shift_name,
+                    'work_type': work_type_name,
+                    'min_hour': min_hour,
+                    'overtime': overtime,
+                }
+            )
 
         working_days = present + absent + leave + half_days
 
-        return Response({
-            'summary': {
-                'working_days': working_days,
-                'present': present,
-                'absent': absent,
-                'leave': leave,
-                'holidays': 0,
-                'half_days': half_days,
-                'on_duty': 0
-            },
-            'daily': daily
-        })
+        return Response(
+            {
+                'summary': {
+                    'working_days': working_days,
+                    'present': present,
+                    'absent': absent,
+                    'leave': leave,
+                    'holidays': 0,
+                    'half_days': half_days,
+                    'on_duty': 0,
+                },
+                'daily': daily,
+            }
+        )
 
 
 class AttendanceWeeklyView(APIView):
@@ -565,9 +928,7 @@ class AttendanceWeeklyView(APIView):
         week_end = week_start + timedelta(days=6)
 
         attendances = Attendance.objects.filter(
-            employee_id_id=employee.id,
-            attendance_date__gte=week_start,
-            attendance_date__lte=week_end
+            employee_id_id=employee.id, attendance_date__gte=week_start, attendance_date__lte=week_end
         )
 
         present = 0
@@ -588,6 +949,7 @@ class AttendanceWeeklyView(APIView):
                 hours = 0
                 if att.attendance_clock_in and att.attendance_clock_out:
                     from datetime import datetime as dt
+
                     cin = dt.combine(day, att.attendance_clock_in)
                     cout = dt.combine(day, att.attendance_clock_out)
                     diff = (cout - cin).total_seconds() / 3600
@@ -602,28 +964,33 @@ class AttendanceWeeklyView(APIView):
                         hours = 0
                 hours = round(hours, 2)
                 daily_hours.append({'day': weekday, 'hours': hours})
-                punch_in_val = att.attendance_clock_in.hour + att.attendance_clock_in.minute / 60 if att.attendance_clock_in else 0
-                punch_out_val = att.attendance_clock_out.hour + att.attendance_clock_out.minute / 60 if att.attendance_clock_out else 0
-                punch_times.append({
-                    'day': weekday,
-                    'punch_in': round(punch_in_val, 2),
-                    'punch_out': round(punch_out_val, 2)
-                })
+                punch_in_val = (
+                    att.attendance_clock_in.hour + att.attendance_clock_in.minute / 60
+                    if att.attendance_clock_in
+                    else 0
+                )
+                punch_out_val = (
+                    att.attendance_clock_out.hour + att.attendance_clock_out.minute / 60
+                    if att.attendance_clock_out
+                    else 0
+                )
+                punch_times.append(
+                    {'day': weekday, 'punch_in': round(punch_in_val, 2), 'punch_out': round(punch_out_val, 2)}
+                )
             else:
                 absent += 1
                 daily_hours.append({'day': weekday, 'hours': 0})
                 punch_times.append({'day': weekday, 'punch_in': 0, 'punch_out': 0})
 
-        return Response({
-            'weeks': [{
-                'week': f"Week of {week_start}",
-                'present': present,
-                'absent': absent,
-                'leave': leave
-            }],
-            'daily_hours': daily_hours,
-            'punch_times': punch_times
-        })
+        return Response(
+            {
+                'weeks': [
+                    {'week': f'Week of {week_start}', 'present': present, 'absent': absent, 'leave': leave}
+                ],
+                'daily_hours': daily_hours,
+                'punch_times': punch_times,
+            }
+        )
 
 
 class AttendanceTeamView(APIView):
@@ -650,20 +1017,26 @@ class AttendanceTeamView(APIView):
                 status_val = 'absent'
                 absent_today += 1
 
-            team_members.append({
-                'employee_id': emp.badge_id or str(emp.id),
-                'name': emp.name,
-                'status': status_val,
-                'punch_in': attendance.attendance_clock_in.isoformat() if attendance and attendance.attendance_clock_in else None
-            })
+            team_members.append(
+                {
+                    'employee_id': emp.badge_id or str(emp.id),
+                    'name': emp.name,
+                    'status': status_val,
+                    'punch_in': attendance.attendance_clock_in.isoformat()
+                    if attendance and attendance.attendance_clock_in
+                    else None,
+                }
+            )
 
-        return Response({
-            'total_employees': employees.count(),
-            'present_today': present_today,
-            'absent_today': absent_today,
-            'on_leave_today': on_leave_today,
-            'team_members': team_members
-        })
+        return Response(
+            {
+                'total_employees': employees.count(),
+                'present_today': present_today,
+                'absent_today': absent_today,
+                'on_leave_today': on_leave_today,
+                'team_members': team_members,
+            }
+        )
 
 
 class LeaveBalanceView(APIView):
@@ -684,19 +1057,18 @@ class LeaveBalanceView(APIView):
             used = leave.used_days
             remaining = leave.remaining_days
 
-            balances.append({
-                'type': str(leave.leave_type_id_id),
-                'label': label,
-                'total': total,
-                'used': used,
-                'remaining': remaining
-            })
+            balances.append(
+                {
+                    'type': str(leave.leave_type_id_id),
+                    'label': label,
+                    'total': total,
+                    'used': used,
+                    'remaining': remaining,
+                }
+            )
             total_remaining += remaining
 
-        return Response({
-            'balances': balances,
-            'total_remaining': total_remaining
-        })
+        return Response({'balances': balances, 'total_remaining': total_remaining})
 
 
 class LeaveApplyView(APIView):
@@ -711,11 +1083,15 @@ class LeaveApplyView(APIView):
         leave_type_val = serializer.validated_data['leave_type']
         leave_type = LeaveType.objects.filter(name__iexact=leave_type_val).first()
         if not leave_type:
-            leave_type = LeaveType.objects.filter(id=leave_type_val).first() if leave_type_val.isdigit() else None
+            leave_type = (
+                LeaveType.objects.filter(id=leave_type_val).first() if leave_type_val.isdigit() else None
+            )
         if not leave_type:
             return Response({'error': 'Invalid leave type'}, status=status.HTTP_400_BAD_REQUEST)
 
-        available = AvailableLeave.objects.filter(employee_id_id=employee.id, leave_type_id_id=leave_type.id).first()
+        available = AvailableLeave.objects.filter(
+            employee_id_id=employee.id, leave_type_id_id=leave_type.id
+        ).first()
 
         start_date = serializer.validated_data['start_date']
         end_date = serializer.validated_data.get('end_date') or start_date
@@ -723,8 +1099,10 @@ class LeaveApplyView(APIView):
         requested_days = (end_date - start_date).days + 1
 
         if available and (available.available_days or 0) < requested_days:
-            return Response({'error': {'code': 'LEAVE_INSUFFICIENT', 'message': 'Insufficient leave balance'}},
-                           status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': {'code': 'LEAVE_INSUFFICIENT', 'message': 'Insufficient leave balance'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         leave_request = LeaveRequest.objects.create(
             employee_id_id=employee.id,
@@ -735,24 +1113,28 @@ class LeaveApplyView(APIView):
             end_date_breakdown=serializer.validated_data.get('end_breakdown', 'full_day'),
             requested_days=requested_days,
             description=serializer.validated_data.get('description', ''),
-            status='requested'
+            status='requested',
         )
 
         # Notify employee and manager
-        create_notification(request.user.id, 'Leave Request Submitted',
-                          f'{leave_type.name} from {start_date} to {end_date}')
+        create_notification(
+            request.user.id, 'Leave Request Submitted', f'{leave_type.name} from {start_date} to {end_date}'
+        )
         notify_managers_of_request(employee, 'Leave', f'{leave_type.name} Leave')
 
-        return Response({
-            'id': str(leave_request.id),
-            'request_id': get_request_id('LV', leave_request.id),
-            'type': 'Leave',
-            'title': f"{leave_type.name} Leave",
-            'status': leave_request.status,
-            'start_date': leave_request.start_date.isoformat(),
-            'end_date': leave_request.end_date.isoformat() if leave_request.end_date else None,
-            'description': leave_request.description
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                'id': str(leave_request.id),
+                'request_id': get_request_id('LV', leave_request.id),
+                'type': 'Leave',
+                'title': f'{leave_type.name} Leave',
+                'status': leave_request.status,
+                'start_date': leave_request.start_date.isoformat(),
+                'end_date': leave_request.end_date.isoformat() if leave_request.end_date else None,
+                'description': leave_request.description,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class ClaimSubmitView(APIView):
@@ -775,8 +1157,8 @@ class ClaimSubmitView(APIView):
 
         ticket = Ticket.objects.create(
             employee_id_id=employee.id,
-            title=f"[Claim] {title}",
-            description=f"Type: {claim_type}\nAmount: {amount}\n{desc}",
+            title=f'[Claim] {title}',
+            description=f'Type: {claim_type}\nAmount: {amount}\n{desc}',
             priority='medium',
             status='open',
             created_date=date.today(),
@@ -796,14 +1178,17 @@ class ClaimSubmitView(APIView):
         create_notification(request.user.id, 'Claim Submitted', f'{title} - {amount}')
         notify_managers_of_request(employee, 'Claim', title)
 
-        return Response({
-            'id': str(ticket.id),
-            'request_id': get_request_id('CL', ticket.id),
-            'type': 'Claims',
-            'title': title,
-            'status': 'requested',
-            'amount': float(amount) if amount else 0,
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                'id': str(ticket.id),
+                'request_id': get_request_id('CL', ticket.id),
+                'type': 'Claims',
+                'title': title,
+                'status': 'requested',
+                'amount': float(amount) if amount else 0,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class TicketRaiseView(APIView):
@@ -831,14 +1216,17 @@ class TicketRaiseView(APIView):
             ticket_type_id=ticket_type_id,
         )
 
-        return Response({
-            'id': str(ticket.id),
-            'request_id': get_request_id('TK', ticket.id),
-            'type': 'Tickets',
-            'title': ticket.title,
-            'status': ticket.status,
-            'priority': ticket.priority,
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                'id': str(ticket.id),
+                'request_id': get_request_id('TK', ticket.id),
+                'type': 'Tickets',
+                'title': ticket.title,
+                'status': ticket.status,
+                'priority': ticket.priority,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class ShiftRequestView(APIView):
@@ -870,19 +1258,21 @@ class ShiftRequestView(APIView):
             canceled=False,
         )
 
-        return Response({
-            'id': str(shift_request.id),
-            'request_id': get_request_id('SR', shift_request.id),
-            'type': 'Shift Requests',
-            'title': f"Shift Change to {shift.employee_shift}",
-            'status': shift_request.status,
-            'shift_details': {
-                'name': shift.employee_shift,
-                'timing': shift.full_time
+        return Response(
+            {
+                'id': str(shift_request.id),
+                'request_id': get_request_id('SR', shift_request.id),
+                'type': 'Shift Requests',
+                'title': f'Shift Change to {shift.employee_shift}',
+                'status': shift_request.status,
+                'shift_details': {'name': shift.employee_shift, 'timing': shift.full_time},
+                'from_date': shift_request.requested_date.isoformat()
+                if shift_request.requested_date
+                else None,
+                'to_date': shift_request.requested_till.isoformat() if shift_request.requested_till else None,
             },
-            'from_date': shift_request.requested_date.isoformat() if shift_request.requested_date else None,
-            'to_date': shift_request.requested_till.isoformat() if shift_request.requested_till else None,
-        }, status=status.HTTP_201_CREATED)
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class WorkTypeRequestView(APIView):
@@ -914,16 +1304,19 @@ class WorkTypeRequestView(APIView):
             canceled=False,
         )
 
-        return Response({
-            'id': str(work_request.id),
-            'request_id': get_request_id('WR', work_request.id),
-            'type': 'Work Type Requests',
-            'title': f"Work Type Change to {work_type.work_type}",
-            'status': work_request.status,
-            'work_type': work_type.work_type,
-            'from_date': work_request.requested_date.isoformat() if work_request.requested_date else None,
-            'to_date': work_request.requested_till.isoformat() if work_request.requested_till else None,
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                'id': str(work_request.id),
+                'request_id': get_request_id('WR', work_request.id),
+                'type': 'Work Type Requests',
+                'title': f'Work Type Change to {work_type.work_type}',
+                'status': work_request.status,
+                'work_type': work_type.work_type,
+                'from_date': work_request.requested_date.isoformat() if work_request.requested_date else None,
+                'to_date': work_request.requested_till.isoformat() if work_request.requested_till else None,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class AttendanceRegularizeView(APIView):
@@ -935,25 +1328,34 @@ class AttendanceRegularizeView(APIView):
         if not employee:
             return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        att_date = serializer.validated_data['attendance_date']
+        data = serializer.validated_data
+        att_date = data['attendance_date']
         att_request = AttendanceRequestModel.objects.create(
             employee_id=employee.id,
             requested_date=att_date,
-            from_time='09:00',
-            to_time='18:00',
-            reason=serializer.validated_data.get('description', ''),
+            from_time=data.get('requested_check_in') or None,
+            to_time=data.get('requested_check_out') or None,
+            reason=data.get('reason', ''),
+            attendance_type=data.get('attendance_type', ''),
+            shift_name=data.get('shift', '') or None,
+            attachment_name=data.get('attachment_name', '') or None,
             status='requested',
             created_at=timezone.now(),
         )
 
-        return Response({
-            'id': str(att_request.id),
-            'request_id': get_request_id('AR', att_request.id),
-            'type': 'Attendance Requests',
-            'title': f"Attendance Regularization for {att_date}",
-            'status': 'requested',
-            'attendance_date': att_date.isoformat(),
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                'id': str(att_request.id),
+                'request_id': get_request_id('AR', att_request.id),
+                'type': 'Attendance Requests',
+                'title': f'{att_request.attendance_type or "Attendance Regularization"} for {att_date}',
+                'status': 'requested',
+                'attendance_date': att_date.isoformat(),
+                'attendance_type': att_request.attendance_type,
+                'shift': att_request.shift_name,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class AssetRequestView(APIView):
@@ -970,8 +1372,11 @@ class AssetRequestView(APIView):
         cat_id = 1
         try:
             from django.db import connection
+
             with connection.cursor() as cursor:
-                cursor.execute("SELECT id FROM asset_assetcategory WHERE asset_category_name = %s LIMIT 1", [cat_name])
+                cursor.execute(
+                    'SELECT id FROM asset_assetcategory WHERE asset_category_name = %s LIMIT 1', [cat_name]
+                )
                 row = cursor.fetchone()
                 if row:
                     cat_id = row[0]
@@ -983,18 +1388,21 @@ class AssetRequestView(APIView):
             requested_employee_id_id=employee.id,
             asset_category_id_id=cat_id,
             asset_request_date=date.today(),
-            description=f"[{cat_name}] {desc}" if cat_name else desc,
+            description=f'[{cat_name}] {desc}' if cat_name else desc,
             asset_request_status='Requested',
         )
 
-        return Response({
-            'id': str(asset_request.id),
-            'request_id': get_request_id('AS', asset_request.id),
-            'type': 'Asset Requests',
-            'title': f"{cat_name} Request",
-            'status': asset_request.status,
-            'asset_category': cat_name,
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                'id': str(asset_request.id),
+                'request_id': get_request_id('AS', asset_request.id),
+                'type': 'Asset Requests',
+                'title': f'{cat_name} Request',
+                'status': asset_request.status,
+                'asset_category': cat_name,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class RequestsListView(APIView):
@@ -1015,9 +1423,9 @@ class RequestsListView(APIView):
             else:
                 # Manager sees only direct reports' requests
                 team_ids = list(
-                    EmployeeWorkInformation.objects.filter(
-                        reporting_manager_id_id=employee.id
-                    ).values_list('employee_id_id', flat=True)
+                    EmployeeWorkInformation.objects.filter(reporting_manager_id_id=employee.id).values_list(
+                        'employee_id_id', flat=True
+                    )
                 )
 
         requests_list = []
@@ -1034,11 +1442,11 @@ class RequestsListView(APIView):
                 filtered = []
                 for item in qs:
                     item_status = getattr(item, 'status', 'requested')
-                    if req_status == 'pending' and item_status != 'requested':
-                        continue
-                    elif req_status == 'accepted' and item_status != 'approved':
-                        continue
-                    elif req_status == 'rejected' and item_status != 'rejected':
+                    if (
+                        (req_status == 'pending' and item_status != 'requested')
+                        or (req_status == 'accepted' and item_status != 'approved')
+                        or (req_status == 'rejected' and item_status != 'rejected')
+                    ):
                         continue
                     filtered.append(item)
                 return filtered
@@ -1046,14 +1454,22 @@ class RequestsListView(APIView):
                 return []
 
         icon_map = {
-            'Leave': 'calendar', 'Claims': 'receipt', 'Tickets': 'support',
-            'Shift Requests': 'clock', 'Work Type Requests': 'home',
-            'Attendance Requests': 'fingerprint', 'Asset Requests': 'devices'
+            'Leave': 'calendar',
+            'Claims': 'receipt',
+            'Tickets': 'support',
+            'Shift Requests': 'clock',
+            'Work Type Requests': 'home',
+            'Attendance Requests': 'fingerprint',
+            'Asset Requests': 'devices',
         }
         color_map = {
-            'Leave': '#4CAF50', 'Claims': '#2196F3', 'Tickets': '#FF9800',
-            'Shift Requests': '#9C27B0', 'Work Type Requests': '#00BCD4',
-            'Attendance Requests': '#795548', 'Asset Requests': '#607D8B'
+            'Leave': '#4CAF50',
+            'Claims': '#2196F3',
+            'Tickets': '#FF9800',
+            'Shift Requests': '#9C27B0',
+            'Work Type Requests': '#00BCD4',
+            'Attendance Requests': '#795548',
+            'Asset Requests': '#607D8B',
         }
 
         type_models = [
@@ -1066,55 +1482,128 @@ class RequestsListView(APIView):
             ('Asset Requests', AssetRequestModel, {'requested_employee_id_id': employee.id}),
         ]
 
+        # Cache reference data once per request to avoid N+1 lookups in metadata.
+        leave_type_cache = {lt.id: (lt.name or '') for lt in LeaveType.objects.all()}
+        work_type_cache = {wt.id: (wt.work_type or '') for wt in WorkType.objects.all()}
+        shift_cache = {s.id: (s.employee_shift or '') for s in Shift.objects.all()}
+        ticket_type_cache = {tt.id: (tt.title or '') for tt in TicketType.objects.all()}
+
+        def _iso(v):
+            if v is None:
+                return None
+            return v.isoformat() if hasattr(v, 'isoformat') else str(v)
+
+        def _build_metadata(type_name, item):
+            """Per-type extra fields that the manager approvals UI needs to render
+            real cards (dates, leave type, ticket priority, work type names, etc.).
+            All values are JSON-friendly primitives or null."""
+            md = {}
+            if type_name == 'Leave':
+                md['leave_type'] = leave_type_cache.get(item.leave_type_id_id) or 'Leave'
+                md['start_date'] = _iso(item.start_date)
+                md['end_date'] = _iso(item.end_date)
+                md['requested_days'] = item.requested_days
+                md['reason'] = item.description or ''
+                md['attachment'] = item.attachment or None
+            elif type_name == 'Claims':
+                # ClaimRequest is a flag-on-Ticket; pull display fields from the linked ticket.
+                ticket = None
+                if getattr(item, 'ticket_id_id', None):
+                    ticket = Ticket.objects.filter(id=item.ticket_id_id).first()
+                md['category'] = (ticket.title if ticket else None) or 'Claim'
+                md['description'] = (ticket.description if ticket else '') or ''
+                md['priority'] = ticket.priority if ticket else None
+                md['ticket_id'] = str(ticket.id) if ticket else None
+                md['amount'] = None  # not stored on the model
+                md['has_receipt'] = None
+            elif type_name == 'Tickets':
+                md['priority'] = (item.priority or 'Medium').title()
+                md['ticket_type'] = ticket_type_cache.get(item.ticket_type_id) or ''
+                md['raised_on'] = item.raised_on or ''
+            elif type_name == 'Shift Requests':
+                md['shift'] = shift_cache.get(item.shift_id_id) or ''
+                md['start_date'] = _iso(item.requested_date)
+                md['end_date'] = _iso(item.requested_till)
+                md['reason'] = item.description or ''
+            elif type_name == 'Work Type Requests':
+                md['work_type'] = work_type_cache.get(item.work_type_id_id) or 'Work From Home'
+                # Current work type lives on EmployeeWorkInformation.
+                current = ''
+                wi = EmployeeWorkInformation.objects.filter(employee_id_id=item.employee_id_id).first()
+                if wi and wi.work_type_id_id:
+                    current = work_type_cache.get(wi.work_type_id_id) or ''
+                md['current_work_type'] = current or 'Office'
+                md['start_date'] = _iso(item.requested_date)
+                md['end_date'] = _iso(item.requested_till)
+                md['reason'] = item.description or ''
+            elif type_name == 'Attendance Requests':
+                md['date'] = _iso(item.requested_date)
+                md['from_time'] = _iso(item.from_time)
+                md['to_time'] = _iso(item.to_time)
+                md['attendance_type'] = item.attendance_type or ''
+                md['shift_name'] = item.shift_name or ''
+                md['reason'] = item.reason or ''
+            elif type_name == 'Asset Requests':
+                md['date'] = _iso(item.asset_request_date)
+                md['description'] = item.description or ''
+                md['asset_category_id'] = item.asset_category_id_id
+            return md
+
         for type_name, model, emp_filter in type_models:
             if req_type != 'all' and type_name != req_type:
                 continue
             items = get_items(model, type_name, emp_filter)
             for item in items:
-                emp_id = getattr(item, 'employee_id_id', None) or getattr(item, 'requested_employee_id_id', None)
+                emp_id = getattr(item, 'employee_id_id', None) or getattr(
+                    item, 'requested_employee_id_id', None
+                )
                 emp = get_employee_by_id(emp_id) if emp_id else None
                 emp_name = emp.name if emp else 'Unknown'
                 emp_badge = (emp.badge_id or str(emp.id)) if emp else ''
 
                 # Extract created date from various model fields
                 item_date = (
-                    getattr(item, 'created_at', None) or
-                    getattr(item, 'created_date', None) or
-                    getattr(item, 'asset_request_date', None) or
-                    getattr(item, 'start_date', None)
+                    getattr(item, 'created_at', None)
+                    or getattr(item, 'created_date', None)
+                    or getattr(item, 'asset_request_date', None)
+                    or getattr(item, 'start_date', None)
                 )
                 if item_date:
                     date_str = item_date.isoformat() if hasattr(item_date, 'isoformat') else str(item_date)
                 else:
                     date_str = ''
 
-                requests_list.append({
-                    'id': str(item.id),
-                    'request_id': get_request_id(type_name[:2].upper(), item.id),
-                    'type': type_name,
-                    'title': getattr(item, 'title', f"{type_name} Request"),
-                    'status': getattr(item, 'status', 'requested'),
-                    'icon_name': icon_map.get(type_name, 'file'),
-                    'color_hex': color_map.get(type_name, '#000000'),
-                    'employee': {
-                        'id': str(emp_id or ''),
-                        'name': emp_name,
-                        'employee_id': emp_badge,
-                    },
-                    'subtitle': f"{emp_name} - {type_name}",
-                    'description': getattr(item, 'description', ''),
-                    'created_date': date_str,
-                })
+                metadata = {}
+                try:
+                    metadata = _build_metadata(type_name, item)
+                except Exception:
+                    metadata = {}
+
+                requests_list.append(
+                    {
+                        'id': str(item.id),
+                        'request_id': get_request_id(type_name[:2].upper(), item.id),
+                        'type': type_name,
+                        'title': getattr(item, 'title', f'{type_name} Request'),
+                        'status': getattr(item, 'status', 'requested'),
+                        'icon_name': icon_map.get(type_name, 'file'),
+                        'color_hex': color_map.get(type_name, '#000000'),
+                        'employee': {
+                            'id': str(emp_id or ''),
+                            'name': emp_name,
+                            'employee_id': emp_badge,
+                        },
+                        'subtitle': f'{emp_name} - {type_name}',
+                        'description': getattr(item, 'description', ''),
+                        'created_date': date_str,
+                        'metadata': metadata,
+                    }
+                )
 
         # Sort by created_date descending (newest first), fallback to id
         requests_list.sort(key=lambda r: (r.get('created_date') or '', int(r['id'])), reverse=True)
 
-        return Response({
-            'total': len(requests_list),
-            'page': 1,
-            'limit': 50,
-            'requests': requests_list[:50]
-        })
+        return Response({'total': len(requests_list), 'page': 1, 'limit': 50, 'requests': requests_list[:50]})
 
 
 class RequestDetailView(APIView):
@@ -1151,30 +1640,36 @@ class RequestDetailView(APIView):
         emp_badge = (emp.badge_id or str(emp.id)) if emp else ''
 
         icon_map = {
-            'Leave': 'calendar', 'Claims': 'receipt', 'Tickets': 'support',
-            'Shift Requests': 'clock', 'Work Type Requests': 'home',
-            'Attendance Requests': 'fingerprint', 'Asset Requests': 'devices'
+            'Leave': 'calendar',
+            'Claims': 'receipt',
+            'Tickets': 'support',
+            'Shift Requests': 'clock',
+            'Work Type Requests': 'home',
+            'Attendance Requests': 'fingerprint',
+            'Asset Requests': 'devices',
         }
 
-        return Response({
-            'id': str(item.id),
-            'request_id': get_request_id(type_name[:2].upper(), item.id),
-            'type': type_name,
-            'title': getattr(item, 'title', f"{type_name} Request"),
-            'status': getattr(item, 'status', 'requested'),
-            'icon_name': icon_map.get(type_name, 'file'),
-            'color_hex': '#000000',
-            'employee': {
-                'id': str(item.employee_id_id),
-                'name': emp_name,
-                'employee_id': emp_badge,
-            },
-            'subtitle': f"{emp_name} - {type_name}",
-            'description': getattr(item, 'description', ''),
-            'rejection_reason': getattr(item, 'reject_reason', None),
-            'timeline': [],
-            'metadata': {}
-        })
+        return Response(
+            {
+                'id': str(item.id),
+                'request_id': get_request_id(type_name[:2].upper(), item.id),
+                'type': type_name,
+                'title': getattr(item, 'title', f'{type_name} Request'),
+                'status': getattr(item, 'status', 'requested'),
+                'icon_name': icon_map.get(type_name, 'file'),
+                'color_hex': '#000000',
+                'employee': {
+                    'id': str(item.employee_id_id),
+                    'name': emp_name,
+                    'employee_id': emp_badge,
+                },
+                'subtitle': f'{emp_name} - {type_name}',
+                'description': getattr(item, 'description', ''),
+                'rejection_reason': getattr(item, 'reject_reason', None),
+                'timeline': [],
+                'metadata': {},
+            }
+        )
 
 
 class RequestAcceptView(APIView):
@@ -1182,8 +1677,14 @@ class RequestAcceptView(APIView):
         serializer = RequestActionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        type_models = [LeaveRequest, Ticket, ShiftRequestModel,
-                       WorkTypeRequestModel, AttendanceRequestModel, AssetRequestModel]
+        type_models = [
+            LeaveRequest,
+            Ticket,
+            ShiftRequestModel,
+            WorkTypeRequestModel,
+            AttendanceRequestModel,
+            AssetRequestModel,
+        ]
 
         item = None
         for model in type_models:
@@ -1213,14 +1714,17 @@ class RequestAcceptView(APIView):
             emp = get_employee_by_id(emp_id)
             if emp and emp.employee_user_id_id:
                 title = getattr(item, 'title', 'Request')
-                create_notification(emp.employee_user_id_id, 'Request Approved',
-                                  f'Your request "{title}" has been approved')
+                create_notification(
+                    emp.employee_user_id_id, 'Request Approved', f'Your request "{title}" has been approved'
+                )
 
-        return Response({
-            'id': str(item.id),
-            'request_id': get_request_id('REQ', item.id),
-            'status': 'approved',
-        })
+        return Response(
+            {
+                'id': str(item.id),
+                'request_id': get_request_id('REQ', item.id),
+                'status': 'approved',
+            }
+        )
 
 
 class RequestRejectView(APIView):
@@ -1230,8 +1734,14 @@ class RequestRejectView(APIView):
 
         rejection_reason = serializer.validated_data.get('rejection_reason')
 
-        type_models = [LeaveRequest, Ticket, ShiftRequestModel,
-                       WorkTypeRequestModel, AttendanceRequestModel, AssetRequestModel]
+        type_models = [
+            LeaveRequest,
+            Ticket,
+            ShiftRequestModel,
+            WorkTypeRequestModel,
+            AttendanceRequestModel,
+            AssetRequestModel,
+        ]
 
         item = None
         for model in type_models:
@@ -1262,16 +1772,21 @@ class RequestRejectView(APIView):
             emp = get_employee_by_id(emp_id)
             if emp and emp.employee_user_id_id:
                 title = getattr(item, 'title', 'Request')
-                create_notification(emp.employee_user_id_id, 'Request Rejected',
-                                  f'Your request "{title}" was rejected' +
-                                  (f': {rejection_reason}' if rejection_reason else ''))
+                create_notification(
+                    emp.employee_user_id_id,
+                    'Request Rejected',
+                    f'Your request "{title}" was rejected'
+                    + (f': {rejection_reason}' if rejection_reason else ''),
+                )
 
-        return Response({
-            'id': str(item.id),
-            'request_id': get_request_id('REQ', item.id),
-            'status': 'rejected',
-            'rejection_reason': rejection_reason,
-        })
+        return Response(
+            {
+                'id': str(item.id),
+                'request_id': get_request_id('REQ', item.id),
+                'status': 'rejected',
+                'rejection_reason': rejection_reason,
+            }
+        )
 
 
 class RequestCancelView(APIView):
@@ -1280,8 +1795,15 @@ class RequestCancelView(APIView):
         if not employee:
             return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        type_models = [LeaveRequest, ClaimRequest, Ticket, ShiftRequestModel,
-                       WorkTypeRequestModel, AttendanceRequestModel, AssetRequestModel]
+        type_models = [
+            LeaveRequest,
+            ClaimRequest,
+            Ticket,
+            ShiftRequestModel,
+            WorkTypeRequestModel,
+            AttendanceRequestModel,
+            AssetRequestModel,
+        ]
 
         item = None
         for model in type_models:
@@ -1296,10 +1818,9 @@ class RequestCancelView(APIView):
 
         item.delete()
 
-        return Response({
-            'message': 'Request cancelled successfully',
-            'request_id': get_request_id('REQ', pk)
-        })
+        return Response(
+            {'message': 'Request cancelled successfully', 'request_id': get_request_id('REQ', pk)}
+        )
 
 
 class PayslipsView(APIView):
@@ -1314,24 +1835,24 @@ class PayslipsView(APIView):
         start = date(year, month, 1)
         end = date(year, month, monthrange(year, month)[1])
         payslip = Payslip.objects.filter(
-            employee_id_id=employee.id,
-            start_date__gte=start,
-            start_date__lte=end
+            employee_id_id=employee.id, start_date__gte=start, start_date__lte=end
         ).first()
 
         if not payslip:
             return Response({'error': 'Payslip not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        return Response({
-            'id': payslip.id,
-            'month': payslip.month,
-            'year': payslip.year,
-            'gross_pay': float(payslip.gross_pay or 0),
-            'net_pay': float(payslip.net_pay or 0),
-            'basic_pay': float(payslip.basic_pay or 0),
-            'deduction': float(payslip.deduction or 0),
-            'status': payslip.status,
-        })
+        return Response(
+            {
+                'id': payslip.id,
+                'month': payslip.month,
+                'year': payslip.year,
+                'gross_pay': float(payslip.gross_pay or 0),
+                'net_pay': float(payslip.net_pay or 0),
+                'basic_pay': float(payslip.basic_pay or 0),
+                'deduction': float(payslip.deduction or 0),
+                'status': payslip.status,
+            }
+        )
 
 
 class PayslipsListView(APIView):
@@ -1342,33 +1863,49 @@ class PayslipsListView(APIView):
 
         year = int(request.query_params.get('year', datetime.now().year))
 
-        payslips = Payslip.objects.filter(
-            employee_id_id=employee.id,
-            start_date__year=year
+        payslips = Payslip.objects.filter(employee_id_id=employee.id, start_date__year=year)
+
+        month_names = [
+            '',
+            'January',
+            'February',
+            'March',
+            'April',
+            'May',
+            'June',
+            'July',
+            'August',
+            'September',
+            'October',
+            'November',
+            'December',
+        ]
+
+        return Response(
+            {
+                'year': year,
+                'payslips': [
+                    {
+                        'month': p.month,
+                        'label': month_names[p.month] if p.month and 1 <= p.month <= 12 else '',
+                        'net_pay': float(p.net_pay) if p.net_pay else 0,
+                    }
+                    for p in payslips
+                ],
+            }
         )
-
-        month_names = ['', 'January', 'February', 'March', 'April', 'May', 'June',
-                      'July', 'August', 'September', 'October', 'November', 'December']
-
-        return Response({
-            'year': year,
-            'payslips': [{
-                'month': p.month,
-                'label': month_names[p.month] if p.month and 1 <= p.month <= 12 else '',
-                'net_pay': float(p.net_pay) if p.net_pay else 0,
-            } for p in payslips]
-        })
 
 
 class PayslipPDFView(APIView):
     def get(self, request, pk):
-        from django.http import HttpResponse
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib import colors
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import inch
         import io
+
+        from django.http import HttpResponse
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.units import inch
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
         payslip = get_object_or_404(Payslip, id=pk)
         employee = get_employee_by_id(payslip.employee_id_id)
@@ -1386,8 +1923,21 @@ class PayslipPDFView(APIView):
                 dept = Department.objects.filter(id=work_info.department_id_id).first()
                 dept_name = dept.department if dept else ''
 
-        month_names = ['', 'January', 'February', 'March', 'April', 'May', 'June',
-                      'July', 'August', 'September', 'October', 'November', 'December']
+        month_names = [
+            '',
+            'January',
+            'February',
+            'March',
+            'April',
+            'May',
+            'June',
+            'July',
+            'August',
+            'September',
+            'October',
+            'November',
+            'December',
+        ]
         month_label = month_names[payslip.month] if payslip.month and 1 <= payslip.month <= 12 else ''
 
         gross = float(payslip.gross_pay or 0)
@@ -1402,12 +1952,22 @@ class PayslipPDFView(APIView):
 
         # Generate PDF
         buf = io.BytesIO()
-        doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=0.5*inch, bottomMargin=0.5*inch)
+        doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=0.5 * inch, bottomMargin=0.5 * inch)
         styles = getSampleStyleSheet()
-        title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=18, alignment=1, spaceAfter=6)
-        subtitle_style = ParagraphStyle('Sub', parent=styles['Normal'], fontSize=11, alignment=1, textColor=colors.grey)
-        section_style = ParagraphStyle('Section', parent=styles['Heading2'], fontSize=13, spaceAfter=8, spaceBefore=16,
-                                       textColor=colors.HexColor('#3B5FE5'))
+        title_style = ParagraphStyle(
+            'Title', parent=styles['Heading1'], fontSize=18, alignment=1, spaceAfter=6
+        )
+        subtitle_style = ParagraphStyle(
+            'Sub', parent=styles['Normal'], fontSize=11, alignment=1, textColor=colors.grey
+        )
+        section_style = ParagraphStyle(
+            'Section',
+            parent=styles['Heading2'],
+            fontSize=13,
+            spaceAfter=8,
+            spaceBefore=16,
+            textColor=colors.HexColor('#3B5FE5'),
+        )
 
         elements = []
 
@@ -1423,87 +1983,105 @@ class PayslipPDFView(APIView):
             ['Designation', designation, 'Department', dept_name],
             ['Pay Period', f'{month_label} {payslip.year}', 'Status', payslip.status or 'Generated'],
         ]
-        emp_table = Table(emp_data, colWidths=[1.3*inch, 2*inch, 1.3*inch, 2*inch])
-        emp_table.setStyle(TableStyle([
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
-            ('TEXTCOLOR', (0, 0), (0, -1), colors.grey),
-            ('TEXTCOLOR', (2, 0), (2, -1), colors.grey),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ]))
+        emp_table = Table(emp_data, colWidths=[1.3 * inch, 2 * inch, 1.3 * inch, 2 * inch])
+        emp_table.setStyle(
+            TableStyle(
+                [
+                    ('FONTSIZE', (0, 0), (-1, -1), 10),
+                    ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+                    ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+                    ('TEXTCOLOR', (0, 0), (0, -1), colors.grey),
+                    ('TEXTCOLOR', (2, 0), (2, -1), colors.grey),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                    ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ]
+            )
+        )
         elements.append(emp_table)
         elements.append(Spacer(1, 16))
 
         # Earnings
         elements.append(Paragraph('Earnings', section_style))
         earn_data = [
-            ['Component', 'Amount (\u20B9)'],
+            ['Component', 'Amount (\u20b9)'],
             ['Basic Pay', f'{basic:,.0f}'],
             ['HRA', f'{hra:,.0f}'],
             ['DA', f'{da:,.0f}'],
             ['Special Allowance', f'{special:,.0f}'],
             ['Gross Pay', f'{gross:,.0f}'],
         ]
-        earn_table = Table(earn_data, colWidths=[4*inch, 2.5*inch])
-        earn_table.setStyle(TableStyle([
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F0F0F0')),
-            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#E8F5E9')),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E0E0E0')),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-        ]))
+        earn_table = Table(earn_data, colWidths=[4 * inch, 2.5 * inch])
+        earn_table.setStyle(
+            TableStyle(
+                [
+                    ('FONTSIZE', (0, 0), (-1, -1), 10),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F0F0F0')),
+                    ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#E8F5E9')),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E0E0E0')),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                    ('TOPPADDING', (0, 0), (-1, -1), 6),
+                    ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+                ]
+            )
+        )
         elements.append(earn_table)
         elements.append(Spacer(1, 12))
 
         # Deductions
         elements.append(Paragraph('Deductions', section_style))
         ded_data = [
-            ['Component', 'Amount (\u20B9)'],
+            ['Component', 'Amount (\u20b9)'],
             ['Provident Fund (12%)', f'{pf:,.0f}'],
             ['Professional Tax', f'{tax:,.0f}'],
             ['Total Deductions', f'{deduction:,.0f}'],
         ]
-        ded_table = Table(ded_data, colWidths=[4*inch, 2.5*inch])
-        ded_table.setStyle(TableStyle([
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F0F0F0')),
-            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#FFEBEE')),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E0E0E0')),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-        ]))
+        ded_table = Table(ded_data, colWidths=[4 * inch, 2.5 * inch])
+        ded_table.setStyle(
+            TableStyle(
+                [
+                    ('FONTSIZE', (0, 0), (-1, -1), 10),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F0F0F0')),
+                    ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#FFEBEE')),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E0E0E0')),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                    ('TOPPADDING', (0, 0), (-1, -1), 6),
+                    ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+                ]
+            )
+        )
         elements.append(ded_table)
         elements.append(Spacer(1, 20))
 
         # Net Pay
-        net_data = [['Net Pay', f'\u20B9 {net:,.0f}']]
-        net_table = Table(net_data, colWidths=[4*inch, 2.5*inch])
-        net_table.setStyle(TableStyle([
-            ('FONTSIZE', (0, 0), (-1, -1), 14),
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
-            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#E3F2FD')),
-            ('TEXTCOLOR', (1, 0), (1, 0), colors.HexColor('#1565C0')),
-            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#1565C0')),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('TOPPADDING', (0, 0), (-1, -1), 12),
-            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
-        ]))
+        net_data = [['Net Pay', f'\u20b9 {net:,.0f}']]
+        net_table = Table(net_data, colWidths=[4 * inch, 2.5 * inch])
+        net_table.setStyle(
+            TableStyle(
+                [
+                    ('FONTSIZE', (0, 0), (-1, -1), 14),
+                    ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+                    ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#E3F2FD')),
+                    ('TEXTCOLOR', (1, 0), (1, 0), colors.HexColor('#1565C0')),
+                    ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#1565C0')),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+                    ('TOPPADDING', (0, 0), (-1, -1), 12),
+                    ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+                ]
+            )
+        )
         elements.append(net_table)
 
         doc.build(elements)
         buf.seek(0)
 
         response = HttpResponse(buf.getvalue(), content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="payslip_{emp_name.replace(" ", "_")}_{month_label}_{payslip.year}.pdf"'
+        response['Content-Disposition'] = (
+            f'attachment; filename="payslip_{emp_name.replace(" ", "_")}_{month_label}_{payslip.year}.pdf"'
+        )
         return response
 
 
@@ -1513,16 +2091,21 @@ class NotificationsView(APIView):
 
         notifications = NotificationModel.objects.filter(recipient_id=user.id)
 
-        return Response({
-            'unread_count': notifications.filter(unread=True).count(),
-            'notifications': [{
-                'id': n.id,
-                'title': n.verb or '',
-                'body': n.description or '',
-                'read': not n.unread,
-                'timestamp': n.timestamp.isoformat() if n.timestamp else None,
-            } for n in notifications.order_by('-timestamp')[:20]]
-        })
+        return Response(
+            {
+                'unread_count': notifications.filter(unread=True).count(),
+                'notifications': [
+                    {
+                        'id': n.id,
+                        'title': n.verb or '',
+                        'body': n.description or '',
+                        'read': not n.unread,
+                        'timestamp': n.timestamp.isoformat() if n.timestamp else None,
+                    }
+                    for n in notifications.order_by('-timestamp')[:20]
+                ],
+            }
+        )
 
 
 class NotificationReadView(APIView):
@@ -1554,8 +2137,8 @@ class DeviceRegisterView(APIView):
             device_id=serializer.validated_data['device_id'],
             defaults={
                 'fcm_token': serializer.validated_data['fcm_token'],
-                'platform': serializer.validated_data['platform']
-            }
+                'platform': serializer.validated_data['platform'],
+            },
         )
 
         return Response({'message': 'Device registered successfully'})
@@ -1570,14 +2153,16 @@ class EmployeesListView(APIView):
 
         if search:
             employees = employees.filter(
-                Q(employee_first_name__icontains=search) |
-                Q(employee_last_name__icontains=search) |
-                Q(email__icontains=search) |
-                Q(badge_id__icontains=search)
+                Q(employee_first_name__icontains=search)
+                | Q(employee_last_name__icontains=search)
+                | Q(email__icontains=search)
+                | Q(badge_id__icontains=search)
             )
 
         if department:
-            dept_ids = Department.objects.filter(department__icontains=department).values_list('id', flat=True)
+            dept_ids = Department.objects.filter(department__icontains=department).values_list(
+                'id', flat=True
+            )
             work_info_emp_ids = EmployeeWorkInformation.objects.filter(
                 department_id_id__in=dept_ids
             ).values_list('employee_id_id', flat=True)
@@ -1595,21 +2180,20 @@ class EmployeesListView(APIView):
                 if work_info.department_id_id:
                     dept = Department.objects.filter(id=work_info.department_id_id).first()
                     dept_name = dept.department if dept else ''
-            emp_list.append({
-                'id': str(emp.id),
-                'employee_id': emp.badge_id or str(emp.id),
-                'name': emp.name,
-                'designation': designation,
-                'department': dept_name,
-                'email': emp.email,
-                'phone': emp.phone,
-                'avatar_url': emp.avatar_url
-            })
+            emp_list.append(
+                {
+                    'id': str(emp.id),
+                    'employee_id': emp.badge_id or str(emp.id),
+                    'name': emp.name,
+                    'designation': designation,
+                    'department': dept_name,
+                    'email': emp.email,
+                    'phone': emp.phone,
+                    'avatar_url': emp.avatar_url,
+                }
+            )
 
-        return Response({
-            'total': employees.count(),
-            'employees': emp_list
-        })
+        return Response({'total': employees.count(), 'employees': emp_list})
 
 
 class EmployeeDetailView(APIView):
@@ -1634,23 +2218,22 @@ class EmployeeDetailView(APIView):
             if work_info.reporting_manager_id_id:
                 reporting_emp = get_employee_by_id(work_info.reporting_manager_id_id)
                 if reporting_emp:
-                    reporting_manager = {
-                        'id': str(reporting_emp.id),
-                        'name': reporting_emp.name
-                    }
+                    reporting_manager = {'id': str(reporting_emp.id), 'name': reporting_emp.name}
 
-        return Response({
-            'id': str(employee.id),
-            'employee_id': employee.badge_id or str(employee.id),
-            'name': employee.name,
-            'email': employee.email,
-            'phone': employee.phone,
-            'designation': designation,
-            'department': dept_name,
-            'date_of_joining': date_joining.isoformat() if date_joining else None,
-            'reporting_manager': reporting_manager,
-            'avatar_url': employee.avatar_url
-        })
+        return Response(
+            {
+                'id': str(employee.id),
+                'employee_id': employee.badge_id or str(employee.id),
+                'name': employee.name,
+                'email': employee.email,
+                'phone': employee.phone,
+                'designation': designation,
+                'department': dept_name,
+                'date_of_joining': date_joining.isoformat() if date_joining else None,
+                'reporting_manager': reporting_manager,
+                'avatar_url': employee.avatar_url,
+            }
+        )
 
 
 class DashboardSummaryView(APIView):
@@ -1667,69 +2250,139 @@ class DashboardSummaryView(APIView):
         punch_in = None
         punch_out = None
         total_hours = '00:00'
+        punch_in_source = None
+        can_punch_via_mobile = True  # Default: mobile can punch in
 
         if attendance:
             attendance_status = attendance.computed_status
             punch_in = attendance.attendance_clock_in.isoformat() if attendance.attendance_clock_in else None
-            punch_out = attendance.attendance_clock_out.isoformat() if attendance.attendance_clock_out else None
+            punch_out = (
+                attendance.attendance_clock_out.isoformat() if attendance.attendance_clock_out else None
+            )
             total_hours = attendance.attendance_worked_hour or '00:00'
+            punch_in_source = attendance.punch_in_source
+            # If currently checked in via biometric, mobile cannot punch out
+            if attendance.is_checked_in and _is_biometric_source(attendance.punch_in_source):
+                can_punch_via_mobile = False
 
         available_leaves = AvailableLeave.objects.filter(employee_id_id=employee.id)
-        total_remaining = sum(leave.remaining_days for leave in available_leaves)
 
+        gender = (employee.gender or '').strip().lower()
         leave_summary = {}
+        total_remaining = 0
         for leave in available_leaves:
             leave_type = LeaveType.objects.filter(id=leave.leave_type_id_id).first()
+            lt_name = (leave_type.name or '').lower() if leave_type else ''
+            # Hide gender-specific leaves that don't match
+            if 'maternity' in lt_name and gender != 'female':
+                continue
+            if 'paternity' in lt_name and gender != 'male':
+                continue
+            total_days = leave.total_leave_days or 0
+            # Skip leave types with no allotment
+            if total_days <= 0:
+                continue
+
+            # Credit back any "earned" days (negative approved requested_days,
+            # e.g. earned Comp Off entries) on top of the cached available_days.
+            credited_back = (
+                LeaveRequest.objects.filter(
+                    employee_id_id=employee.id,
+                    leave_type_id_id=leave.leave_type_id_id,
+                    status='approved',
+                    requested_days__lt=0,
+                ).aggregate(total=Sum('requested_days'))['total']
+                or 0
+            )
+            credit = -float(credited_back)  # convert negative to positive credit
+
+            used = leave.used_days - credit
+            if used < 0:
+                used = 0
+            remaining = total_days - used
+            if remaining < 0:
+                remaining = 0
+            total_remaining += remaining
+
             key = str(leave.leave_type_id_id)
             leave_summary[key] = {
                 'label': leave_type.name if leave_type else 'Unknown',
-                'used': leave.used_days,
-                'total': leave.total_leave_days or 0
+                'used': int(used),
+                'total': int(total_days),
+                'remaining': int(remaining),
             }
+
+        # Include Unpaid Leave (LOP) only if there are days taken
+        unpaid_lt = LeaveType.objects.filter(name__iexact='Unpaid Leave').first()
+        if unpaid_lt:
+            unpaid_taken = (
+                LeaveRequest.objects.filter(
+                    employee_id_id=employee.id,
+                    leave_type_id_id=unpaid_lt.id,
+                    status='approved',
+                ).aggregate(total=Sum('requested_days'))['total']
+                or 0
+            )
+            if unpaid_taken and unpaid_taken > 0:
+                leave_summary[str(unpaid_lt.id)] = {
+                    'label': 'LOP',
+                    'used': int(unpaid_taken),
+                    'total': int(unpaid_taken),
+                    'is_unpaid': True,
+                }
 
         # Calculate real attendance percentage for current month
         month_start = date(today.year, today.month, 1)
         month_attendances = Attendance.objects.filter(
-            employee_id_id=employee.id,
-            attendance_date__gte=month_start,
-            attendance_date__lte=today
+            employee_id_id=employee.id, attendance_date__gte=month_start, attendance_date__lte=today
         )
         present_days = sum(1 for a in month_attendances if a.attendance_clock_in is not None)
-        working_days = sum(1 for d in range((today - month_start).days + 1)
-                          if (month_start + timedelta(days=d)).weekday() < 5)
+        working_days = sum(
+            1
+            for d in range((today - month_start).days + 1)
+            if (month_start + timedelta(days=d)).weekday() < 5
+        )
         attendance_pct = round((present_days / working_days * 100), 1) if working_days > 0 else 0.0
 
         # Build recent activity from ALL request types
         recent_activity = []
         for lr in LeaveRequest.objects.filter(employee_id_id=employee.id).order_by('-id')[:5]:
             lt = LeaveType.objects.filter(id=lr.leave_type_id_id).first()
-            recent_activity.append({
-                'type': 'leave',
-                'title': f"{lt.name if lt else 'Leave'} Request",
-                'status': lr.status,
-                'date': lr.start_date.isoformat() if lr.start_date else None,
-            })
+            recent_activity.append(
+                {
+                    'type': 'leave',
+                    'title': f'{lt.name if lt else "Leave"} Request',
+                    'status': lr.status,
+                    'date': lr.start_date.isoformat() if lr.start_date else None,
+                }
+            )
         for sr in ShiftRequestModel.objects.filter(employee_id_id=employee.id).order_by('-id')[:3]:
-            recent_activity.append({
-                'type': 'shift',
-                'title': 'Shift Change Request',
-                'status': sr.status,
-                'date': sr.requested_date.isoformat() if sr.requested_date else None,
-            })
+            recent_activity.append(
+                {
+                    'type': 'shift',
+                    'title': 'Shift Change Request',
+                    'status': sr.status,
+                    'date': sr.requested_date.isoformat() if sr.requested_date else None,
+                }
+            )
         for wr in WorkTypeRequestModel.objects.filter(employee_id_id=employee.id).order_by('-id')[:3]:
-            recent_activity.append({
-                'type': 'work_type',
-                'title': 'Work Type Request',
-                'status': wr.status,
-                'date': wr.requested_date.isoformat() if wr.requested_date else None,
-            })
+            recent_activity.append(
+                {
+                    'type': 'work_type',
+                    'title': 'Work Type Request',
+                    'status': wr.status,
+                    'date': wr.requested_date.isoformat() if wr.requested_date else None,
+                }
+            )
         for ar in AttendanceRequestModel.objects.filter(employee_id=employee.id).order_by('-id')[:3]:
-            recent_activity.append({
-                'type': 'attendance',
-                'title': 'Attendance Request',
-                'status': ar.status,
-                'date': ar.requested_date.isoformat() if ar.requested_date else None,
-            })
+            recent_activity.append(
+                {
+                    'type': 'attendance',
+                    'title': 'Attendance Request',
+                    'status': ar.status,
+                    'date': ar.requested_date.isoformat() if ar.requested_date else None,
+                }
+            )
         # Sort all by date descending and limit to 8
         recent_activity.sort(key=lambda x: x.get('date') or '', reverse=True)
         recent_activity = recent_activity[:8]
@@ -1745,40 +2398,49 @@ class DashboardSummaryView(APIView):
         except Exception:
             pending_tickets = 0
 
-        return Response({
-            'attendance': {
-                'status': attendance_status,
-                'punch_in': punch_in,
-                'punch_out': punch_out,
-                'total_hours': total_hours
-            },
-            'leave_balance': {
-                'total_remaining': int(total_remaining),
-                'attendance_percentage': attendance_pct
-            },
-            'leave_summary': leave_summary,
-            'recent_activity': recent_activity,
-            'pending_approvals': {
-                'leave_requests': pending_leaves,
-                'claims': pending_claims,
-                'tickets': pending_tickets,
-                'total': pending_leaves + pending_claims + pending_tickets,
+        return Response(
+            {
+                'attendance': {
+                    'status': attendance_status,
+                    'punch_in': punch_in,
+                    'punch_out': punch_out,
+                    'total_hours': total_hours,
+                    'source': punch_in_source,
+                    'can_punch_via_mobile': can_punch_via_mobile,
+                },
+                'leave_balance': {
+                    'total_remaining': int(total_remaining),
+                    'attendance_percentage': attendance_pct,
+                },
+                'leave_summary': leave_summary,
+                'recent_activity': recent_activity,
+                'pending_approvals': {
+                    'leave_requests': pending_leaves,
+                    'claims': pending_claims,
+                    'tickets': pending_tickets,
+                    'total': pending_leaves + pending_claims + pending_tickets,
+                },
             }
-        })
+        )
 
 
 class DashboardAnnouncementsView(APIView):
     def get(self, request):
         announcements = Announcement.objects.filter(is_active=True)[:5]
 
-        return Response({
-            'announcements': [{
-                'id': str(a.id),
-                'title': a.title,
-                'subtitle': a.subtitle or '',
-                'icon': a.icon or 'announcement',
-            } for a in announcements]
-        })
+        return Response(
+            {
+                'announcements': [
+                    {
+                        'id': str(a.id),
+                        'title': a.title,
+                        'subtitle': a.subtitle or '',
+                        'icon': a.icon or 'announcement',
+                    }
+                    for a in announcements
+                ]
+            }
+        )
 
 
 class DashboardAnalyticsView(APIView):
@@ -1806,60 +2468,90 @@ class DashboardAnalyticsView(APIView):
         most_used = max(leave_type_usage, key=leave_type_usage.get) if leave_type_usage else 'N/A'
         avg_leaves = round(total_used / total_employees, 1) if total_employees > 0 else 0.0
 
-        return Response({
-            'total_employees': total_employees,
-            'new_joiners_this_month': 0,
-            'attrition_rate': 0.0,
-            'department_breakdown': dept_breakdown,
-            'leave_analytics': {
-                'most_used_type': most_used,
-                'avg_leaves_per_employee': avg_leaves
+        return Response(
+            {
+                'total_employees': total_employees,
+                'new_joiners_this_month': 0,
+                'attrition_rate': 0.0,
+                'department_breakdown': dept_breakdown,
+                'leave_analytics': {'most_used_type': most_used, 'avg_leaves_per_employee': avg_leaves},
             }
-        })
+        )
 
 
 class DepartmentsView(APIView):
     def get(self, request):
         departments = Department.objects.all()
-        return Response({
-            'departments': [{
-                'id': str(d.id),
-                'name': d.department or '',
-            } for d in departments]
-        })
+        return Response(
+            {
+                'departments': [
+                    {
+                        'id': str(d.id),
+                        'name': d.department or '',
+                    }
+                    for d in departments
+                ]
+            }
+        )
 
 
 class ShiftsListView(APIView):
     def get(self, request):
         shifts = Shift.objects.all()
-        return Response({
-            'shifts': [{
-                'id': str(s.id),
-                'name': s.employee_shift or '',
-            } for s in shifts]
-        })
+        return Response(
+            {
+                'shifts': [
+                    {
+                        'id': str(s.id),
+                        'name': s.employee_shift or '',
+                    }
+                    for s in shifts
+                ]
+            }
+        )
 
 
 class WorkTypesListView(APIView):
     def get(self, request):
         work_types = WorkType.objects.all()
-        return Response({
-            'work_types': [{
-                'id': str(w.id),
-                'name': w.work_type or '',
-            } for w in work_types]
-        })
+        return Response(
+            {
+                'work_types': [
+                    {
+                        'id': str(w.id),
+                        'name': w.work_type or '',
+                    }
+                    for w in work_types
+                ]
+            }
+        )
 
 
 class LeaveTypesListView(APIView):
     def get(self, request):
         leave_types = LeaveType.objects.all()
-        return Response({
-            'leave_types': [{
-                'id': str(lt.id),
-                'name': lt.name or '',
-            } for lt in leave_types]
-        })
+        # Gender-based filtering: hide Maternity from males, Paternity from females
+        employee = get_employee_from_user(request.user)
+        gender = (employee.gender or '').strip().lower() if employee else ''
+        filtered = []
+        for lt in leave_types:
+            name = (lt.name or '').lower()
+            if 'maternity' in name and gender != 'female':
+                continue
+            if 'paternity' in name and gender != 'male':
+                continue
+            filtered.append(lt)
+        return Response(
+            {
+                'leave_types': [
+                    {
+                        'id': str(lt.id),
+                        'name': lt.name or '',
+                    }
+                    for lt in filtered
+                ]
+            }
+        )
 
 
 class ManagerStatsView(APIView):
@@ -1886,19 +2578,23 @@ class ManagerStatsView(APIView):
         absent_today = total_employees - today_punched - on_leave_today
 
         # Attendance rate this month
-        working_days = sum(1 for d in range((today - month_start).days + 1)
-                          if (month_start + timedelta(days=d)).weekday() < 5)
+        working_days = sum(
+            1
+            for d in range((today - month_start).days + 1)
+            if (month_start + timedelta(days=d)).weekday() < 5
+        )
         total_possible = total_employees * max(working_days, 1)
         total_present = Attendance.objects.filter(
-            attendance_date__gte=month_start, attendance_date__lte=today,
-            attendance_clock_in__isnull=False
+            attendance_date__gte=month_start, attendance_date__lte=today, attendance_clock_in__isnull=False
         ).count()
         attendance_rate = round((total_present / total_possible * 100), 1) if total_possible > 0 else 0
 
         # Avg work hours (from employees who checked out this month)
         checked_out = Attendance.objects.filter(
-            attendance_date__gte=month_start, attendance_date__lte=today,
-            attendance_clock_in__isnull=False, attendance_clock_out__isnull=False
+            attendance_date__gte=month_start,
+            attendance_date__lte=today,
+            attendance_clock_in__isnull=False,
+            attendance_clock_out__isnull=False,
         )
         total_hours = 0
         count_hours = 0
@@ -1919,24 +2615,28 @@ class ManagerStatsView(APIView):
             total_alloc = sum(a.total_leave_days or 0 for a in all_avail)
             total_used = sum(a.used_days for a in all_avail)
             pct = round(total_used / total_alloc * 100) if total_alloc > 0 else 0
-            leave_util.append({
-                'label': lt.name,
-                'used': round(total_used, 1),
-                'total': round(total_alloc, 1),
-                'percentage': pct,
-            })
+            leave_util.append(
+                {
+                    'label': lt.name,
+                    'used': round(total_used, 1),
+                    'total': round(total_alloc, 1),
+                    'percentage': pct,
+                }
+            )
 
-        return Response({
-            'total_employees': total_employees,
-            'active_employees': total_employees,
-            'inactive_employees': inactive,
-            'present_today': today_punched,
-            'absent_today': max(0, absent_today),
-            'on_leave_today': on_leave_today,
-            'attendance_rate': attendance_rate,
-            'avg_work_hours': avg_hours,
-            'leave_utilization': leave_util,
-        })
+        return Response(
+            {
+                'total_employees': total_employees,
+                'active_employees': total_employees,
+                'inactive_employees': inactive,
+                'present_today': today_punched,
+                'absent_today': max(0, absent_today),
+                'on_leave_today': on_leave_today,
+                'attendance_rate': attendance_rate,
+                'avg_work_hours': avg_hours,
+                'leave_utilization': leave_util,
+            }
+        )
 
 
 class OrgChartView(APIView):
@@ -1957,9 +2657,9 @@ class OrgChartView(APIView):
                     dept_name = dept.department if dept else ''
 
             # Find direct reports
-            report_ids = EmployeeWorkInformation.objects.filter(
-                reporting_manager_id_id=emp.id
-            ).values_list('employee_id_id', flat=True)
+            report_ids = EmployeeWorkInformation.objects.filter(reporting_manager_id_id=emp.id).values_list(
+                'employee_id_id', flat=True
+            )
             children = []
             for rid in report_ids:
                 child = employees.filter(id=rid).first()
@@ -1977,9 +2677,11 @@ class OrgChartView(APIView):
             }
 
         # Find root nodes (employees with no manager)
-        managed_ids = set(EmployeeWorkInformation.objects.filter(
-            reporting_manager_id_id__isnull=False
-        ).values_list('employee_id_id', flat=True))
+        managed_ids = set(
+            EmployeeWorkInformation.objects.filter(reporting_manager_id_id__isnull=False).values_list(
+                'employee_id_id', flat=True
+            )
+        )
 
         roots = []
         for emp in employees:
@@ -1997,12 +2699,14 @@ class SettingsView(APIView):
 
         settings_obj, _ = UserSettingsModel.objects.get_or_create(employee_id_id=employee.id)
 
-        return Response({
-            'theme': settings_obj.theme,
-            'notifications_enabled': settings_obj.notifications_enabled,
-            'biometric_enabled': settings_obj.biometric_enabled,
-            'language': settings_obj.language
-        })
+        return Response(
+            {
+                'theme': settings_obj.theme,
+                'notifications_enabled': settings_obj.notifications_enabled,
+                'biometric_enabled': settings_obj.biometric_enabled,
+                'language': settings_obj.language,
+            }
+        )
 
     def put(self, request):
         employee = get_employee_from_user(request.user)
@@ -2022,9 +2726,11 @@ class SettingsView(APIView):
 
         settings_obj.save()
 
-        return Response({
-            'theme': settings_obj.theme,
-            'notifications_enabled': settings_obj.notifications_enabled,
-            'biometric_enabled': settings_obj.biometric_enabled,
-            'language': settings_obj.language
-        })
+        return Response(
+            {
+                'theme': settings_obj.theme,
+                'notifications_enabled': settings_obj.notifications_enabled,
+                'biometric_enabled': settings_obj.biometric_enabled,
+                'language': settings_obj.language,
+            }
+        )

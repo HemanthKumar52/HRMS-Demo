@@ -9,46 +9,49 @@ class DynamicIslandOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AppProvider>(
       builder: (context, provider, _) {
-        if (!provider.showDynamicIsland) return const SizedBox.shrink();
-        return IgnorePointer(
-          child: Positioned(
-            top: MediaQuery.of(context).padding.top + 8,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 400),
-                curve: Curves.easeOutBack,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.85),
-                  borderRadius: BorderRadius.circular(32),
-                  boxShadow: [
-                    BoxShadow(
-                      color: provider.dynamicIslandColor.withValues(alpha: 0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      provider.dynamicIslandIcon,
-                      color: provider.dynamicIslandColor,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      provider.dynamicIslandMessage,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+        return Positioned(
+          top: provider.showDynamicIsland
+              ? MediaQuery.of(context).padding.top + 8
+              : -100,
+          left: 0,
+          right: 0,
+          child: IgnorePointer(
+            child: AnimatedOpacity(
+              opacity: provider.showDynamicIsland ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.85),
+                    borderRadius: BorderRadius.circular(32),
+                    boxShadow: [
+                      BoxShadow(
+                        color: provider.dynamicIslandColor.withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        provider.dynamicIslandIcon,
+                        color: provider.dynamicIslandColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        provider.dynamicIslandMessage,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

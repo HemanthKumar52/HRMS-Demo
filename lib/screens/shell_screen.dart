@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -113,97 +112,121 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildIOSShell(BuildContext context, AppProvider provider, bool isDark, List<Widget> screens) {
-    final topPadding = MediaQuery.of(context).padding.top;
-
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      extendBody: true,
-      extendBodyBehindAppBar: true,
-      appBar: null,
+      appBar: AppBar(
+        toolbarHeight: 52,
+        backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Good ${_getGreeting()},',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+              ),
+            ),
+            Text(
+              provider.userName.split(' ').first,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppColors.darkText : AppColors.lightText,
+                letterSpacing: -0.3,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _showNotifications(context);
+            },
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  CupertinoIcons.bell,
+                  color: isDark ? AppColors.darkText : AppColors.lightText,
+                  size: 22,
+                ),
+                if (provider.unreadNotifications > 0)
+                  Positioned(
+                    top: -4,
+                    right: -6,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: AppColors.danger,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isDark ? AppColors.darkBg : AppColors.lightBg,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Text(
+                        '${provider.unreadNotifications > 9 ? '9+' : provider.unreadNotifications}',
+                        style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: () => showProfileSheet(context),
+              child: _buildProfileAvatar(provider, isDark, 36),
+            ),
+          ),
+        ],
+      ),
       body: Stack(
         children: [
-          // Content scrolls behind the glass header
           IndexedStack(
             index: provider.bottomNavIndex.clamp(0, screens.length - 1),
             children: screens,
           ),
-
-          // Glass header — overlays content so blur is visible
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
-                child: Container(
-                  padding: EdgeInsets.only(top: topPadding),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.black.withValues(alpha: 0.5)
-                        : Colors.white.withValues(alpha: 0.7),
-                    border: Border(
-                      bottom: BorderSide(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.1)
-                            : Colors.black.withValues(alpha: 0.05),
-                        width: 0.5,
-                      ),
-                    ),
-                  ),
-                  child: SizedBox(
-                    height: 56,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Good ${_getGreeting()},',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w400,
-                                    color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
-                                  ),
-                                ),
-                                Text(
-                                  provider.userName.split(' ').first,
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                    color: isDark ? AppColors.darkText : AppColors.lightText,
-                                    letterSpacing: -0.3,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          _buildNotificationButton(provider, isDark),
-                          const SizedBox(width: 8),
-                          CupertinoButton(
-                            padding: EdgeInsets.zero,
-                            onPressed: () => showProfileSheet(context),
-                            child: _buildProfileAvatar(provider, isDark, 36),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // Glass bottom tab bar
-          GlassTabBar(
-            currentIndex: provider.bottomNavIndex,
-            onTap: (index) => provider.setBottomNavIndex(index),
-          ),
           const DynamicIslandOverlay(),
+        ],
+      ),
+      bottomNavigationBar: CupertinoTabBar(
+        currentIndex: provider.bottomNavIndex,
+        onTap: (index) {
+          HapticFeedback.selectionClick();
+          provider.setBottomNavIndex(index);
+        },
+        activeColor: AppColors.primary,
+        inactiveColor: CupertinoColors.systemGrey,
+        backgroundColor: isDark
+            ? AppColors.darkBg.withValues(alpha: 0.9)
+            : AppColors.lightBg.withValues(alpha: 0.9),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.square_grid_2x2_fill),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.doc_text_fill),
+            label: 'Requests',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.hand_raised_fill),
+            label: 'Attendance',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.creditcard_fill),
+            label: 'Payroll',
+          ),
         ],
       ),
     );

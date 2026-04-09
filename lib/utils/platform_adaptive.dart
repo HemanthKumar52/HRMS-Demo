@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
+import '../widgets/liquid_glass.dart';
 
 /// Returns true if the current platform is iOS or macOS
 bool get isApplePlatform {
@@ -29,58 +30,40 @@ PreferredSizeWidget adaptiveAppBar({
   if (isApplePlatform) {
     return PreferredSize(
       preferredSize: const Size.fromHeight(56),
-      child: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark
-                  ? AppColors.darkBg.withValues(alpha: 0.72)
-                  : AppColors.lightBg.withValues(alpha: 0.72),
-              border: Border(
-                bottom: BorderSide(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.08)
-                      : Colors.black.withValues(alpha: 0.06),
-                  width: 0.5,
-                ),
-              ),
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: SizedBox(
-                height: 56,
-                child: NavigationToolbar(
-                  leading: leading ??
-                      (showBackButton
-                          ? CupertinoButton(
-                              padding: const EdgeInsets.only(left: 8),
-                              onPressed: () => Navigator.pop(context),
-                              child: Icon(
-                                CupertinoIcons.back,
-                                color: AppColors.primary,
-                                size: 24,
-                              ),
-                            )
-                          : null),
-                  middle: Text(
-                    title,
-                    style: TextStyle(
-                      color: isDark ? AppColors.darkText : AppColors.lightText,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  trailing: actions != null
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: actions,
+      child: LiquidGlass(
+        child: SafeArea(
+          bottom: false,
+          child: SizedBox(
+            height: 56,
+            child: NavigationToolbar(
+              leading: leading ??
+                  (showBackButton
+                      ? CupertinoButton(
+                          padding: const EdgeInsets.only(left: 8),
+                          onPressed: () => Navigator.pop(context),
+                          child: Icon(
+                            CupertinoIcons.back,
+                            color: AppColors.primary,
+                            size: 24,
+                          ),
                         )
-                      : null,
-                  centerMiddle: centerTitle,
+                      : null),
+              middle: Text(
+                title,
+                style: TextStyle(
+                  color: isDark ? AppColors.darkText : AppColors.lightText,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.3,
                 ),
               ),
+              trailing: actions != null
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: actions,
+                    )
+                  : null,
+              centerMiddle: centerTitle,
             ),
           ),
         ),
@@ -141,71 +124,53 @@ class GlassTabBar extends StatelessWidget {
       bottom: 0,
       left: 0,
       right: 0,
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.black.withValues(alpha: 0.5)
-                  : Colors.white.withValues(alpha: 0.7),
-              border: Border(
-                top: BorderSide(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.1)
-                      : Colors.black.withValues(alpha: 0.05),
-                  width: 0.5,
-                ),
-              ),
-            ),
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 4, bottom: 2),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: List.generate(items.length, (index) {
-                    final isActive = currentIndex == index;
-                    return CupertinoButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () {
-                        HapticFeedback.selectionClick();
-                        onTap(index);
-                      },
-                      child: SizedBox(
-                        width: 70,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              items[index].icon,
-                              size: 24,
-                              color: isActive
-                                  ? AppColors.primary
-                                  : isDark
-                                      ? Colors.white.withValues(alpha: 0.4)
-                                      : Colors.grey.shade500,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              items[index].label,
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                                color: isActive
-                                    ? AppColors.primary
-                                    : isDark
-                                        ? Colors.white.withValues(alpha: 0.4)
-                                        : Colors.grey.shade500,
-                              ),
-                            ),
-                          ],
+      child: LiquidGlass(
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 2),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(items.length, (index) {
+                final isActive = currentIndex == index;
+                return CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    onTap(index);
+                  },
+                  child: SizedBox(
+                    width: 70,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          items[index].icon,
+                          size: 24,
+                          color: isActive
+                              ? AppColors.primary
+                              : isDark
+                                  ? Colors.white.withValues(alpha: 0.4)
+                                  : Colors.grey.shade500,
                         ),
-                      ),
-                    );
-                  }),
-                ),
-              ),
+                        const SizedBox(height: 2),
+                        Text(
+                          items[index].label,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                            color: isActive
+                                ? AppColors.primary
+                                : isDark
+                                    ? Colors.white.withValues(alpha: 0.4)
+                                    : Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
             ),
           ),
         ),

@@ -48,7 +48,7 @@ class _SplashScreenState extends State<SplashScreen>
     if (token != null && name != null && name.isNotEmpty) {
       // Validate token and restore role
       try {
-        final userData = await ApiService.getCurrentUser();
+        final userData = await ApiService.getCurrentUser().timeout(const Duration(seconds: 5));
         isValidSession = true;
         // Restore role from API response
         if (mounted) {

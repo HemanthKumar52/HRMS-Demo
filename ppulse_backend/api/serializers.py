@@ -1,11 +1,28 @@
-from rest_framework import serializers
 from django.contrib.auth import authenticate
+from rest_framework import serializers
+
 from .models import (
-    User, Employee, Department, JobPosition, EmployeeWorkInformation,
-    Shift, WorkType, Attendance, LeaveType, AvailableLeave, LeaveRequest,
-    ClaimRequest, Ticket, ShiftRequestModel, WorkTypeRequestModel,
-    AttendanceRequestModel, AssetCategoryModel, AssetRequestModel,
-    Payslip, NotificationModel, Announcement, DeviceTokenModel, UserSettingsModel
+    Announcement,
+    AssetRequestModel,
+    Attendance,
+    AttendanceRequestModel,
+    AvailableLeave,
+    ClaimRequest,
+    Department,
+    Employee,
+    EmployeeWorkInformation,
+    JobPosition,
+    LeaveRequest,
+    LeaveType,
+    NotificationModel,
+    Payslip,
+    Shift,
+    ShiftRequestModel,
+    Ticket,
+    User,
+    UserSettingsModel,
+    WorkType,
+    WorkTypeRequestModel,
 )
 
 
@@ -21,23 +38,51 @@ class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = [
-            'id', 'badge_id', 'employee_first_name', 'employee_last_name', 'name',
-            'employee_profile', 'email', 'phone', 'address', 'country', 'state', 'city',
-            'zip', 'dob', 'gender', 'qualification', 'marital_status', 'children',
-            'emergency_contact', 'emergency_contact_name', 'emergency_contact_relation',
-            'is_active', 'employee_user_id_id', 'experience'
+            'id',
+            'badge_id',
+            'employee_first_name',
+            'employee_last_name',
+            'name',
+            'employee_profile',
+            'email',
+            'phone',
+            'address',
+            'country',
+            'state',
+            'city',
+            'zip',
+            'dob',
+            'gender',
+            'qualification',
+            'marital_status',
+            'children',
+            'emergency_contact',
+            'emergency_contact_name',
+            'emergency_contact_relation',
+            'is_active',
+            'employee_user_id_id',
+            'experience',
         ]
 
     def get_name(self, obj):
-        return f"{obj.employee_first_name or ''} {obj.employee_last_name or ''}".strip()
+        return f'{obj.employee_first_name or ""} {obj.employee_last_name or ""}'.strip()
 
 
 class EmployeeWorkInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmployeeWorkInformation
-        fields = ['id', 'email', 'mobile', 'date_joining', 'department_id_id',
-                  'job_position_id_id', 'reporting_manager_id_id', 'work_type_id_id',
-                  'basic_salary', 'shift_id_id']
+        fields = [
+            'id',
+            'email',
+            'mobile',
+            'date_joining',
+            'department_id_id',
+            'job_position_id_id',
+            'reporting_manager_id_id',
+            'work_type_id_id',
+            'basic_salary',
+            'shift_id_id',
+        ]
 
 
 class DepartmentSerializer(serializers.ModelSerializer):
@@ -79,8 +124,15 @@ class LeaveTypeSerializer(serializers.ModelSerializer):
 class AvailableLeaveSerializer(serializers.ModelSerializer):
     class Meta:
         model = AvailableLeave
-        fields = ['id', 'available_days', 'carryforward_days', 'total_leave_days',
-                  'assigned_date', 'employee_id_id', 'leave_type_id_id']
+        fields = [
+            'id',
+            'available_days',
+            'carryforward_days',
+            'total_leave_days',
+            'assigned_date',
+            'employee_id_id',
+            'leave_type_id_id',
+        ]
 
 
 class LeaveRequestSerializer(serializers.ModelSerializer):
@@ -128,8 +180,7 @@ class AssetRequestSerializer(serializers.ModelSerializer):
 class PayslipSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payslip
-        fields = ['id', 'month', 'year', 'month_label', 'gross_salary', 'net_pay',
-                  'employee_id_id']
+        fields = ['id', 'month', 'year', 'month_label', 'gross_salary', 'net_pay', 'employee_id_id']
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -190,12 +241,29 @@ class UserProfileUpdateSerializer(serializers.Serializer):
 class PunchInSerializer(serializers.Serializer):
     latitude = serializers.FloatField(required=False)
     longitude = serializers.FloatField(required=False)
+    location_name = serializers.CharField(required=False, allow_blank=True)
     method = serializers.CharField(required=False)
+    source = serializers.CharField(required=False)  # 'mobile_ios', 'mobile_android', 'web', 'biometric'
+    device_info = serializers.CharField(required=False, allow_blank=True)
+
+
+class FaceVerifyPunchInSerializer(serializers.Serializer):
+    """WFH face-verified punch-in. `image` is required (base64 or data-URI)."""
+
+    image = serializers.CharField()  # base64-encoded JPEG/PNG (or data-URI)
+    latitude = serializers.FloatField(required=False)
+    longitude = serializers.FloatField(required=False)
+    location_name = serializers.CharField(required=False, allow_blank=True)
+    source = serializers.CharField(required=False)
+    device_info = serializers.CharField(required=False, allow_blank=True)
 
 
 class PunchOutSerializer(serializers.Serializer):
     latitude = serializers.FloatField(required=False)
     longitude = serializers.FloatField(required=False)
+    location_name = serializers.CharField(required=False, allow_blank=True)
+    source = serializers.CharField(required=False)
+    device_info = serializers.CharField(required=False, allow_blank=True)
 
 
 class LeaveApplySerializer(serializers.Serializer):
@@ -245,17 +313,12 @@ class WorkTypeRequestCreateSerializer(serializers.Serializer):
 
 class AttendanceRegularizeSerializer(serializers.Serializer):
     attendance_date = serializers.DateField()
-    shift = serializers.CharField(required=False)
-    attendance_status = serializers.CharField(required=False)
-    expected_check_in = serializers.TimeField(required=False)
-    expected_check_out = serializers.TimeField(required=False)
-    actual_check_in = serializers.TimeField(required=False)
-    actual_check_out = serializers.TimeField(required=False)
-    work_type = serializers.CharField(required=False)
-    worked_hours = serializers.CharField(required=False)
-    reason = serializers.CharField(required=False)
-    description = serializers.CharField(required=False)
-    attachment = serializers.FileField(required=False)
+    attendance_type = serializers.CharField()
+    shift = serializers.CharField(required=False, allow_blank=True)
+    requested_check_in = serializers.TimeField(required=False)
+    requested_check_out = serializers.TimeField(required=False)
+    reason = serializers.CharField()
+    attachment_name = serializers.CharField(required=False, allow_blank=True)
 
 
 class AssetRequestCreateSerializer(serializers.Serializer):

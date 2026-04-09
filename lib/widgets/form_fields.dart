@@ -530,6 +530,70 @@ const formFieldGap = SizedBox(height: 20);
 const formSectionGap = SizedBox(height: 28);
 const formLabelGap = SizedBox(height: 8);
 
+/// Attachment toggle widget — asks "Add attachment?" with a switch.
+/// When toggled on, shows the FormAttachment below.
+class FormAttachmentToggle extends StatelessWidget {
+  final bool enabled;
+  final String? fileName;
+  final ValueChanged<bool> onToggle;
+  final VoidCallback onPick;
+  final VoidCallback onRemove;
+
+  const FormAttachmentToggle({
+    super.key,
+    required this.enabled,
+    required this.fileName,
+    required this.onToggle,
+    required this.onPick,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkCard : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.attach_file_rounded, size: 20, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Add attachment?',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+              Switch.adaptive(
+                value: enabled,
+                onChanged: onToggle,
+                activeTrackColor: AppColors.primary,
+              ),
+            ],
+          ),
+        ),
+        if (enabled) ...[
+          const SizedBox(height: 12),
+          FormAttachment(
+            fileName: fileName,
+            onTap: onPick,
+            onRemove: onRemove,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 String formatDate(DateTime? date) {
   if (date == null) return 'Select Date';
   return '${date.day.toString().padLeft(2, '0')}-${date.month.toString().padLeft(2, '0')}-${date.year}';

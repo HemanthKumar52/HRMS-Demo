@@ -4,11 +4,23 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
+  /// Backend host. Can be overridden at build/run time with
+  /// `--dart-define=API_HOST=192.168.1.26` so the same APK works on the
+  /// Android emulator (10.0.2.2), an iOS simulator (127.0.0.1), or a real
+  /// device on the LAN.
+  static const String _apiHostOverride =
+      String.fromEnvironment('API_HOST', defaultValue: '');
+  static const String _apiPortOverride =
+      String.fromEnvironment('API_PORT', defaultValue: '8000');
+
   static String get baseUrl {
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8000/v1';
+    if (_apiHostOverride.isNotEmpty) {
+      return 'http://$_apiHostOverride:$_apiPortOverride/v1';
     }
-    return 'http://127.0.0.1:8000/v1';
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:$_apiPortOverride/v1';
+    }
+    return 'http://127.0.0.1:$_apiPortOverride/v1';
   }
 
   static Future<Map<String, String>> _getHeaders() async {
@@ -101,14 +113,17 @@ class ApiService {
         // Extract a readable error message from various response formats
         dynamic raw = body['detail'] ?? body['error'] ?? body['non_field_errors']?[0] ?? 'Request failed';
         String msg;
+        String? code;
         if (raw is Map) {
           msg = raw['message'] ?? raw['detail'] ?? raw.values.first?.toString() ?? 'Request failed';
+          code = raw['code']?.toString();
         } else if (raw is List) {
           msg = raw.first?.toString() ?? 'Request failed';
         } else {
           msg = raw.toString();
         }
-        throw Exception(msg);
+        // Embed the error code into the exception so callers can match it
+        throw Exception(code != null ? '[$code] $msg' : msg);
       } catch (e) {
         if (e is Exception) rethrow;
         throw Exception('Request failed (${response.statusCode})');
@@ -194,12 +209,25 @@ class ApiService {
     return await get('/attendance/team');
   }
 
-  static Future<Map<String, dynamic>> punchIn() async {
-    return await post('/attendance/punch-in', {});
+  static Future<Map<String, dynamic>> punchIn([Map<String, dynamic>? metadata]) async {
+    return await post('/attendance/punch-in', metadata ?? {});
   }
 
-  static Future<Map<String, dynamic>> punchOut() async {
-    return await post('/attendance/punch-out', {});
+  /// WFH face-verified punch-in. `imageBase64` is the raw base64-encoded JPEG/PNG
+  /// of the user's selfie. Other metadata (lat/lng/source/device_info) is merged in.
+  static Future<Map<String, dynamic>> facePunchIn({
+    required String imageBase64,
+    Map<String, dynamic>? metadata,
+  }) async {
+    final body = <String, dynamic>{
+      'image': imageBase64,
+      ...?metadata,
+    };
+    return await post('/attendance/face-punch-in', body);
+  }
+
+  static Future<Map<String, dynamic>> punchOut([Map<String, dynamic>? metadata]) async {
+    return await post('/attendance/punch-out', metadata ?? {});
   }
 
   static Future<Map<String, dynamic>> regularizeAttendance(Map<String, dynamic> data) async {

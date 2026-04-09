@@ -37,14 +37,22 @@ class _LoginScreenState extends State<LoginScreen>
   late AnimationController _pulseController;
   late ShakeController _shakeController;
 
+  // Honor `--dart-define=API_HOST=…` so a real phone on the LAN can hit the
+  // dev backend. Falls back to the emulator/sim default when not set.
+  static const String _apiHostOverride =
+      String.fromEnvironment('API_HOST', defaultValue: '');
+  static const String _apiPortOverride =
+      String.fromEnvironment('API_PORT', defaultValue: '8000');
+
   String get _apiHost {
+    if (_apiHostOverride.isNotEmpty) return _apiHostOverride;
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       return '10.0.2.2';
     }
     return '127.0.0.1';
   }
 
-  String get _baseUrl => 'http://$_apiHost:8000';
+  String get _baseUrl => 'http://$_apiHost:$_apiPortOverride';
 
   @override
   void initState() {

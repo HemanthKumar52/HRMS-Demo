@@ -16,14 +16,12 @@ class ShiftChangeScreen extends StatefulWidget {
 class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
-  String? _selectedEmployee;
   String? _requestingShift;
   DateTime? _requestedDate;
   DateTime? _requestedTill;
   bool _permanentRequest = false;
   bool _isSubmitting = false;
 
-  List<String> _employees = [];
   List<String> _shifts = [];
 
   @override
@@ -34,12 +32,13 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
 
   Future<void> _loadData() async {
     try {
-      final emps = await ApiService.getEmployees();
       final shifts = await ApiService.getShifts();
       if (!mounted) return;
       setState(() {
-        _employees = emps.map<String>((e) => e['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList();
         _shifts = shifts.map<String>((s) => s['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+        if (_shifts.isNotEmpty) {
+          _requestingShift = _shifts.first;
+        }
       });
     } catch (_) {}
   }
@@ -94,23 +93,13 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
               Text('Create Shift Request', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
               formFieldGap,
 
-              const FormLabel('Employee'),
-              formLabelGap,
-              FormDropdown(
-                value: _selectedEmployee,
-                hint: 'Select employee',
-                items: _employees,
-                onChanged: (v) => setState(() => _selectedEmployee = v),
-              ),
-              formFieldGap,
-
               const FormLabel('Requesting Shift'),
               formLabelGap,
               FormDropdown(
                 value: _requestingShift,
                 hint: 'Select shift',
                 items: _shifts,
-                onChanged: (v) => setState(() => _requestingShift = v),
+                onChanged: (v) => setState(() => _requestingShift = v ?? (_shifts.isNotEmpty ? _shifts.first : null)),
               ),
               formFieldGap,
 

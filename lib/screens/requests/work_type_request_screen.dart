@@ -16,14 +16,12 @@ class WorkTypeRequestScreen extends StatefulWidget {
 class _WorkTypeRequestScreenState extends State<WorkTypeRequestScreen> {
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
-  String? _selectedEmployee;
   String? _requestingWorkType;
   DateTime? _requestedDate;
   DateTime? _requestedTill;
   bool _permanentRequest = false;
   bool _isSubmitting = false;
 
-  List<String> _employees = [];
   List<String> _workTypes = [];
 
   @override
@@ -34,12 +32,13 @@ class _WorkTypeRequestScreenState extends State<WorkTypeRequestScreen> {
 
   Future<void> _loadData() async {
     try {
-      final emps = await ApiService.getEmployees();
       final wts = await ApiService.getWorkTypes();
       if (!mounted) return;
       setState(() {
-        _employees = emps.map<String>((e) => e['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList();
         _workTypes = wts.map<String>((w) => w['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+        if (_workTypes.isNotEmpty) {
+          _requestingWorkType = _workTypes.first;
+        }
       });
     } catch (_) {}
   }
@@ -93,23 +92,13 @@ class _WorkTypeRequestScreenState extends State<WorkTypeRequestScreen> {
               Text('Work Type Request', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
               formFieldGap,
 
-              const FormLabel('Employee'),
-              formLabelGap,
-              FormDropdown(
-                value: _selectedEmployee,
-                hint: 'Select employee',
-                items: _employees,
-                onChanged: (v) => setState(() => _selectedEmployee = v),
-              ),
-              formFieldGap,
-
               const FormLabel('Requesting Work Type'),
               formLabelGap,
               FormDropdown(
                 value: _requestingWorkType,
                 hint: 'Select work type',
                 items: _workTypes,
-                onChanged: (v) => setState(() => _requestingWorkType = v),
+                onChanged: (v) => setState(() => _requestingWorkType = v ?? (_workTypes.isNotEmpty ? _workTypes.first : null)),
               ),
               formFieldGap,
 

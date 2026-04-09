@@ -19,8 +19,7 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  String? _selectedType;
-  String? _selectedEmployee;
+  late String _selectedType;
   DateTime? _date;
   final List<XFile> _images = [];
   bool _isSubmitting = false;
@@ -35,20 +34,10 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
     'Other',
   ];
 
-  List<String> _employees = [];
-
   @override
   void initState() {
     super.initState();
-    _loadEmployees();
-  }
-
-  Future<void> _loadEmployees() async {
-    try {
-      final data = await ApiService.getEmployees();
-      if (!mounted) return;
-      setState(() { _employees = data.map<String>((e) => e['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList(); });
-    } catch (_) {}
+    _selectedType = _claimTypes.first;
   }
 
   @override
@@ -98,7 +87,7 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
     try {
       await ApiService.submitClaim({
         'title': _titleController.text,
-        'claim_type': _selectedType ?? 'other',
+        'claim_type': _selectedType,
         'amount': 0,
         'date': (_date ?? DateTime.now()).toIso8601String().split('T')[0],
         'description': _descriptionController.text,
@@ -133,32 +122,13 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
               Text('Create Reimbursement / Encashment', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
               formFieldGap,
 
-              const FormLabel('Title'),
-              formLabelGap,
-              FormInput(
-                controller: _titleController,
-                hint: 'Title',
-                validator: (v) => (v == null || v.isEmpty) ? 'Title is required' : null,
-              ),
-              formFieldGap,
-
               const FormLabel('Type'),
               formLabelGap,
               FormDropdown(
                 value: _selectedType,
                 hint: 'Select type',
                 items: _claimTypes,
-                onChanged: (v) => setState(() => _selectedType = v),
-              ),
-              formFieldGap,
-
-              const FormLabel('Employee'),
-              formLabelGap,
-              FormDropdown(
-                value: _selectedEmployee,
-                hint: 'Select employee',
-                items: _employees,
-                onChanged: (v) => setState(() => _selectedEmployee = v),
+                onChanged: (v) => setState(() => _selectedType = v ?? _claimTypes.first),
               ),
               formFieldGap,
 
@@ -171,6 +141,15 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
                   final picked = await pickDate(context, initial: _date, accentColor: AppColors.success);
                   if (picked != null) setState(() => _date = picked);
                 },
+              ),
+              formFieldGap,
+
+              const FormLabel('Title'),
+              formLabelGap,
+              FormInput(
+                controller: _titleController,
+                hint: 'Title',
+                validator: (v) => (v == null || v.isEmpty) ? 'Title is required' : null,
               ),
               formFieldGap,
 
