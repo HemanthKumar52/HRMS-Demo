@@ -96,3 +96,7 @@ db_dump.sql
 *.dump.sql
 *.bak.sql
 migrate_working_dir/
+
+
+#Ignore vscode AI rules
+.github\instructions\codacy.instructions.md
