@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/live_activity_service.dart';
 import '../services/notification_service.dart';
 import '../services/api_service.dart';
+import '../services/punch_metadata_service.dart';
 
 enum UserRole { employee, manager, hr }
 
@@ -15,9 +19,11 @@ class AppProvider extends ChangeNotifier {
   String _email = '';
   bool _isPunchedIn = false;
   DateTime? _punchInTime;
+  String? _attendanceSource;
+  bool _canPunchViaMobile = true;
   int _bottomNavIndex = 0;
   int _requestsTabIndex = 0;
-  
+
   int _leaveBalance = 0;
   int _approvedLeaves = 0;
   int _pendingLeaves = 0;
@@ -31,6 +37,7 @@ class AppProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _claimRequests = [];
   List<Map<String, dynamic>> _tickets = [];
   List<Map<String, dynamic>> _recentActivity = [];
+  List<Map<String, dynamic>> _announcements = [];
   List<Map<String, dynamic>> _notifications = [];
   int _unreadNotifications = 0;
   Map<String, dynamic> _pendingApprovals = {};
@@ -42,8 +49,81 @@ class AppProvider extends ChangeNotifier {
   IconData _dynamicIslandIcon = Icons.check_circle;
   Color _dynamicIslandColor = Colors.green;
 
+  Timer? _attendancePollTimer;
+
   AppProvider() {
     _loadUserData();
+  }
+
+  @override
+  void dispose() {
+    _attendancePollTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Start polling /attendance/today every [interval] so a biometric punch made
+  /// outside the app is reflected automatically (timer + UI flip to "Synced from
+  /// Biometric"). Safe to call multiple times — replaces any existing timer.
+  void _startAttendancePolling({Duration interval = const Duration(seconds: 30)}) {
+    _attendancePollTimer?.cancel();
+    _attendancePollTimer = Timer.periodic(interval, (_) {
+      if (_isLoggedIn) refreshAttendanceStatus();
+    });
+  }
+
+  /// Lightweight refresh of just the attendance/today record. Updates
+  /// [isPunchedIn], [punchInTime], [attendanceSource], [canPunchViaMobile].
+  Future<void> refreshAttendanceStatus() async {
+    if (!_isLoggedIn) return;
+    try {
+      final att = await ApiService.getTodayAttendance();
+      final wasPunchedIn = _isPunchedIn;
+      final wasSource = _attendanceSource;
+
+      _attendanceSource = att['source'] as String?;
+      _canPunchViaMobile = att['can_punch_via_mobile'] as bool? ?? true;
+      final statusStr = att['status'] as String?;
+
+      if (statusStr == 'checked_in' || statusStr == 'clocked_in') {
+        _isPunchedIn = true;
+        if (att['punch_in'] != null) {
+          final today = DateTime.now();
+          final parts = att['punch_in'].toString().split(':');
+          if (parts.length >= 2) {
+            _punchInTime = DateTime(
+              today.year, today.month, today.day,
+              int.parse(parts[0]), int.parse(parts[1]),
+            );
+          }
+        }
+      } else {
+        _isPunchedIn = false;
+        _punchInTime = null;
+      }
+
+      // If biometric just appeared while we weren't punched in, surface a toast +
+      // start the live activity timer so the dashboard shows the running clock.
+      final biometricArrived = !wasPunchedIn && _isPunchedIn && _attendanceSource == 'biometric';
+      if (biometricArrived && _punchInTime != null) {
+        triggerDynamicIsland(
+          'Synced from Biometric',
+          Icons.fingerprint,
+          const Color(0xFF34D399),
+        );
+        try {
+          LiveActivityService.instance.startPunchIn(
+            userName: _userName,
+            punchTime: _punchInTime!,
+          );
+        } catch (_) {/* live activity is best-effort */}
+      }
+
+      if (wasPunchedIn != _isPunchedIn || wasSource != _attendanceSource) {
+        notifyListeners();
+      }
+    } catch (_) {
+      // Network blip — keep current state, try again on the next tick.
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -64,6 +144,7 @@ class AppProvider extends ChangeNotifier {
       _isLoggedIn = true;
       notifyListeners();
       await fetchDashboardData();
+      _startAttendancePolling();
     }
   }
 
@@ -80,7 +161,9 @@ class AppProvider extends ChangeNotifier {
 
         // Attendance status
         final att = summary['attendance'] ?? {};
-        if (att['status'] == 'clocked_in') {
+        _attendanceSource = att['source'] as String?;
+        _canPunchViaMobile = att['can_punch_via_mobile'] as bool? ?? true;
+        if (att['status'] == 'checked_in' || att['status'] == 'clocked_in') {
           _isPunchedIn = true;
           if (att['punch_in'] != null) {
             final today = DateTime.now();
@@ -126,6 +209,14 @@ class AppProvider extends ChangeNotifier {
         }
       } catch (e) {
         debugPrint('Error fetching leaves: $e');
+      }
+
+      // Fetch announcements
+      try {
+        final announcementData = await ApiService.getDashboardAnnouncements();
+        _announcements = List<Map<String, dynamic>>.from(announcementData['announcements'] ?? []);
+      } catch (e) {
+        debugPrint('Error fetching announcements: $e');
       }
 
       // Fetch user profile and update role
@@ -187,16 +278,28 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> punchIn() async {
     try {
-      await ApiService.punchIn();
+      // Capture location + device info silently
+      final metadata = await PunchMetadataService.instance.capture();
+      await ApiService.punchIn(metadata);
       _isPunchedIn = true;
       _punchInTime = DateTime.now();
+      _attendanceSource = metadata['source'] as String?;
+      _canPunchViaMobile = true;
       triggerDynamicIsland('Punched In Successfully', Icons.login, const Color(0xFF34D399));
       NotificationService.instance.showPunchIn();
+      LiveActivityService.instance.startPunchIn(userName: _userName, punchTime: _punchInTime!);
       notifyListeners();
     } catch (e) {
       final msg = e.toString();
-      if (msg.contains('ALREADY_PUNCHED_IN') || msg.contains('Already clocked in')) {
-        // Already punched in — just sync the state
+      if (msg.contains('GEOFENCE_OFFICE')) {
+        triggerDynamicIsland(
+          "You're at the office — use the biometric device",
+          Icons.fingerprint,
+          Colors.orange,
+        );
+      } else if (msg.contains('BIOMETRIC_PUNCH_ACTIVE')) {
+        triggerDynamicIsland('Already Punched In via Biometric', Icons.fingerprint, Colors.orange);
+      } else if (msg.contains('ALREADY_PUNCHED_IN') || msg.contains('Already clocked in')) {
         _isPunchedIn = true;
         _punchInTime ??= DateTime.now();
         triggerDynamicIsland('Already Clocked In', Icons.check_circle, const Color(0xFF34D399));
@@ -207,17 +310,77 @@ class AppProvider extends ChangeNotifier {
     }
   }
 
+  /// WFH face-verified punch-in. Returns null on success, or an error code string
+  /// on failure (e.g. 'GEOFENCE_OFFICE', 'WFH_OUT_OF_ZONE', 'FACE_VERIFICATION_FAILED',
+  /// 'FACE_MISMATCH', 'BIOMETRIC_PUNCH_ACTIVE', 'ALREADY_PUNCHED_IN').
+  Future<String?> facePunchIn(String imageBase64) async {
+    try {
+      final metadata = await PunchMetadataService.instance.capture();
+      await ApiService.facePunchIn(imageBase64: imageBase64, metadata: metadata);
+      _isPunchedIn = true;
+      _punchInTime = DateTime.now();
+      _attendanceSource = metadata['source'] as String?;
+      _canPunchViaMobile = true;
+      triggerDynamicIsland('Punched In Successfully', Icons.login, const Color(0xFF34D399));
+      NotificationService.instance.showPunchIn();
+      LiveActivityService.instance.startPunchIn(userName: _userName, punchTime: _punchInTime!);
+      notifyListeners();
+      return null;
+    } catch (e) {
+      final msg = e.toString();
+      if (msg.contains('GEOFENCE_OFFICE')) {
+        triggerDynamicIsland(
+          "You're at the office — use the biometric device",
+          Icons.fingerprint,
+          Colors.orange,
+        );
+        return 'GEOFENCE_OFFICE';
+      } else if (msg.contains('WFH_OUT_OF_ZONE')) {
+        triggerDynamicIsland(
+          'Not in an authorized WFH zone',
+          Icons.location_off,
+          Colors.orange,
+        );
+        return 'WFH_OUT_OF_ZONE';
+      } else if (msg.contains('FACE_MISMATCH')) {
+        triggerDynamicIsland('Face does not match this account', Icons.error, Colors.red);
+        return 'FACE_MISMATCH';
+      } else if (msg.contains('FACE_VERIFICATION_FAILED')) {
+        triggerDynamicIsland('Unknown user', Icons.no_accounts, Colors.red);
+        return 'FACE_VERIFICATION_FAILED';
+      } else if (msg.contains('BIOMETRIC_PUNCH_ACTIVE')) {
+        triggerDynamicIsland('Already Punched In via Biometric', Icons.fingerprint, Colors.orange);
+        return 'BIOMETRIC_PUNCH_ACTIVE';
+      } else if (msg.contains('ALREADY_PUNCHED_IN')) {
+        _isPunchedIn = true;
+        _punchInTime ??= DateTime.now();
+        triggerDynamicIsland('Already Clocked In', Icons.check_circle, const Color(0xFF34D399));
+        notifyListeners();
+        return 'ALREADY_PUNCHED_IN';
+      }
+      triggerDynamicIsland('Punch In Failed', Icons.error, Colors.red);
+      return 'UNKNOWN_ERROR';
+    }
+  }
+
   Future<void> punchOut() async {
     try {
-      await ApiService.punchOut();
+      final workedDuration = _punchInTime != null ? DateTime.now().difference(_punchInTime!) : null;
+      final metadata = await PunchMetadataService.instance.capture();
+      await ApiService.punchOut(metadata);
       _isPunchedIn = false;
       _punchInTime = null;
+      _attendanceSource = null;
+      _canPunchViaMobile = true;
       triggerDynamicIsland('Punched Out Successfully', Icons.logout, const Color(0xFFFF8C42));
       NotificationService.instance.showPunchOut();
+      LiveActivityService.instance.stopPunchOut(totalWorked: workedDuration);
       notifyListeners();
     } catch (e) {
       final msg = e.toString();
-      if (msg.contains('NOT_PUNCHED_IN') || msg.contains('without punching in')) {
+      if (msg.contains('BIOMETRIC_PUNCH_ACTIVE')) {
+        triggerDynamicIsland('Use Biometric Device to Punch Out', Icons.fingerprint, Colors.orange);
+      } else if (msg.contains('NOT_PUNCHED_IN') || msg.contains('without punching in')) {
         _isPunchedIn = false;
         _punchInTime = null;
         triggerDynamicIsland('Not Clocked In Yet', Icons.info, Colors.orange);
@@ -254,6 +417,9 @@ class AppProvider extends ChangeNotifier {
   String get email => _email;
   bool get isPunchedIn => _isPunchedIn;
   DateTime? get punchInTime => _punchInTime;
+  String? get attendanceSource => _attendanceSource;
+  bool get canPunchViaMobile => _canPunchViaMobile;
+  bool get isBiometricPunch => _attendanceSource == 'biometric';
   int get bottomNavIndex => _bottomNavIndex;
   int get requestsTabIndex => _requestsTabIndex;
   bool get showDynamicIsland => _showDynamicIsland;
@@ -272,6 +438,7 @@ class AppProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get claimRequests => _claimRequests;
   List<Map<String, dynamic>> get tickets => _tickets;
   List<Map<String, dynamic>> get recentActivity => _recentActivity;
+  List<Map<String, dynamic>> get announcements => _announcements;
   List<Map<String, dynamic>> get notifications => _notifications;
   int get unreadNotifications => _unreadNotifications;
   Map<String, dynamic> get pendingApprovals => _pendingApprovals;
@@ -289,9 +456,12 @@ class AppProvider extends ChangeNotifier {
     _isLoggedIn = true;
     notifyListeners();
     triggerDynamicIsland('Welcome back, $_userName!', Icons.waving_hand, const Color(0xFF4F8EF7));
+    _startAttendancePolling();
   }
 
   void logout() async {
+    _attendancePollTimer?.cancel();
+    _attendancePollTimer = null;
     _isLoggedIn = false;
     _userName = '';
     _designation = '';
@@ -341,6 +511,17 @@ class AppProvider extends ChangeNotifier {
       _showDynamicIsland = false;
       notifyListeners();
     });
+  }
+
+  void setPunchState(bool isPunchedIn, DateTime? punchTime) {
+    _isPunchedIn = isPunchedIn;
+    _punchInTime = punchTime;
+    notifyListeners();
+  }
+
+  void setAnnouncements(List<Map<String, dynamic>> announcements) {
+    _announcements = announcements;
+    notifyListeners();
   }
 
   void setUserName(String name) {

@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../animations/skeleton_loading.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 
 class DirectoryScreen extends StatefulWidget {
@@ -99,14 +100,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Team'),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      appBar: adaptiveAppBar(context: context, title: 'My Team', showBackButton: true),
       body: Column(
         children: [
           // Search bar

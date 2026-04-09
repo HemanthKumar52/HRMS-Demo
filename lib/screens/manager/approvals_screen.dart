@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:intl/intl.dart';
+
+import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/status_chip.dart';
 
+/// Manager approvals screen — driven entirely from `/v1/requests?role=manager&status=pending&type=...`.
+///
+/// Each tab loads its own slice from the backend, supports pull-to-refresh, and
+/// approves / rejects through the existing accept/reject endpoints.
 class ApprovalsScreen extends StatefulWidget {
   const ApprovalsScreen({super.key});
 
@@ -65,7 +72,11 @@ class _ApprovalsScreenState extends State<ApprovalsScreen>
               ],
             ),
           ),
-        ).animate().fadeIn(duration: 420.ms).slideY(begin: 0.12, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
+        ).animate().fadeIn(duration: 420.ms).slideY(
+            begin: 0.12,
+            end: 0,
+            duration: 400.ms,
+            curve: Curves.easeOutCubic),
         const SizedBox(height: 8),
 
         // Tab Views
@@ -73,11 +84,11 @@ class _ApprovalsScreenState extends State<ApprovalsScreen>
           child: TabBarView(
             controller: _tabController,
             children: const [
-              _LeaveTab(),
-              _ClaimsTab(),
-              _TicketsTab(),
-              _WorkTypeTab(),
-              _RegularizationTab(),
+              _RequestsTab(typeFilter: 'Leave'),
+              _RequestsTab(typeFilter: 'Claims'),
+              _RequestsTab(typeFilter: 'Tickets'),
+              _RequestsTab(typeFilter: 'Work Type Requests'),
+              _RequestsTab(typeFilter: 'Attendance Requests'),
             ],
           ),
         ),
@@ -87,482 +98,266 @@ class _ApprovalsScreenState extends State<ApprovalsScreen>
 }
 
 // ---------------------------------------------------------------------------
-// Sample Data Models
+// Helpers
 // ---------------------------------------------------------------------------
-class _ApprovalRequest {
-  final String employeeName;
-  final String initials;
-  final Color avatarColor;
-  final String requestType;
-  final String dateRange;
-  final String reason;
 
-  const _ApprovalRequest({
-    required this.employeeName,
-    required this.initials,
-    required this.avatarColor,
-    required this.requestType,
-    required this.dateRange,
-    required this.reason,
-  });
+String _initialsOf(String name) {
+  final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  if (parts.isEmpty) return '?';
+  if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+  return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
 }
 
-class _ClaimRequest {
-  final String employeeName;
-  final String initials;
-  final Color avatarColor;
-  final String category;
-  final String amount;
-  final String date;
-  final String description;
-  final bool hasReceipt;
+const _avatarPalette = [
+  AppColors.primary,
+  AppColors.secondary,
+  AppColors.success,
+  AppColors.orange,
+  AppColors.pink,
+  AppColors.warning,
+];
 
-  const _ClaimRequest({
-    required this.employeeName,
-    required this.initials,
-    required this.avatarColor,
-    required this.category,
-    required this.amount,
-    required this.date,
-    required this.description,
-    required this.hasReceipt,
-  });
+Color _avatarColorFor(String key) {
+  if (key.isEmpty) return AppColors.primary;
+  final hash = key.codeUnits.fold<int>(0, (a, c) => a + c);
+  return _avatarPalette[hash % _avatarPalette.length];
 }
 
-class _TicketItem {
-  final String employeeName;
-  final String initials;
-  final Color avatarColor;
-  final String title;
-  final String description;
-  final String priority;
-  final String date;
-  final String ticketType;
-
-  const _TicketItem({
-    required this.employeeName,
-    required this.initials,
-    required this.avatarColor,
-    required this.title,
-    required this.description,
-    required this.priority,
-    required this.date,
-    required this.ticketType,
-  });
+String _formatDate(String? iso) {
+  if (iso == null || iso.isEmpty) return '—';
+  try {
+    final d = DateTime.parse(iso);
+    return DateFormat('MMM d, yyyy').format(d);
+  } catch (_) {
+    return iso;
+  }
 }
 
-class _WorkTypeRequest {
-  final String employeeName;
-  final String initials;
-  final Color avatarColor;
-  final String workType;
-  final String dateRange;
-  final String reason;
-  final String currentType;
-
-  const _WorkTypeRequest({
-    required this.employeeName,
-    required this.initials,
-    required this.avatarColor,
-    required this.workType,
-    required this.dateRange,
-    required this.reason,
-    required this.currentType,
-  });
+String _formatDateRange(String? start, String? end) {
+  if ((start == null || start.isEmpty) && (end == null || end.isEmpty)) return '—';
+  if (end == null || end.isEmpty || start == end) return _formatDate(start);
+  return '${_formatDate(start)} – ${_formatDate(end)}';
 }
 
-class _RegularizationRequest {
-  final String employeeName;
-  final String initials;
-  final Color avatarColor;
-  final String date;
-  final String originalPunchIn;
-  final String originalPunchOut;
-  final String requestedPunchIn;
-  final String requestedPunchOut;
-  final String reason;
-
-  const _RegularizationRequest({
-    required this.employeeName,
-    required this.initials,
-    required this.avatarColor,
-    required this.date,
-    required this.originalPunchIn,
-    required this.originalPunchOut,
-    required this.requestedPunchIn,
-    required this.requestedPunchOut,
-    required this.reason,
-  });
+String _formatTime(String? iso) {
+  if (iso == null || iso.isEmpty) return '--:--';
+  try {
+    // Backend returns either HH:MM:SS or full ISO. Take the time portion.
+    final s = iso.contains('T') ? iso.split('T').last : iso;
+    final parts = s.split(':');
+    if (parts.length < 2) return iso;
+    final h = int.tryParse(parts[0]) ?? 0;
+    final m = int.tryParse(parts[1]) ?? 0;
+    final ampm = h >= 12 ? 'PM' : 'AM';
+    final hh = ((h % 12) == 0 ? 12 : h % 12).toString().padLeft(2, '0');
+    return '$hh:${m.toString().padLeft(2, '0')} $ampm';
+  } catch (_) {
+    return iso;
+  }
 }
 
 // ---------------------------------------------------------------------------
-// Sample Data
+// Generic per-tab loader
 // ---------------------------------------------------------------------------
-const _sampleLeaveApprovals = [
-  _ApprovalRequest(
-    employeeName: 'Priya Sharma',
-    initials: 'PS',
-    avatarColor: AppColors.primary,
-    requestType: 'Sick Leave',
-    dateRange: 'Mar 12 - Mar 14, 2026',
-    reason: 'Family function - sister\'s wedding ceremony',
-  ),
-  _ApprovalRequest(
-    employeeName: 'Rahul Verma',
-    initials: 'RV',
-    avatarColor: AppColors.secondary,
-    requestType: 'Casual Leave',
-    dateRange: 'Mar 10 - Mar 11, 2026',
-    reason: 'Need to attend parent-teacher meeting at school',
-  ),
-  _ApprovalRequest(
-    employeeName: 'Karan Mehta',
-    initials: 'KM',
-    avatarColor: AppColors.success,
-    requestType: 'Earned Leave',
-    dateRange: 'Mar 18 - Mar 20, 2026',
-    reason: 'Personal medical appointment and recovery',
-  ),
-  _ApprovalRequest(
-    employeeName: 'Sneha Patel',
-    initials: 'SP',
-    avatarColor: AppColors.pink,
-    requestType: 'Sick Leave',
-    dateRange: 'Mar 16, 2026',
-    reason: 'Dental surgery scheduled with post-op rest',
-  ),
-];
-
-const _sampleClaims = [
-  _ClaimRequest(
-    employeeName: 'Anita Desai',
-    initials: 'AD',
-    avatarColor: AppColors.orange,
-    category: 'Travel',
-    amount: '₹34,500',
-    date: 'Mar 8, 2026',
-    description: 'Round-trip cab fare for client site visit in Bangalore',
-    hasReceipt: true,
-  ),
-  _ClaimRequest(
-    employeeName: 'Rahul Verma',
-    initials: 'RV',
-    avatarColor: AppColors.secondary,
-    category: 'Laptop Repair',
-    amount: '₹21,500',
-    date: 'Mar 6, 2026',
-    description: 'Screen replacement for work laptop after accidental damage',
-    hasReceipt: true,
-  ),
-  _ClaimRequest(
-    employeeName: 'Priya Sharma',
-    initials: 'PS',
-    avatarColor: AppColors.primary,
-    category: 'Client Dinner',
-    amount: '₹9,200',
-    date: 'Mar 5, 2026',
-    description: 'Dinner with prospective client at The Grand Hotel',
-    hasReceipt: false,
-  ),
-];
-
-const _sampleTickets = [
-  _TicketItem(
-    employeeName: 'Karan Mehta',
-    initials: 'KM',
-    avatarColor: AppColors.success,
-    title: 'VPN Access Not Working',
-    description:
-        'Unable to connect to corporate VPN from home network. Tried reinstalling the client.',
-    priority: 'High',
-    date: 'Mar 9, 2026',
-    ticketType: 'IT',
-  ),
-  _TicketItem(
-    employeeName: 'Sneha Patel',
-    initials: 'SP',
-    avatarColor: AppColors.pink,
-    title: 'Email Setup on New Device',
-    description:
-        'Need help configuring Outlook on the newly issued MacBook Pro.',
-    priority: 'Medium',
-    date: 'Mar 8, 2026',
-    ticketType: 'IT',
-  ),
-  _TicketItem(
-    employeeName: 'Vikram Singh',
-    initials: 'VS',
-    avatarColor: AppColors.orange,
-    title: 'Software License Request',
-    description:
-        'Requesting Figma Pro license for upcoming UI/UX project deliverables.',
-    priority: 'Low',
-    date: 'Mar 7, 2026',
-    ticketType: 'HR',
-  ),
-];
-
-const _sampleWorkType = [
-  _WorkTypeRequest(
-    employeeName: 'Priya Sharma',
-    initials: 'PS',
-    avatarColor: AppColors.primary,
-    workType: 'Work From Home',
-    dateRange: 'Mar 11 - Mar 13, 2026',
-    reason: 'Plumber visit and home renovation scheduled',
-    currentType: 'Office',
-  ),
-  _WorkTypeRequest(
-    employeeName: 'Anita Desai',
-    initials: 'AD',
-    avatarColor: AppColors.orange,
-    workType: 'Work From Home',
-    dateRange: 'Mar 14 - Mar 15, 2026',
-    reason: 'Child unwell, need to be at home for care',
-    currentType: 'Office',
-  ),
-  _WorkTypeRequest(
-    employeeName: 'Rahul Verma',
-    initials: 'RV',
-    avatarColor: AppColors.secondary,
-    workType: 'Shift Swap',
-    dateRange: 'Mar 16, 2026',
-    reason: 'Swap morning shift to evening for dentist appointment',
-    currentType: 'Morning Shift',
-  ),
-];
-
-const _sampleRegularization = [
-  _RegularizationRequest(
-    employeeName: 'Vikram Singh',
-    initials: 'VS',
-    avatarColor: AppColors.orange,
-    date: 'Mar 7, 2026',
-    originalPunchIn: '--:--',
-    originalPunchOut: '06:15 PM',
-    requestedPunchIn: '09:05 AM',
-    requestedPunchOut: '06:15 PM',
-    reason: 'Biometric did not register morning punch-in',
-  ),
-  _RegularizationRequest(
-    employeeName: 'Sneha Patel',
-    initials: 'SP',
-    avatarColor: AppColors.pink,
-    date: 'Mar 6, 2026',
-    originalPunchIn: '09:30 AM',
-    originalPunchOut: '--:--',
-    requestedPunchIn: '09:30 AM',
-    requestedPunchOut: '06:45 PM',
-    reason: 'Forgot to punch out, was in a client call until late',
-  ),
-  _RegularizationRequest(
-    employeeName: 'Karan Mehta',
-    initials: 'KM',
-    avatarColor: AppColors.success,
-    date: 'Mar 5, 2026',
-    originalPunchIn: '10:45 AM',
-    originalPunchOut: '06:00 PM',
-    requestedPunchIn: '09:00 AM',
-    requestedPunchOut: '06:00 PM',
-    reason: 'Was working from lobby; biometric logged late entry',
-  ),
-];
-
-// ---------------------------------------------------------------------------
-// Leave Tab
-// ---------------------------------------------------------------------------
-class _LeaveTab extends StatelessWidget {
-  const _LeaveTab();
+class _RequestsTab extends StatefulWidget {
+  /// Backend `type` filter — Leave / Claims / Tickets / Work Type Requests /
+  /// Attendance Requests / Shift Requests / Asset Requests.
+  final String typeFilter;
+  const _RequestsTab({required this.typeFilter});
 
   @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-      itemCount: _sampleLeaveApprovals.length,
-      itemBuilder: (context, index) {
-        final req = _sampleLeaveApprovals[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 14),
-          child: _ApprovalCard(request: req)
-              .animate()
-              .fadeIn(duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms)
-              .slideY(begin: 0.06, end: 0, duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOutCubic),
-        );
-      },
+  State<_RequestsTab> createState() => _RequestsTabState();
+}
+
+class _RequestsTabState extends State<_RequestsTab>
+    with AutomaticKeepAliveClientMixin {
+  bool _loading = true;
+  String? _error;
+  List<Map<String, dynamic>> _items = [];
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final resp = await ApiService.getRequests(
+        role: 'manager',
+        status: 'pending',
+        type: widget.typeFilter,
+      );
+      final list = List<Map<String, dynamic>>.from(resp['requests'] ?? const []);
+      if (!mounted) return;
+      setState(() {
+        _items = list;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  /// Optimistically removes the row, calls the API, restores on failure.
+  Future<void> _act({
+    required Map<String, dynamic> req,
+    required bool approve,
+    String? reason,
+  }) async {
+    final id = int.tryParse(req['id']?.toString() ?? '');
+    if (id == null) return;
+
+    final empName = (req['employee']?['name'] ?? '').toString();
+    final removedIndex = _items.indexOf(req);
+    setState(() => _items.remove(req));
+
+    try {
+      if (approve) {
+        await ApiService.acceptRequest(id);
+      } else {
+        await ApiService.rejectRequest(id, reason: reason);
+      }
+      if (!mounted) return;
+      _showSnack(
+        '${empName.isEmpty ? 'Request' : '$empName\'s request'} ${approve ? 'approved' : 'rejected'}',
+        approve ? AppColors.success : AppColors.danger,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      // Roll back the optimistic removal.
+      setState(() {
+        if (removedIndex >= 0 && removedIndex <= _items.length) {
+          _items.insert(removedIndex, req);
+        } else {
+          _items.add(req);
+        }
+      });
+      _showSnack('Action failed: ${e.toString()}', AppColors.danger);
+    }
+  }
+
+  void _showSnack(String msg, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 2),
+      ),
     );
   }
-}
-
-class _ApprovalCard extends StatelessWidget {
-  final _ApprovalRequest request;
-  const _ApprovalCard({required this.request});
-
-  Color _typeColor() {
-    switch (request.requestType) {
-      case 'Sick Leave':
-        return AppColors.danger;
-      case 'Casual Leave':
-        return AppColors.primary;
-      case 'Earned Leave':
-        return AppColors.success;
-      default:
-        return AppColors.primary;
-    }
-  }
-
-  IconData _typeIcon() {
-    switch (request.requestType) {
-      case 'Sick Leave':
-        return Icons.local_hospital;
-      case 'Casual Leave':
-        return Icons.event_busy;
-      case 'Earned Leave':
-        return Icons.beach_access;
-      default:
-        return Icons.event_busy;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = _typeColor();
+    super.build(context);
+    if (_loading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.only(top: 80),
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+    if (_error != null) {
+      return _ErrorState(message: _error!, onRetry: _load);
+    }
+    if (_items.isEmpty) {
+      return _EmptyState(label: 'No pending ${widget.typeFilter.toLowerCase()} to review', onRefresh: _load);
+    }
 
-    return NeuCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _load,
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+        itemCount: _items.length,
+        itemBuilder: (context, index) {
+          final req = _items[index];
+          final delay = ((index < 6 ? index : 6) * 80).ms;
+          final card = _buildCard(req);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: card
+                .animate()
+                .fadeIn(duration: 420.ms, delay: delay)
+                .slideY(
+                  begin: 0.06,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: delay,
+                  curve: Curves.easeOutCubic,
+                ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCard(Map<String, dynamic> req) {
+    VoidCallback approve() => () => _act(req: req, approve: true);
+    VoidCallback reject() => () => _act(req: req, approve: false);
+    final type = (req['type'] ?? '').toString();
+    switch (type) {
+      case 'Leave':
+        return _LeaveCard(request: req, onApprove: approve(), onReject: reject());
+      case 'Claims':
+        return _ClaimCard(request: req, onApprove: approve(), onReject: reject());
+      case 'Tickets':
+        return _TicketCard(request: req, onApprove: approve(), onReject: reject());
+      case 'Work Type Requests':
+        return _WorkTypeCard(request: req, onApprove: approve(), onReject: reject());
+      case 'Attendance Requests':
+        return _RegularizationCard(request: req, onApprove: approve(), onReject: reject());
+      default:
+        return _LeaveCard(request: req, onApprove: approve(), onReject: reject());
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Empty / Error states
+// ---------------------------------------------------------------------------
+class _EmptyState extends StatelessWidget {
+  final String label;
+  final VoidCallback onRefresh;
+  const _EmptyState({required this.label, required this.onRefresh});
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: () async => onRefresh(),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          // Header row
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: request.avatarColor.withValues(alpha: 0.15),
-                child: Text(
-                  request.initials,
-                  style: TextStyle(
-                    color: request.avatarColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(request.employeeName,
-                        style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Icon(_typeIcon(), size: 14, color: color),
-                        const SizedBox(width: 4),
-                        Text(
-                          request.requestType,
-                          style: TextStyle(
-                            color: color,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              StatusChip.pending(),
-            ],
+          const SizedBox(height: 120),
+          Icon(Icons.inbox_outlined, size: 64, color: Colors.grey.shade400),
+          const SizedBox(height: 12),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
           ),
-          const SizedBox(height: 14),
-
-          // Date range
-          Row(
-            children: [
-              const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
-              const SizedBox(width: 6),
-              Text(request.dateRange, style: theme.textTheme.bodySmall),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Reason
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.notes, size: 14, color: Colors.grey),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(request.reason, style: theme.textTheme.bodyMedium),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Action buttons
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 42,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${request.employeeName}\'s request approved'),
-                          backgroundColor: AppColors.success,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.check, size: 18),
-                    label: const Text('Approve',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SizedBox(
-                  height: 42,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${request.employeeName}\'s request rejected'),
-                          backgroundColor: AppColors.danger,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.close, size: 18),
-                    label: const Text('Reject',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.danger,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+          const SizedBox(height: 12),
+          Center(
+            child: TextButton.icon(
+              onPressed: onRefresh,
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('Refresh'),
+            ),
           ),
         ],
       ),
@@ -570,209 +365,318 @@ class _ApprovalCard extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Claims Tab
-// ---------------------------------------------------------------------------
-class _ClaimsTab extends StatelessWidget {
-  const _ClaimsTab();
+class _ErrorState extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _ErrorState({required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-      itemCount: _sampleClaims.length,
-      itemBuilder: (context, index) {
-        final claim = _sampleClaims[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 14),
-          child: _ClaimCard(claim: claim)
-              .animate()
-              .fadeIn(duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms)
-              .slideY(begin: 0.06, end: 0, duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOutCubic),
-        );
-      },
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: AppColors.danger, size: 48),
+            const SizedBox(height: 12),
+            Text(
+              'Could not load requests',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
+// ---------------------------------------------------------------------------
+// Shared header widgets
+// ---------------------------------------------------------------------------
+class _CardHeader extends StatelessWidget {
+  final String employeeName;
+  final Widget badge;
+  final Widget trailing;
+
+  const _CardHeader({
+    required this.employeeName,
+    required this.badge,
+    required this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final initials = _initialsOf(employeeName);
+    final color = _avatarColorFor(employeeName);
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 20,
+          backgroundColor: color.withValues(alpha: 0.15),
+          child: Text(
+            initials,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                employeeName.isEmpty ? 'Unknown' : employeeName,
+                style: theme.textTheme.titleMedium,
+              ),
+              const SizedBox(height: 2),
+              badge,
+            ],
+          ),
+        ),
+        trailing,
+      ],
+    );
+  }
+}
+
+class _ApproveRejectButtons extends StatelessWidget {
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+  const _ApproveRejectButtons({required this.onApprove, required this.onReject});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: 42,
+            child: ElevatedButton.icon(
+              onPressed: onApprove,
+              icon: const Icon(Icons.check, size: 18),
+              label: const Text('Approve',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.success,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: SizedBox(
+            height: 42,
+            child: ElevatedButton.icon(
+              onPressed: onReject,
+              icon: const Icon(Icons.close, size: 18),
+              label: const Text('Reject',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.danger,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Leave card
+// ---------------------------------------------------------------------------
+class _LeaveCard extends StatelessWidget {
+  final Map<String, dynamic> request;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+  const _LeaveCard({required this.request, required this.onApprove, required this.onReject});
+
+  Color _typeColor(String t) {
+    final lower = t.toLowerCase();
+    if (lower.contains('sick')) return AppColors.danger;
+    if (lower.contains('earned')) return AppColors.success;
+    if (lower.contains('casual')) return AppColors.primary;
+    return AppColors.primary;
+  }
+
+  IconData _typeIcon(String t) {
+    final lower = t.toLowerCase();
+    if (lower.contains('sick')) return Icons.local_hospital;
+    if (lower.contains('earned')) return Icons.beach_access;
+    return Icons.event_busy;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final emp = (request['employee'] ?? {}) as Map;
+    final md = (request['metadata'] ?? {}) as Map;
+    final leaveType = (md['leave_type'] ?? 'Leave').toString();
+    final reason = (md['reason'] ?? request['description'] ?? '').toString();
+    final dateRange = _formatDateRange(md['start_date']?.toString(), md['end_date']?.toString());
+    final color = _typeColor(leaveType);
+
+    return NeuCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _CardHeader(
+            employeeName: (emp['name'] ?? '').toString(),
+            badge: Row(
+              children: [
+                Icon(_typeIcon(leaveType), size: 14, color: color),
+                const SizedBox(width: 4),
+                Text(
+                  leaveType,
+                  style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            trailing: StatusChip.pending(),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+              const SizedBox(width: 6),
+              Text(dateRange, style: theme.textTheme.bodySmall),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.notes, size: 14, color: Colors.grey),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  reason.isEmpty ? 'No reason provided' : reason,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _ApproveRejectButtons(onApprove: onApprove, onReject: onReject),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Claim card
+// ---------------------------------------------------------------------------
 class _ClaimCard extends StatelessWidget {
-  final _ClaimRequest claim;
-  const _ClaimCard({required this.claim});
+  final Map<String, dynamic> request;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+  const _ClaimCard({required this.request, required this.onApprove, required this.onReject});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final emp = (request['employee'] ?? {}) as Map;
+    final md = (request['metadata'] ?? {}) as Map;
+    final category = (md['category'] ?? 'Claim').toString();
+    final description = (md['description'] ?? request['description'] ?? '').toString();
+    final amount = md['amount'];
+    final date = _formatDate(request['created_date']?.toString());
 
     return NeuCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: claim.avatarColor.withValues(alpha: 0.15),
-                child: Text(
-                  claim.initials,
-                  style: TextStyle(
-                    color: claim.avatarColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
+          _CardHeader(
+            employeeName: (emp['name'] ?? '').toString(),
+            badge: Row(
+              children: [
+                const Icon(Icons.receipt_long, size: 14, color: AppColors.orange),
+                const SizedBox(width: 4),
+                Text(
+                  category,
+                  style: const TextStyle(
+                    color: AppColors.orange,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(claim.employeeName,
-                        style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        const Icon(Icons.receipt_long,
-                            size: 14, color: AppColors.orange),
-                        const SizedBox(width: 4),
-                        Text(
-                          claim.category,
-                          style: const TextStyle(
-                            color: AppColors.orange,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              StatusChip.pending(),
-            ],
+              ],
+            ),
+            trailing: StatusChip.pending(),
           ),
           const SizedBox(height: 14),
-
-          // Amount row
-          Row(
-            children: [
-              const Icon(Icons.currency_rupee, size: 16, color: AppColors.success),
-              const SizedBox(width: 4),
-              Text(
-                claim.amount,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: AppColors.success,
-                  fontWeight: FontWeight.w700,
+          if (amount != null)
+            Row(
+              children: [
+                const Icon(Icons.currency_rupee, size: 16, color: AppColors.success),
+                const SizedBox(width: 4),
+                Text(
+                  amount.toString(),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: AppColors.success,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              const Spacer(),
-              const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
-              const SizedBox(width: 6),
-              Text(claim.date, style: theme.textTheme.bodySmall),
-            ],
-          ),
+                const Spacer(),
+                const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                const SizedBox(width: 6),
+                Text(date, style: theme.textTheme.bodySmall),
+              ],
+            )
+          else
+            Row(
+              children: [
+                const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                const SizedBox(width: 6),
+                Text(date, style: theme.textTheme.bodySmall),
+              ],
+            ),
           const SizedBox(height: 8),
-
-          // Description
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.notes, size: 14, color: Colors.grey),
-              const SizedBox(width: 6),
-              Expanded(
-                child:
-                    Text(claim.description, style: theme.textTheme.bodyMedium),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Receipt info
-          Row(
-            children: [
-              Icon(
-                claim.hasReceipt ? Icons.check_circle : Icons.warning_amber,
-                size: 14,
-                color: claim.hasReceipt ? AppColors.success : AppColors.warning,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                claim.hasReceipt ? 'Receipt attached' : 'No receipt attached',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color:
-                      claim.hasReceipt ? AppColors.success : AppColors.warning,
-                ),
-              ),
-            ],
-          ),
+          if (description.isNotEmpty)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.notes, size: 14, color: Colors.grey),
+                const SizedBox(width: 6),
+                Expanded(child: Text(description, style: theme.textTheme.bodyMedium)),
+              ],
+            ),
           const SizedBox(height: 16),
-
-          // Action buttons
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 42,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${claim.employeeName}\'s request approved'),
-                          backgroundColor: AppColors.success,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.check, size: 18),
-                    label: const Text('Approve',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SizedBox(
-                  height: 42,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${claim.employeeName}\'s request rejected'),
-                          backgroundColor: AppColors.danger,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.close, size: 18),
-                    label: const Text('Reject',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.danger,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+          _ApproveRejectButtons(onApprove: onApprove, onReject: onReject),
         ],
       ),
     );
@@ -780,54 +684,36 @@ class _ClaimCard extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Tickets Tab
+// Ticket card
 // ---------------------------------------------------------------------------
-class _TicketsTab extends StatelessWidget {
-  const _TicketsTab();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-      itemCount: _sampleTickets.length,
-      itemBuilder: (context, index) {
-        final ticket = _sampleTickets[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 14),
-          child: _TicketCard(ticket: ticket)
-              .animate()
-              .fadeIn(duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms)
-              .slideY(begin: 0.06, end: 0, duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOutCubic),
-        );
-      },
-    );
-  }
-}
-
 class _TicketCard extends StatelessWidget {
-  final _TicketItem ticket;
-  const _TicketCard({required this.ticket});
+  final Map<String, dynamic> request;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+  const _TicketCard({required this.request, required this.onApprove, required this.onReject});
 
-  Color _priorityColor() {
-    switch (ticket.priority) {
-      case 'High':
+  Color _priorityColor(String p) {
+    switch (p.toLowerCase()) {
+      case 'high':
+      case 'critical':
         return AppColors.danger;
-      case 'Medium':
+      case 'medium':
         return AppColors.warning;
-      case 'Low':
+      case 'low':
         return AppColors.success;
       default:
         return AppColors.primary;
     }
   }
 
-  IconData _priorityIcon() {
-    switch (ticket.priority) {
-      case 'High':
+  IconData _priorityIcon(String p) {
+    switch (p.toLowerCase()) {
+      case 'high':
+      case 'critical':
         return Icons.priority_high;
-      case 'Medium':
+      case 'medium':
         return Icons.remove;
-      case 'Low':
+      case 'low':
         return Icons.arrow_downward;
       default:
         return Icons.help_outline;
@@ -837,22 +723,29 @@ class _TicketCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final prioColor = _priorityColor();
+    final emp = (request['employee'] ?? {}) as Map;
+    final md = (request['metadata'] ?? {}) as Map;
+    final title = (request['title'] ?? 'Ticket').toString();
+    final description = (request['description'] ?? '').toString();
+    final priority = (md['priority'] ?? 'Medium').toString();
+    final ticketType = (md['ticket_type'] ?? '').toString();
+    final date = _formatDate(request['created_date']?.toString());
+    final color = _priorityColor(priority);
+    final empName = (emp['name'] ?? '').toString();
 
     return NeuCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Row(
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: ticket.avatarColor.withValues(alpha: 0.15),
+                backgroundColor: _avatarColorFor(empName).withValues(alpha: 0.15),
                 child: Text(
-                  ticket.initials,
+                  _initialsOf(empName),
                   style: TextStyle(
-                    color: ticket.avatarColor,
+                    color: _avatarColorFor(empName),
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
                   ),
@@ -863,267 +756,103 @@ class _TicketCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(ticket.title, style: theme.textTheme.titleMedium),
+                    Text(title, style: theme.textTheme.titleMedium),
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        Text(
-                          ticket.employeeName,
-                          style: theme.textTheme.bodySmall,
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.secondary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            ticket.ticketType,
-                            style: const TextStyle(
-                              color: AppColors.secondary,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
+                        Text(empName, style: theme.textTheme.bodySmall),
+                        if (ticketType.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.secondary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              ticketType,
+                              style: const TextStyle(
+                                color: AppColors.secondary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ],
                 ),
               ),
-              StatusChip(
-                label: ticket.priority,
-                color: prioColor,
-                icon: _priorityIcon(),
-              ),
+              StatusChip(label: priority, color: color, icon: _priorityIcon(priority)),
             ],
           ),
           const SizedBox(height: 12),
-
-          // Date
           Row(
             children: [
               const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
               const SizedBox(width: 6),
-              Text(ticket.date, style: theme.textTheme.bodySmall),
+              Text(date, style: theme.textTheme.bodySmall),
             ],
           ),
-          const SizedBox(height: 8),
-
-          // Description
-          Text(
-            ticket.description,
-            style: theme.textTheme.bodyMedium,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
+          if (description.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              description,
+              style: theme.textTheme.bodyMedium,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
           const SizedBox(height: 16),
-
-          // Action buttons
-          Row(
-            children: [
-              _TicketActionButton(
-                icon: Icons.person_add_alt,
-                label: 'Assign',
-                color: AppColors.primary,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Ticket assign initiated'),
-                      backgroundColor: AppColors.primary,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(width: 8),
-              _TicketActionButton(
-                icon: Icons.check_circle_outline,
-                label: 'Resolve',
-                color: AppColors.success,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Ticket resolve initiated'),
-                      backgroundColor: AppColors.success,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(width: 8),
-              _TicketActionButton(
-                icon: Icons.arrow_upward,
-                label: 'Escalate',
-                color: AppColors.orange,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Ticket escalate initiated'),
-                      backgroundColor: AppColors.orange,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
+          _ApproveRejectButtons(onApprove: onApprove, onReject: onReject),
         ],
       ),
     );
   }
 }
 
-class _TicketActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _TicketActionButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ---------------------------------------------------------------------------
-// Work Type Tab
+// Work-type card
 // ---------------------------------------------------------------------------
-class _WorkTypeTab extends StatelessWidget {
-  const _WorkTypeTab();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-      itemCount: _sampleWorkType.length,
-      itemBuilder: (context, index) {
-        final req = _sampleWorkType[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 14),
-          child: _WorkTypeCard(request: req)
-              .animate()
-              .fadeIn(duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms)
-              .slideY(begin: 0.06, end: 0, duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOutCubic),
-        );
-      },
-    );
-  }
-}
-
 class _WorkTypeCard extends StatelessWidget {
-  final _WorkTypeRequest request;
-  const _WorkTypeCard({required this.request});
-
-  Color _typeColor() {
-    return request.workType == 'Work From Home'
-        ? AppColors.primary
-        : AppColors.secondary;
-  }
-
-  IconData _typeIcon() {
-    return request.workType == 'Work From Home'
-        ? Icons.home_work
-        : Icons.swap_horiz;
-  }
+  final Map<String, dynamic> request;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+  const _WorkTypeCard({required this.request, required this.onApprove, required this.onReject});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = _typeColor();
+    final emp = (request['employee'] ?? {}) as Map;
+    final md = (request['metadata'] ?? {}) as Map;
+    final workType = (md['work_type'] ?? 'Work From Home').toString();
+    final currentType = (md['current_work_type'] ?? 'Office').toString();
+    final reason = (md['reason'] ?? '').toString();
+    final dateRange = _formatDateRange(md['start_date']?.toString(), md['end_date']?.toString());
+    final isWfh = workType.toLowerCase().contains('home');
+    final color = isWfh ? AppColors.primary : AppColors.secondary;
+    final icon = isWfh ? Icons.home_work : Icons.swap_horiz;
 
     return NeuCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: request.avatarColor.withValues(alpha: 0.15),
-                child: Text(
-                  request.initials,
-                  style: TextStyle(
-                    color: request.avatarColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
+          _CardHeader(
+            employeeName: (emp['name'] ?? '').toString(),
+            badge: Row(
+              children: [
+                Icon(icon, size: 14, color: color),
+                const SizedBox(width: 4),
+                Text(
+                  workType,
+                  style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(request.employeeName,
-                        style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Icon(_typeIcon(), size: 14, color: color),
-                        const SizedBox(width: 4),
-                        Text(
-                          request.workType,
-                          style: TextStyle(
-                            color: color,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              StatusChip.pending(),
-            ],
+              ],
+            ),
+            trailing: StatusChip.pending(),
           ),
           const SizedBox(height: 14),
-
-          // Current type -> Requested type
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
@@ -1134,7 +863,7 @@ class _WorkTypeCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  request.currentType,
+                  currentType,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -1146,7 +875,7 @@ class _WorkTypeCard extends StatelessWidget {
                   child: Icon(Icons.arrow_forward, size: 16, color: color),
                 ),
                 Text(
-                  request.workType,
+                  workType,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -1157,94 +886,25 @@ class _WorkTypeCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-
-          // Date range
           Row(
             children: [
               const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
               const SizedBox(width: 6),
-              Text(request.dateRange, style: theme.textTheme.bodySmall),
+              Text(dateRange, style: theme.textTheme.bodySmall),
             ],
           ),
           const SizedBox(height: 8),
-
-          // Reason
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.notes, size: 14, color: Colors.grey),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(request.reason, style: theme.textTheme.bodyMedium),
-              ),
-            ],
-          ),
+          if (reason.isNotEmpty)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.notes, size: 14, color: Colors.grey),
+                const SizedBox(width: 6),
+                Expanded(child: Text(reason, style: theme.textTheme.bodyMedium)),
+              ],
+            ),
           const SizedBox(height: 16),
-
-          // Action buttons
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 42,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${request.employeeName}\'s request approved'),
-                          backgroundColor: AppColors.success,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.check, size: 18),
-                    label: const Text('Approve',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SizedBox(
-                  height: 42,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${request.employeeName}\'s request rejected'),
-                          backgroundColor: AppColors.danger,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.close, size: 18),
-                    label: const Text('Reject',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.danger,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+          _ApproveRejectButtons(onApprove: onApprove, onReject: onReject),
         ],
       ),
     );
@@ -1252,100 +912,56 @@ class _WorkTypeCard extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Regularization Tab
+// Regularization card (AttendanceRequest)
 // ---------------------------------------------------------------------------
-class _RegularizationTab extends StatelessWidget {
-  const _RegularizationTab();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-      itemCount: _sampleRegularization.length,
-      itemBuilder: (context, index) {
-        final req = _sampleRegularization[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 14),
-          child: _RegularizationCard(request: req)
-              .animate()
-              .fadeIn(duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms)
-              .slideY(begin: 0.06, end: 0, duration: 420.ms, delay: ((index < 6 ? index : 6) * 80).ms, curve: Curves.easeOutCubic),
-        );
-      },
-    );
-  }
-}
-
 class _RegularizationCard extends StatelessWidget {
-  final _RegularizationRequest request;
-  const _RegularizationCard({required this.request});
+  final Map<String, dynamic> request;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+  const _RegularizationCard({required this.request, required this.onApprove, required this.onReject});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final emp = (request['employee'] ?? {}) as Map;
+    final md = (request['metadata'] ?? {}) as Map;
+    final date = _formatDate(md['date']?.toString() ?? request['created_date']?.toString());
+    final fromTime = _formatTime(md['from_time']?.toString());
+    final toTime = _formatTime(md['to_time']?.toString());
+    final reason = (md['reason'] ?? request['description'] ?? '').toString();
 
     return NeuCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: request.avatarColor.withValues(alpha: 0.15),
-                child: Text(
-                  request.initials,
+          _CardHeader(
+            employeeName: (emp['name'] ?? '').toString(),
+            badge: const Row(
+              children: [
+                Icon(Icons.access_time, size: 14, color: AppColors.secondary),
+                SizedBox(width: 4),
+                Text(
+                  'Attendance Regularization',
                   style: TextStyle(
-                    color: request.avatarColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
+                    color: AppColors.secondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(request.employeeName,
-                        style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        const Icon(Icons.access_time,
-                            size: 14, color: AppColors.secondary),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Attendance Regularization',
-                          style: const TextStyle(
-                            color: AppColors.secondary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              StatusChip.pending(),
-            ],
+              ],
+            ),
+            trailing: StatusChip.pending(),
           ),
           const SizedBox(height: 14),
-
-          // Date
           Row(
             children: [
               const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
               const SizedBox(width: 6),
-              Text(request.date, style: theme.textTheme.bodySmall),
+              Text(date, style: theme.textTheme.bodySmall),
             ],
           ),
           const SizedBox(height: 12),
-
-          // Punch time comparison
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -1359,218 +975,70 @@ class _RegularizationCard extends StatelessWidget {
                     : Colors.grey.shade200,
               ),
             ),
-            child: Column(
+            child: Row(
               children: [
-                // Header row
-                Row(
-                  children: [
-                    const SizedBox(width: 80),
-                    Expanded(
-                      child: Text(
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
                         'Punch In',
-                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: isDark
-                              ? AppColors.darkSubtext
-                              : AppColors.lightSubtext,
+                          color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        'Punch Out',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: isDark
-                              ? AppColors.darkSubtext
-                              : AppColors.lightSubtext,
+                      const SizedBox(height: 4),
+                      Text(
+                        fromTime,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                // Original row
-                Row(
-                  children: [
-                    SizedBox(
-                      width: 80,
-                      child: Text(
-                        'Original',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: isDark
-                              ? AppColors.darkSubtext
-                              : AppColors.lightSubtext,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        request.originalPunchIn,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: request.originalPunchIn == '--:--'
-                              ? AppColors.danger
-                              : (isDark
-                                  ? AppColors.darkSubtext
-                                  : AppColors.lightSubtext),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        request.originalPunchOut,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: request.originalPunchOut == '--:--'
-                              ? AppColors.danger
-                              : (isDark
-                                  ? AppColors.darkSubtext
-                                  : AppColors.lightSubtext),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Divider(
-                    height: 1,
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.08)
-                        : Colors.grey.shade300,
+                    ],
                   ),
                 ),
-                // Requested row
-                Row(
-                  children: [
-                    SizedBox(
-                      width: 80,
-                      child: Text(
-                        'Requested',
+                Container(width: 1, height: 32, color: Colors.grey.shade300),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        'Punch Out',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
+                          color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        request.requestedPunchIn,
-                        textAlign: TextAlign.center,
+                      const SizedBox(height: 4),
+                      Text(
+                        toTime,
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: AppColors.primary,
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        request.requestedPunchOut,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 10),
-
-          // Reason
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.notes, size: 14, color: Colors.grey),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(request.reason, style: theme.textTheme.bodyMedium),
-              ),
-            ],
-          ),
+          if (reason.isNotEmpty)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.notes, size: 14, color: Colors.grey),
+                const SizedBox(width: 6),
+                Expanded(child: Text(reason, style: theme.textTheme.bodyMedium)),
+              ],
+            ),
           const SizedBox(height: 16),
-
-          // Action buttons
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 42,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${request.employeeName}\'s request approved'),
-                          backgroundColor: AppColors.success,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.check, size: 18),
-                    label: const Text('Approve',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SizedBox(
-                  height: 42,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${request.employeeName}\'s request rejected'),
-                          backgroundColor: AppColors.danger,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.close, size: 18),
-                    label: const Text('Reject',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.danger,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+          _ApproveRejectButtons(onApprove: onApprove, onReject: onReject),
         ],
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 
 class NeuCard extends StatefulWidget {
@@ -26,8 +27,6 @@ class _NeuCardState extends State<NeuCard> with TickerProviderStateMixin {
   late AnimationController _upController;
   late Animation<double> _scaleDown;
   late Animation<double> _scaleUp;
-  bool _isDown = false;
-
   @override
   void initState() {
     super.initState();
@@ -57,28 +56,6 @@ class _NeuCardState extends State<NeuCard> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  void _handleDown() {
-    if (widget.onTap == null) return;
-    _isDown = true;
-    _upController.reset();
-    _downController.forward();
-  }
-
-  void _handleUp() {
-    if (widget.onTap == null || !_isDown) return;
-    _isDown = false;
-    _downController.stop();
-    _upController.forward(from: 0);
-    widget.onTap?.call();
-  }
-
-  void _handleCancel() {
-    if (widget.onTap == null || !_isDown) return;
-    _isDown = false;
-    _downController.stop();
-    _upController.forward(from: 0);
-  }
-
   @override
   Widget build(BuildContext context) {
     final cardChild = AnimatedContainer(
@@ -94,20 +71,18 @@ class _NeuCardState extends State<NeuCard> with TickerProviderStateMixin {
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => _handleDown(),
-      onTapUp: (_) => _handleUp(),
-      onTapCancel: _handleCancel,
       onTap: () {
-        // Fallback: if onTapUp didn't fire (scroll conflict), ensure onTap works
-        if (!_isDown) {
-          widget.onTap?.call();
-        }
+        HapticFeedback.lightImpact();
+        _downController.forward().then((_) {
+          _upController.forward(from: 0);
+        });
+        widget.onTap?.call();
       },
       child: AnimatedBuilder(
         animation: Listenable.merge([_downController, _upController]),
         builder: (context, child) {
           double scale;
-          if (_downController.isAnimating || (_isDown && _downController.isCompleted)) {
+          if (_downController.isAnimating || _downController.isCompleted && !_upController.isAnimating) {
             scale = _scaleDown.value;
           } else if (_upController.isAnimating) {
             scale = _scaleUp.value;
@@ -139,7 +114,10 @@ class GlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap?.call();
+      },
       child: Container(
         decoration: NeuDecoration.glass(context, radius: radius),
         padding: padding,

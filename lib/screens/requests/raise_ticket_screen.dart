@@ -4,6 +4,7 @@ import '../../animations/success_overlay.dart';
 import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/form_fields.dart';
 
 class RaiseTicketScreen extends StatefulWidget {
@@ -18,11 +19,11 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _ccController = TextEditingController();
-  String? _ticketType;
-  String? _priority;
-  String? _department;
-  String? _status;
+  late String _ticketType;
+  late String _priority;
+  late String _department;
   String? _attachmentName;
+  bool _attachmentEnabled = false;
   bool _isSubmitting = false;
 
   final List<String> _ticketTypes = [
@@ -48,11 +49,14 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
     'Admin',
   ];
 
-  final List<String> _statuses = [
-    'Open',
-    'In Progress',
-    'On Hold',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Default to first option in each dropdown
+    _ticketType = _ticketTypes.first;
+    _priority = _priorities.first;
+    _department = _departments.first;
+  }
 
   @override
   void dispose() {
@@ -69,7 +73,9 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
       await ApiService.raiseTicket({
         'title': _titleController.text,
         'description': _descriptionController.text,
-        'priority': (_priority ?? 'medium').toLowerCase(),
+        'priority': _priority.toLowerCase(),
+        'ticket_type': _ticketType,
+        'department': _department,
       });
       if (!mounted) return;
       setState(() => _isSubmitting = false);
@@ -89,7 +95,7 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(title: const Text('Raise Ticket')),
+      appBar: adaptiveAppBar(context: context, title: 'Raise Ticket', showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Form(
@@ -109,6 +115,41 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
               ),
               formFieldGap,
 
+              const FormLabel('Ticket Type'),
+              formLabelGap,
+              FormDropdown(
+                value: _ticketType,
+                hint: 'Select ticket type',
+                items: _ticketTypes,
+                onChanged: (v) => setState(() => _ticketType = v ?? _ticketTypes.first),
+              ),
+              formFieldGap,
+
+              const FormLabel('Priority'),
+              formLabelGap,
+              FormDropdown(
+                value: _priority,
+                hint: 'Select priority',
+                items: _priorities,
+                onChanged: (v) => setState(() => _priority = v ?? _priorities.first),
+              ),
+              formFieldGap,
+
+              const FormLabel('Assign to Department'),
+              formLabelGap,
+              FormDropdown(
+                value: _department,
+                hint: 'Select department',
+                items: _departments,
+                onChanged: (v) => setState(() => _department = v ?? _departments.first),
+              ),
+              formFieldGap,
+
+              const FormLabel('CC'),
+              formLabelGap,
+              FormInput(controller: _ccController, hint: 'Add CC (email addresses)'),
+              formFieldGap,
+
               const FormLabel('Description'),
               formLabelGap,
               FormInput(
@@ -119,56 +160,14 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
               ),
               formFieldGap,
 
-              const FormLabel('Ticket Type'),
-              formLabelGap,
-              FormDropdown(
-                value: _ticketType,
-                hint: 'Select ticket type',
-                items: _ticketTypes,
-                onChanged: (v) => setState(() => _ticketType = v),
-              ),
-              formFieldGap,
-
-              const FormLabel('Priority'),
-              formLabelGap,
-              FormDropdown(
-                value: _priority,
-                hint: 'Select priority',
-                items: _priorities,
-                onChanged: (v) => setState(() => _priority = v),
-              ),
-              formFieldGap,
-
-              const FormLabel('Assign to Department'),
-              formLabelGap,
-              FormDropdown(
-                value: _department,
-                hint: 'Select department',
-                items: _departments,
-                onChanged: (v) => setState(() => _department = v),
-              ),
-              formFieldGap,
-
-              const FormLabel('Status'),
-              formLabelGap,
-              FormDropdown(
-                value: _status,
-                hint: 'Select status',
-                items: _statuses,
-                onChanged: (v) => setState(() => _status = v),
-              ),
-              formFieldGap,
-
-              const FormLabel('CC'),
-              formLabelGap,
-              FormInput(controller: _ccController, hint: 'Add CC (email addresses)'),
-              formFieldGap,
-
-              const FormLabel('Attachments'),
-              formLabelGap,
-              FormAttachment(
+              FormAttachmentToggle(
+                enabled: _attachmentEnabled,
                 fileName: _attachmentName,
-                onTap: () async {
+                onToggle: (v) => setState(() {
+                  _attachmentEnabled = v;
+                  if (!v) _attachmentName = null;
+                }),
+                onPick: () async {
                   final picker = ImagePicker();
                   final XFile? file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
                   if (file != null) {

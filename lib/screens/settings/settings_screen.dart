@@ -5,6 +5,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/app_provider.dart';
+import '../../utils/platform_adaptive.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -24,14 +25,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      appBar: adaptiveAppBar(context: context, title: 'Settings', showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
         child: Column(

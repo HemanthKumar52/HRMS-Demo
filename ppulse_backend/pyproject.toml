@@ -1,0 +1,83 @@
+# Backend tooling — ruff (lint + format) and bandit (security/SAST).
+# Run from ppulse_backend/:
+#   ruff check .
+#   ruff format .
+#   bandit -c pyproject.toml -r api ppulse_backend
+
+[project]
+name = "ppulse_backend"
+version = "0.1.0"
+requires-python = ">=3.11"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Ruff — fast Python linter + formatter (replaces flake8 + isort + most pylint)
+# ─────────────────────────────────────────────────────────────────────────────
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+extend-exclude = [
+    "migrations",
+    "venv",
+    "__pycache__",
+    "models_inspected.py",   # auto-generated Horilla schema dump
+]
+
+[tool.ruff.lint]
+# Curated rule set — strict enough to catch real bugs without flooding the
+# existing Django codebase with style noise. Add more codes as the team is ready.
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes (unused imports/vars, undefined names)
+    "W",   # pycodestyle warnings
+    "I",   # isort (import sorting)
+    "B",   # flake8-bugbear (likely-bug patterns)
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade (modern Python idioms)
+    "DJ",  # flake8-django
+    "S",   # flake8-bandit subset (security)
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific cleanups
+]
+ignore = [
+    "E501",   # line too long — formatter handles wrapping
+    "B008",   # function calls in defaults (DRF / Django pattern)
+    "S101",   # use of `assert` (fine in tests, occasionally in code)
+    "S105",   # hardcoded password string false-positives
+    "S106",   # hardcoded password func arg false-positives
+    "DJ001",  # null=True on string fields (legacy schema)
+    "DJ012",  # Meta class ordering (legacy schema)
+    "RUF012", # mutable class attrs (Django Meta uses these)
+    "SIM108", # ternary vs if-else (style preference)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests and management commands have looser rules
+"**/tests*.py" = ["S101", "S105", "S106"]
+"**/management/commands/*.py" = ["T201"]  # allow print() in CLI tools
+"**/migrations/*.py" = ["E", "F", "I", "B", "RUF"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["api", "ppulse_backend"]
+combine-as-imports = true
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+line-ending = "lf"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Bandit — security / SAST scanner
+# Run: bandit -c pyproject.toml -r api ppulse_backend
+# ─────────────────────────────────────────────────────────────────────────────
+[tool.bandit]
+exclude_dirs = [
+    "venv",
+    "migrations",
+    "tests",
+    "__pycache__",
+]
+skips = [
+    "B101",   # assert used (fine in tests)
+    "B104",   # binding to 0.0.0.0 (intentional for dev runserver / Docker)
+    "B311",   # pseudo-random for non-crypto (we use it for jitter only)
+]

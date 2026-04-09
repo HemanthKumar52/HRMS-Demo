@@ -5,6 +5,7 @@ import 'providers/theme_provider.dart';
 import 'providers/app_provider.dart';
 import 'screens/splash/splash_screen.dart';
 import 'screens/requests/request_detail_screen.dart';
+import 'services/live_activity_service.dart';
 import 'services/notification_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -12,6 +13,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.instance.init();
+  await LiveActivityService.instance.init();
   NotificationService.instance.navigatorKey = navigatorKey;
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

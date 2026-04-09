@@ -75,8 +75,10 @@ class _StyledDonutChartState extends State<StyledDonutChart>
 
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        SizedBox(
+        Center(
+          child: SizedBox(
           width: widget.size,
           height: widget.size,
           child: AnimatedBuilder(
@@ -122,6 +124,7 @@ class _StyledDonutChartState extends State<StyledDonutChart>
               );
             },
           ),
+        ),
         ),
         if (widget.showLegend) ...[
           const SizedBox(height: 20),

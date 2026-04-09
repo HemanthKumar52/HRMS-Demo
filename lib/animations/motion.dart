@@ -5,8 +5,10 @@
 ///   AnimationController(duration: Motion.micro)
 library;
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../utils/platform_adaptive.dart';
 
 class Motion {
   Motion._();
@@ -75,6 +77,11 @@ class Motion {
 
   // ─── Page Transition ─────────────────────────────────
   static Route<T> pageRoute<T>(Widget page) {
+    // iOS/macOS: native Cupertino slide transition
+    if (isApplePlatform) {
+      return CupertinoPageRoute<T>(builder: (_) => page);
+    }
+    // Android: custom fade + slide transition
     return PageRouteBuilder<T>(
       pageBuilder: (_, __, ___) => page,
       transitionDuration: const Duration(milliseconds: 400),

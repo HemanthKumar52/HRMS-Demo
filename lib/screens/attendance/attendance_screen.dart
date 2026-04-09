@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -8,7 +11,7 @@ import '../../providers/app_provider.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
-import '../../widgets/ppulse_footer.dart';
+
 import '../home/face_verification_dialog.dart';
 
 class AttendanceScreen extends StatefulWidget {
@@ -37,6 +40,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   bool _isLoading = true;
 
   bool? _lastPunchedIn;
+  Timer? _biometricPoll;
 
   @override
   void initState() {
@@ -44,6 +48,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     _today = DateTime.now();
     _currentMonth = DateTime(_today.year, _today.month);
     _loadAttendanceData();
+    // Poll dashboard summary every 30s so a biometric punch (made on the
+    // physical device) is reflected in the app without manual refresh.
+    _biometricPoll = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!mounted) return;
+      context.read<AppProvider>().fetchDashboardData();
+    });
+  }
+
+  @override
+  void dispose() {
+    _biometricPoll?.cancel();
+    super.dispose();
   }
 
   @override
@@ -380,13 +396,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  ClipRect(
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8, right: 4),
                     child: SizedBox(
-                    height: 180,
+                    height: 200,
                     child: BarChart(
                       BarChartData(
                         alignment: BarChartAlignment.spaceAround,
-                        maxY: (_weeklyHours.reduce((a, b) => a > b ? a : b).clamp(1, 24) + 1).ceilToDouble().clamp(4, 24),
+                        // Headroom of +2 so the top Y-axis label isn't clipped
+                        maxY: (_weeklyHours.reduce((a, b) => a > b ? a : b).clamp(1, 24) + 2).ceilToDouble().clamp(6, 24),
                         barTouchData: BarTouchData(
                           enabled: true,
                           touchCallback: (FlTouchEvent event, barTouchResponse) {
@@ -440,11 +458,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           leftTitles: AxisTitles(
                             sideTitles: SideTitles(
                               showTitles: true,
-                              reservedSize: 30,
+                              reservedSize: 36,
+                              interval: 2,
                               getTitlesWidget: (value, meta) {
-                                return Text(
-                                  '${value.toInt()}h',
-                                  style: tt.bodySmall?.copyWith(fontSize: 10),
+                                // Skip the maxY label so it doesn't get clipped
+                                if (value >= meta.max) return const SizedBox.shrink();
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 6),
+                                  child: Text(
+                                    '${value.toInt()}h',
+                                    style: tt.bodySmall?.copyWith(fontSize: 10),
+                                    textAlign: TextAlign.right,
+                                  ),
                                 );
                               },
                             ),
@@ -655,7 +680,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             const SizedBox(height: 12),
             _buildAttendanceLogTable(tt, isDark),
 
-            const PPulseFooter(),
+            const SizedBox(height: 12),
             const SizedBox(height: 80),
           ],
         ),
@@ -979,7 +1004,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             left: barLeft,
                             top: 2,
                             bottom: 2,
-                            width: barWidth.clamp(4.0, totalWidth),
+                            width: barWidth.clamp(4.0, totalWidth < 4.0 ? 4.0 : totalWidth),
                             child: Container(
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
@@ -1068,39 +1093,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _buildMonthView(TextTheme tt, bool isDark) {
-    final daysInMonth =
-        DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
-    const dayLabels = ['M', 'T', 'W', 'T', 'F'];
+    const dayLabels = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
-    // Build weeks with weekdays only (Mon-Fri)
-    List<List<int?>> weeks = [];
     final firstDay = DateTime(_currentMonth.year, _currentMonth.month, 1);
-    // Find the Monday of the first week
-    final firstMonday = firstDay.subtract(Duration(days: (firstDay.weekday - 1)));
+    // Monday of the week containing the 1st (weekday: Mon=1..Sun=7)
+    final gridStart = firstDay.subtract(Duration(days: firstDay.weekday - 1));
 
-    DateTime currentMonday = firstMonday;
-    while (true) {
-      List<int?> week = [];
-      bool hasAnyDay = false;
-      for (int i = 0; i < 5; i++) {
-        final date = currentMonday.add(Duration(days: i));
-        if (date.month == _currentMonth.month && date.year == _currentMonth.year) {
-          week.add(date.day);
-          hasAnyDay = true;
-        } else {
-          week.add(null);
-        }
-      }
-      if (hasAnyDay) {
-        weeks.add(week);
-      }
-      currentMonday = currentMonday.add(const Duration(days: 7));
-      // Stop if we've passed the last day of the month
-      if (currentMonday.month != _currentMonth.month &&
-          currentMonday.isAfter(DateTime(_currentMonth.year, _currentMonth.month, daysInMonth))) {
-        break;
-      }
-    }
+    // Always render 6 rows × 7 columns = 42 cells for a stable layout.
+    final cells = List<DateTime>.generate(
+      42,
+      (i) => gridStart.add(Duration(days: i)),
+    );
+
+    final mutedLabel = isDark ? Colors.white54 : Colors.black45;
 
     return Column(
       children: [
@@ -1111,53 +1116,38 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   child: Center(
                     child: Text(
                       d,
-                      style: tt.bodySmall
-                          ?.copyWith(fontWeight: FontWeight.w600),
+                      style: tt.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: mutedLabel,
+                        letterSpacing: 0.2,
+                      ),
                     ),
                   ),
                 ),
               )
               .toList(),
         ),
-        const SizedBox(height: 8),
-        ...weeks.map((week) {
+        const SizedBox(height: 10),
+        ...List.generate(6, (week) {
           return Padding(
-            padding: const EdgeInsets.only(bottom: 4),
+            padding: const EdgeInsets.only(bottom: 6),
             child: Row(
-              children: List.generate(5, (col) {
-                final dayIndex = week[col];
-                if (dayIndex == null) {
-                  return const Expanded(child: SizedBox(height: 38));
-                }
-
-                final status = _dayStatuses[dayIndex] ?? 0;
-                final color = _statusColor(status);
-                final isToday = dayIndex == _today.day &&
-                    _currentMonth.month == _today.month &&
-                    _currentMonth.year == _today.year;
+              children: List.generate(7, (col) {
+                final date = cells[week * 7 + col];
+                final isCurrentMonth = date.month == _currentMonth.month;
+                final status = isCurrentMonth ? (_dayStatuses[date.day] ?? 0) : 0;
+                final isToday = date.year == _today.year &&
+                    date.month == _today.month &&
+                    date.day == _today.day;
 
                 return Expanded(
-                  child: Container(
-                    height: 38,
-                    margin: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: status > 0
-                          ? color.withValues(alpha: isDark ? 0.25 : 0.15)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
-                      border: isToday
-                          ? Border.all(color: AppColors.primary, width: 2)
-                          : null,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '$dayIndex',
-                      style: tt.bodySmall?.copyWith(
-                        fontWeight:
-                            isToday ? FontWeight.w700 : FontWeight.w400,
-                        color: status > 0 ? color : null,
-                      ),
-                    ),
+                  child: _DayCell(
+                    day: date.day,
+                    isCurrentMonth: isCurrentMonth,
+                    isToday: isToday,
+                    statusColor: status > 0 ? _statusColor(status) : null,
+                    isDark: isDark,
+                    textStyle: tt.bodyMedium,
                   ),
                 );
               }),
@@ -1250,62 +1240,99 @@ class _ClockInCard extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // Clock In / Clock Out button
-              GestureDetector(
-                onTap: () {
-                  if (!isPunchedIn) {
-                    showDialog(context: context, builder: (_) => const FaceVerificationDialog());
-                  } else {
-                    provider.togglePunch();
-                  }
-                },
-                child: Container(
-                  width: 130,
-                  height: 130,
+              // Clock In / Clock Out button OR Biometric badge
+              if (provider.isBiometricPunch && isPunchedIn)
+                Container(
+                  width: 200,
+                  padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: isPunchedIn
-                        ? const LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [Color(0xFFE53935), Color(0xFFB71C1C)],
-                          )
-                        : const LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [Color(0xFF2A8F7D), Color(0xFF1B5E50)],
-                          ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (isPunchedIn ? const Color(0xFFE53935) : const Color(0xFF2A8F7D))
-                            .withValues(alpha: 0.3),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(60),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 2),
                   ),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        isPunchedIn ? Icons.logout_rounded : Icons.login_rounded,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                      const SizedBox(height: 6),
+                      const Icon(Icons.fingerprint, color: AppColors.primary, size: 36),
+                      const SizedBox(height: 8),
                       Text(
-                        isPunchedIn ? 'CLOCK OUT' : 'CLOCK IN',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        'Biometric Active',
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
+                          color: isDark ? AppColors.darkText : AppColors.lightText,
                           letterSpacing: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Use device to punch out',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
                         ),
                       ),
                     ],
                   ),
+                )
+              else
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.heavyImpact();
+                    if (!isPunchedIn) {
+                      // Face verification dialog handles the punch-in itself.
+                      showDialog(context: context, builder: (_) => const FaceVerificationDialog());
+                    } else {
+                      provider.togglePunch();
+                    }
+                  },
+                  child: Container(
+                    width: 130,
+                    height: 130,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: isPunchedIn
+                          ? const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFFE53935), Color(0xFFB71C1C)],
+                            )
+                          : const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFF2A8F7D), Color(0xFF1B5E50)],
+                            ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (isPunchedIn ? const Color(0xFFE53935) : const Color(0xFF2A8F7D))
+                              .withValues(alpha: 0.3),
+                          blurRadius: 24,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isPunchedIn ? Icons.logout_rounded : Icons.login_rounded,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          isPunchedIn ? 'CLOCK OUT' : 'CLOCK IN',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
               const SizedBox(height: 20),
 
               // Synced info
@@ -1361,4 +1388,118 @@ class _PunchData {
     required this.punchIn,
     required this.punchOut,
   });
+}
+
+class _DayCell extends StatelessWidget {
+  final int day;
+  final bool isCurrentMonth;
+  final bool isToday;
+  final Color? statusColor;
+  final bool isDark;
+  final TextStyle? textStyle;
+
+  const _DayCell({
+    required this.day,
+    required this.isCurrentMonth,
+    required this.isToday,
+    required this.statusColor,
+    required this.isDark,
+    required this.textStyle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Today: solid dark filled chip with white text (matches reference image).
+    final todayFill = isDark ? Colors.white : const Color(0xFF1B1B1F);
+    final todayText = isDark ? const Color(0xFF1B1B1F) : Colors.white;
+
+    // Idle (in-month) tile: very subtle raised surface.
+    final tileFill = isDark
+        ? Colors.white.withValues(alpha: 0.04)
+        : Colors.white;
+    final tileBorder = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.black.withValues(alpha: 0.05);
+
+    // Out-of-month days: muted, no surface.
+    final outOfMonthText = isDark ? Colors.white24 : Colors.black26;
+    final inMonthText = isDark ? Colors.white : const Color(0xFF1B1B1F);
+
+    final BoxDecoration decoration = isToday
+        ? BoxDecoration(
+            color: todayFill,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: [
+              BoxShadow(
+                color: todayFill.withValues(alpha: 0.25),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          )
+        : isCurrentMonth
+            ? BoxDecoration(
+                color: tileFill,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: tileBorder, width: 1),
+                boxShadow: isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+              )
+            : const BoxDecoration();
+
+    final Color textColor = isToday
+        ? todayText
+        : isCurrentMonth
+            ? inMonthText
+            : outOfMonthText;
+
+    return Container(
+      height: 44,
+      margin: const EdgeInsets.symmetric(horizontal: 3),
+      decoration: decoration,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Text(
+            '$day',
+            style: textStyle?.copyWith(
+              fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+              color: textColor,
+            ),
+          ),
+          if (statusColor != null && !isToday)
+            Positioned(
+              bottom: 5,
+              child: Container(
+                width: 14,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          if (statusColor != null && isToday)
+            Positioned(
+              bottom: 5,
+              child: Container(
+                width: 14,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: todayText.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }

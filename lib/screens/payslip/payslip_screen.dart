@@ -6,7 +6,7 @@ import '../../animations/motion.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/styled_donut_chart.dart';
-import '../../widgets/ppulse_footer.dart';
+
 import 'package:flutter_animate/flutter_animate.dart';
 import 'payslip_viewer_screen.dart';
 import '../../services/api_service.dart';
@@ -182,7 +182,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
                   ],
                 ),
               ),
-              const PPulseFooter(),
+              const SizedBox(height: 12),
               const SizedBox(height: 80),
             ] else ...[
 
@@ -517,7 +517,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
               ],
             ).animate().fadeIn(duration: 420.ms, delay: 560.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 560.ms, curve: Curves.easeOutCubic),
 
-            const PPulseFooter(),
+            const SizedBox(height: 12),
             const SizedBox(height: 80),
             ], // end else
           ],

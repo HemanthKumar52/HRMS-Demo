@@ -1,4 +1,6 @@
-# OS and editor files
+# ═══════════════════════════════════════════
+# OS & Editor
+# ═══════════════════════════════════════════
 .DS_Store
 Thumbs.db
 *.swp
@@ -6,7 +8,7 @@ Thumbs.db
 *.tmp
 *.log
 
-# IDE settings
+# IDE
 .idea/
 *.iml
 *.ipr
@@ -16,7 +18,9 @@ Thumbs.db
 .claude/
 .gemini/
 
+# ═══════════════════════════════════════════
 # Dart / Flutter
+# ═══════════════════════════════════════════
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
@@ -25,6 +29,7 @@ Thumbs.db
 build/
 coverage/
 doc/api/
+pubspec.lock
 
 # Flutter generated artifacts
 */.flutter-plugins-dependencies
@@ -35,20 +40,33 @@ doc/api/
 **/Flutter/Flutter.podspec
 **/GeneratedPluginRegistrant.*
 
+# Symbolication and obfuscation
+app.*.symbols
+app.*.map.json
+
+# ═══════════════════════════════════════════
 # Android
+# ═══════════════════════════════════════════
 android/.gradle/
 android/local.properties
 android/key.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
 **/android/app/debug/
 **/android/app/profile/
 **/android/app/release/
 *.keystore
 *.jks
 
+# ═══════════════════════════════════════════
 # iOS / macOS
+# ═══════════════════════════════════════════
 ios/Pods/
 ios/.symlinks/
 ios/DerivedData/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
 macos/Pods/
 macos/.symlinks/
 *.mode1v3
@@ -57,19 +75,21 @@ macos/.symlinks/
 *.pbxuser
 *.perspectivev3
 *.xcuserstate
+**/xcuserdata/
 Icon?
+**/Pods/
 
-# Linux / Windows generated Flutter files
+# ═══════════════════════════════════════════
+# Linux / Windows
+# ═══════════════════════════════════════════
 linux/flutter/ephemeral/
 windows/flutter/ephemeral/
 windows/flutter/generated_plugins.cmake
 macos/Flutter/ephemeral/
 
-# Symbolication and obfuscation
-app.*.symbols
-app.*.map.json
-
-# Python / Django backend
+# ═══════════════════════════════════════════
+# Python / Django Backend
+# ═══════════════════════════════════════════
 venv/
 .venv/
 env/
@@ -85,18 +105,46 @@ __pycache__/
 htmlcov/
 *.sqlite3
 db.sqlite3
+staticfiles/
+media/
+celerybeat-schedule
 
-# Environment and secrets
+# ═══════════════════════════════════════════
+# Environment & Secrets
+# ═══════════════════════════════════════════
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+*.cert
+credentials.json
+serviceAccountKey.json
 
-# Local dumps and temp exports
+# ═══════════════════════════════════════════
+# Database & Temp
+# ═══════════════════════════════════════════
 db_dump.sql
 *.dump.sql
 *.bak.sql
 migrate_working_dir/
+*.sqlite3-journal
 
+# ═══════════════════════════════════════════
+# Xcode scripts (generated)
+# ═══════════════════════════════════════════
+ios/add_widget_extension.rb
 
-#Ignore vscode AI rules
-.github\instructions\codacy.instructions.md
+# ═══════════════════════════════════════════
+# Web app (ppulse-web)
+# ═══════════════════════════════════════════
+ppulse-web/venv/
+ppulse-web/.env
+ppulse-web/staticfiles/
+ppulse-web/media/
+ppulse-web/__pycache__/
+ppulse-web/**/__pycache__/
+ppulse-web/db.sqlite3
+
+# Ignore vscode AI rules
+.github/instructions/codacy.instructions.md

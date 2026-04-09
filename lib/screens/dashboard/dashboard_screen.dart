@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
@@ -6,8 +7,9 @@ import 'package:intl/intl.dart';
 import '../../animations/motion.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/neu_card.dart';
-import '../../widgets/ppulse_footer.dart';
+
 import '../../services/api_service.dart';
 import '../requests/apply_leave_screen.dart';
 import '../requests/submit_claim_screen.dart';
@@ -31,9 +33,11 @@ class DashboardScreen extends StatelessWidget {
     final role = provider.role;
     final isManagerOrHr = role == UserRole.manager || role == UserRole.hr;
 
+    final gridCols = Responsive.gridColumns(context, phoneCols: 3, tabletCols: 4, desktopCols: 6);
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
-      child: Column(
+      child: ResponsiveContent(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── 1. Attendance Timer ───────────────────────────────────────
@@ -52,34 +56,34 @@ class DashboardScreen extends StatelessWidget {
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 3,
+            crossAxisCount: gridCols,
             childAspectRatio: 1.1,
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
             children: [
               _QuickAction(
-                icon: Icons.event_busy, label: 'Leave', color: AppColors.primary,
-                onTap: () => Navigator.push(context, Motion.pageRoute(const ApplyLeaveScreen())),
+                icon: Icons.access_time, label: 'Attendance', color: AppColors.primaryDark,
+                onTap: () => Navigator.push(context, Motion.pageRoute(const AttendanceRequestScreen())),
               ),
               _QuickAction(
-                icon: Icons.receipt, label: 'Claims', color: AppColors.success,
-                onTap: () => Navigator.push(context, Motion.pageRoute(const SubmitClaimScreen())),
+                icon: Icons.event_busy, label: 'Leave', color: AppColors.primary,
+                onTap: () => Navigator.push(context, Motion.pageRoute(const ApplyLeaveScreen())),
               ),
               _QuickAction(
                 icon: Icons.confirmation_num, label: 'Tickets', color: AppColors.orange,
                 onTap: () => Navigator.push(context, Motion.pageRoute(const RaiseTicketScreen())),
               ),
               _QuickAction(
-                icon: Icons.swap_horiz, label: 'Shift', color: AppColors.secondary,
-                onTap: () => Navigator.push(context, Motion.pageRoute(const ShiftChangeScreen())),
-              ),
-              _QuickAction(
                 icon: Icons.work, label: 'Work Type', color: AppColors.pink,
                 onTap: () => Navigator.push(context, Motion.pageRoute(const WorkTypeRequestScreen())),
               ),
               _QuickAction(
-                icon: Icons.access_time, label: 'Attendance', color: AppColors.primaryDark,
-                onTap: () => Navigator.push(context, Motion.pageRoute(const AttendanceRequestScreen())),
+                icon: Icons.swap_horiz, label: 'Shift', color: AppColors.secondary,
+                onTap: () => Navigator.push(context, Motion.pageRoute(const ShiftChangeScreen())),
+              ),
+              _QuickAction(
+                icon: Icons.receipt, label: 'Claims', color: AppColors.success,
+                onTap: () => Navigator.push(context, Motion.pageRoute(const SubmitClaimScreen())),
               ),
             ],
           )
@@ -123,32 +127,6 @@ class DashboardScreen extends StatelessWidget {
             const SizedBox(height: 16),
           ],
 
-          // ── Org Chart for all roles ─────────────────────────────────
-          if (!isManagerOrHr) ...[
-            NeuCard(
-              onTap: () => Navigator.push(context, Motion.pageRoute(const OrgChartScreen())),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.success.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.account_tree_outlined, color: AppColors.success, size: 20),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(child: Text('Organisation Chart', style: theme.textTheme.titleMedium)),
-                  Icon(Icons.chevron_right_rounded, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
-                ],
-              ),
-            )
-                .animate()
-                .fadeIn(duration: 420.ms, delay: 340.ms)
-                .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 340.ms, curve: Curves.easeOutCubic),
-            const SizedBox(height: 16),
-          ],
-
           // ── 4. Manager Insights (Manager/HR only) ─────────────────────
           if (isManagerOrHr) ...[
             _ManagerInsightsSection(isDark: isDark, role: role),
@@ -164,7 +142,17 @@ class DashboardScreen extends StatelessWidget {
           ],
 
           // ── 6. Leave Balance ──────────────────────────────────────────
-          Row(
+          Builder(builder: (context) {
+          // Compute total remaining from breakdown for consistency (exclude LOP)
+          int totalRemaining = 0;
+          for (final lb in provider.leaveBalances) {
+            if (lb['is_unpaid'] == true) continue;
+            final used = ((lb['used'] ?? 0) as num).toInt();
+            final total = ((lb['total'] ?? 0) as num).toInt();
+            totalRemaining += (total - used).clamp(0, 999);
+          }
+          if (provider.leaveBalances.isEmpty) totalRemaining = provider.leaveBalance;
+          return Row(
             children: [
               Expanded(
                 child: NeuCard(
@@ -183,7 +171,7 @@ class DashboardScreen extends StatelessWidget {
                       Text('Leave Balance', style: theme.textTheme.bodySmall),
                       const SizedBox(height: 4),
                       TweenAnimationBuilder<int>(
-                        tween: IntTween(begin: 0, end: provider.leaveBalance),
+                        tween: IntTween(begin: 0, end: totalRemaining),
                         duration: const Duration(milliseconds: 1500),
                         curve: Curves.easeOutCubic,
                         builder: (context, value, _) => Text(
@@ -237,7 +225,8 @@ class DashboardScreen extends StatelessWidget {
           )
               .animate()
               .fadeIn(duration: 420.ms, delay: (isManagerOrHr ? 640 : 400).ms)
-              .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (isManagerOrHr ? 640 : 400).ms, curve: Curves.easeOutCubic),
+              .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (isManagerOrHr ? 640 : 400).ms, curve: Curves.easeOutCubic);
+          }),
           const SizedBox(height: 14),
 
           // ── 7. Leave Summary ──────────────────────────────────────────
@@ -257,31 +246,77 @@ class DashboardScreen extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     Text('Leave Summary', style: theme.textTheme.titleMedium),
+                    const Spacer(),
+                    Builder(builder: (_) {
+                      // Calculate total remaining from visible leave breakdown (exclude LOP)
+                      int totalRemaining = 0;
+                      for (final lb in provider.leaveBalances) {
+                        if (lb['is_unpaid'] == true) continue;
+                        final used = ((lb['used'] ?? 0) as num).toInt();
+                        final total = ((lb['total'] ?? 0) as num).toInt();
+                        totalRemaining += (total - used).clamp(0, 999);
+                      }
+                      // Fall back to provider.leaveBalance if no breakdown
+                      if (provider.leaveBalances.isEmpty) totalRemaining = provider.leaveBalance;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '$totalRemaining days left',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.secondary,
+                          ),
+                        ),
+                      );
+                    }),
                   ],
                 ),
                 const SizedBox(height: 16),
                 if (provider.leaveBalances.isNotEmpty)
-                  Row(
-                    children: [
-                      for (int i = 0; i < provider.leaveBalances.length && i < 3; i++) ...[
-                        if (i > 0) const SizedBox(width: 10),
-                        Expanded(
-                          child: _LeaveTypeChip(
-                            label: (provider.leaveBalances[i]['label'] ?? 'Leave').toString(),
-                            used: ((provider.leaveBalances[i]['used'] ?? 0) as num).toInt(),
-                            total: ((provider.leaveBalances[i]['total'] ?? 1) as num).toInt().clamp(1, 999),
-                            color: [AppColors.primary, AppColors.orange, AppColors.success][i % 3],
-                            isDark: isDark,
-                          ),
-                        ),
-                      ],
-                    ],
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      const spacing = 10.0;
+                      const cols = 3;
+                      final itemWidth = (constraints.maxWidth - spacing * (cols - 1)) / cols;
+                      return Wrap(
+                        spacing: spacing,
+                        runSpacing: spacing,
+                        children: [
+                          for (int i = 0; i < provider.leaveBalances.length; i++)
+                            SizedBox(
+                              width: itemWidth,
+                              child: _LeaveTypeChip(
+                                label: (provider.leaveBalances[i]['label'] ?? 'Leave').toString(),
+                                used: ((provider.leaveBalances[i]['used'] ?? 0) as num).toInt(),
+                                total: ((provider.leaveBalances[i]['total'] ?? 1) as num).toInt().clamp(1, 999),
+                                isUnpaid: provider.leaveBalances[i]['is_unpaid'] == true,
+                                color: provider.leaveBalances[i]['is_unpaid'] == true
+                                    ? AppColors.danger
+                                    : [AppColors.primary, AppColors.orange, AppColors.success, AppColors.secondary, AppColors.pink, AppColors.warning][i % 6],
+                                isDark: isDark,
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   )
                 else
-                  Row(
-                    children: [
-                      _LeaveTypeChip(label: 'Total', used: 0, total: provider.leaveBalance > 0 ? provider.leaveBalance : 1, color: AppColors.primary, isDark: isDark),
-                    ],
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Center(
+                      child: Text(
+                        'No leave balance data',
+                        style: TextStyle(
+                          color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -296,7 +331,7 @@ class DashboardScreen extends StatelessWidget {
             _PerformanceSection(isDark: isDark, role: role),
           ],
 
-          // ── 9. Announcements ──────────────────────────────────────────
+          // ── 9. Announcements (from DB, posted by admin/HR) ─────────────
           NeuCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -314,22 +349,28 @@ class DashboardScreen extends StatelessWidget {
                     const SizedBox(width: 12),
                     Text('Announcements', style: theme.textTheme.titleMedium),
                     const Spacer(),
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(color: AppColors.danger, shape: BoxShape.circle),
-                    ),
+                    if (provider.announcements.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.danger,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${provider.announcements.length}',
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                if (provider.recentActivity.isNotEmpty)
-                  ...provider.recentActivity.take(3).map((a) {
-                    final status = a['status'] ?? '';
+                if (provider.announcements.isNotEmpty)
+                  ...provider.announcements.take(5).map((a) {
                     return Column(children: [
                       _AnnouncementItem(
-                        title: a['title'] ?? 'Activity',
-                        subtitle: '${a['date'] ?? ''} - ${status}',
-                        icon: status == 'approved' ? Icons.check_circle : status == 'rejected' ? Icons.cancel : Icons.pending,
+                        title: a['title'] ?? 'Announcement',
+                        subtitle: a['subtitle'] ?? '',
+                        icon: Icons.campaign_rounded,
                       ),
                       const Divider(height: 16),
                     ]);
@@ -337,7 +378,7 @@ class DashboardScreen extends StatelessWidget {
                 else
                   const Padding(
                     padding: EdgeInsets.all(8.0),
-                    child: Text('No recent activity', style: TextStyle(color: Colors.grey)),
+                    child: Text('No announcements', style: TextStyle(color: Colors.grey)),
                   ),
               ],
             ),
@@ -402,8 +443,9 @@ class DashboardScreen extends StatelessWidget {
             _HrAnalyticsSection(isDark: isDark),
           ],
 
-          const PPulseFooter(),
+
         ],
+      ),
       ),
     );
   }
@@ -1001,27 +1043,53 @@ class _AttendanceTimerCardState extends State<_AttendanceTimerCard> {
                 ),
               const SizedBox(height: 20),
 
-              // Punch button – navigates to Attendance tab
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Navigate to Attendance tab (index 2)
-                    widget.provider.setBottomNavIndex(2);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isPunchedIn ? AppColors.danger : AppColors.orange,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
+              // Punch button or Biometric badge
+              if (widget.provider.isBiometricPunch && isPunchedIn)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                   ),
-                  child: Text(
-                    isPunchedIn ? 'Punch Out' : 'Punch In',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.fingerprint, color: AppColors.primary, size: 22),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Synced from Biometric',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? AppColors.darkText : AppColors.lightText,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      HapticFeedback.mediumImpact();
+                      widget.provider.setBottomNavIndex(2);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isPunchedIn ? AppColors.danger : AppColors.orange,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      isPunchedIn ? 'Punch Out' : 'Punch In',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ),
-              ),
             ],
           );
         },
@@ -1036,13 +1104,15 @@ class _LeaveTypeChip extends StatelessWidget {
   final int total;
   final Color color;
   final bool isDark;
-  const _LeaveTypeChip({required this.label, required this.used, required this.total, required this.color, required this.isDark});
+  final bool isUnpaid;
+  const _LeaveTypeChip({required this.label, required this.used, required this.total, required this.color, required this.isDark, this.isUnpaid = false});
 
   @override
   Widget build(BuildContext context) {
     final remaining = total - used;
-    return Expanded(
-      child: Container(
+    final headline = isUnpaid ? used : remaining;
+    final progressValue = isUnpaid ? (used > 0 ? 1.0 : 0.0) : (used / total);
+    return Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
           color: isDark ? color.withValues(alpha: 0.12) : color.withValues(alpha: 0.08),
@@ -1051,7 +1121,7 @@ class _LeaveTypeChip extends StatelessWidget {
         child: Column(
           children: [
             TweenAnimationBuilder<int>(
-              tween: IntTween(begin: 0, end: remaining),
+              tween: IntTween(begin: 0, end: headline),
               duration: const Duration(milliseconds: 1500),
               curve: Curves.easeOutCubic,
               builder: (context, value, _) => Text('$value', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: color)),
@@ -1062,7 +1132,7 @@ class _LeaveTypeChip extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: used / total),
+                tween: Tween(begin: 0, end: progressValue),
                 duration: const Duration(milliseconds: 1200),
                 curve: Curves.easeOutCubic,
                 builder: (context, value, _) => LinearProgressIndicator(
@@ -1073,10 +1143,9 @@ class _LeaveTypeChip extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Text('$used/$total used', style: TextStyle(fontSize: 9, color: color.withValues(alpha: 0.7))),
+            Text(isUnpaid ? '$used taken' : '$used/$total used', style: TextStyle(fontSize: 9, color: color.withValues(alpha: 0.7))),
           ],
         ),
-      ),
     );
   }
 }
@@ -1172,7 +1241,7 @@ class _QuickAction extends StatelessWidget {
             child: Icon(icon, color: color, size: 22),
           ),
           const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500), textAlign: TextAlign.center),
+          Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkText : AppColors.lightText), textAlign: TextAlign.center),
         ],
       ),
     );

@@ -3,6 +3,7 @@ import '../../animations/success_overlay.dart';
 import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/form_fields.dart';
 
 class AssetRequestScreen extends StatefulWidget {
@@ -15,11 +16,8 @@ class AssetRequestScreen extends StatefulWidget {
 class _AssetRequestScreenState extends State<AssetRequestScreen> {
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
-  String? _selectedUser;
-  String? _selectedCategory;
+  late String _selectedCategory;
   bool _isSubmitting = false;
-
-  List<String> _users = [];
 
   final List<String> _categories = [
     'Laptop', 'Monitor', 'Keyboard & Mouse', 'Headset',
@@ -29,15 +27,7 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
   @override
   void initState() {
     super.initState();
-    _loadEmployees();
-  }
-
-  Future<void> _loadEmployees() async {
-    try {
-      final emps = await ApiService.getEmployees();
-      if (!mounted) return;
-      setState(() { _users = emps.map<String>((e) => e['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList(); });
-    } catch (_) {}
+    _selectedCategory = _categories.first;
   }
 
   @override
@@ -51,7 +41,7 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
     setState(() => _isSubmitting = true);
     try {
       await ApiService.post('/assets/request', {
-        'asset_category': _selectedCategory ?? '',
+        'asset_category': _selectedCategory,
         'description': _descriptionController.text,
       });
       if (!mounted) return;
@@ -72,7 +62,7 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(title: const Text('Asset Request')),
+      appBar: adaptiveAppBar(context: context, title: 'Asset Request', showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Form(
@@ -83,23 +73,13 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
               Text('Asset Request', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
               formFieldGap,
 
-              const FormLabel('Requesting User'),
-              formLabelGap,
-              FormDropdown(
-                value: _selectedUser,
-                hint: 'Select user',
-                items: _users,
-                onChanged: (v) => setState(() => _selectedUser = v),
-              ),
-              formFieldGap,
-
               const FormLabel('Asset Category'),
               formLabelGap,
               FormDropdown(
                 value: _selectedCategory,
                 hint: 'Select category',
                 items: _categories,
-                onChanged: (v) => setState(() => _selectedCategory = v),
+                onChanged: (v) => setState(() => _selectedCategory = v ?? _categories.first),
               ),
               formFieldGap,
 

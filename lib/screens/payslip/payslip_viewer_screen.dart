@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdfx/pdfx.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 
 class PayslipViewerScreen extends StatefulWidget {
   final String month;
@@ -81,8 +82,10 @@ class _PayslipViewerScreenState extends State<PayslipViewerScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.month} ${widget.year} Payslip'),
+      appBar: adaptiveAppBar(
+        context: context,
+        title: '${widget.month} ${widget.year} Payslip',
+        showBackButton: true,
         actions: [
           if (_totalPages > 0)
             Center(

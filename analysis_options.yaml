@@ -1,28 +1,46 @@
-# This file configures the analyzer, which statically analyzes Dart code to
-# check for errors, warnings, and lints.
+# Static analysis configuration.
 #
-# The issues identified by the analyzer are surfaced in the UI of Dart-enabled
-# IDEs (https://dart.dev/tools#ides-and-editors). The analyzer can also be
-# invoked from the command line by running `flutter analyze`.
+# Lint rule set: very_good_analysis (a strict, opinionated superset of
+# flutter_lints used by Very Good Ventures). It catches a much wider range of
+# real bugs and style issues than the default `flutter_lints` package.
+#
+# Adding it to an existing codebase always surfaces lots of pre-existing
+# warnings. To avoid breaking the build all at once, the `analyzer.errors`
+# block below demotes the noisiest rules from `warning` to `info` so they
+# show up as suggestions in the IDE without failing `flutter analyze`. As we
+# clean things up we can promote each one back to `warning` (or remove the
+# override entirely to inherit the strict default).
 
-# The following line activates a set of recommended lints for Flutter apps,
-# packages, and plugins designed to encourage good coding practices.
-include: package:flutter_lints/flutter.yaml
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "build/**"
+    - "lib/generated_plugin_registrant.dart"
+
+  errors:
+    # Style preferences — demoted to info so they don't break CI.
+    public_member_api_docs: ignore
+    lines_longer_than_80_chars: ignore
+    document_ignores: ignore
+    avoid_redundant_argument_values: info
+    use_setters_to_change_properties: info
+    cascade_invocations: info
+    sort_constructors_first: info
+    sort_unnamed_constructors_first: info
+    avoid_classes_with_only_static_members: info
+    one_member_abstracts: info
+    prefer_int_literals: info
+    avoid_positional_boolean_parameters: info
+    flutter_style_todos: info
+    require_trailing_commas: info
+    diagnostic_describe_all_properties: ignore
+    avoid_dynamic_calls: info
+    avoid_setters_without_getters: info
 
 linter:
-  # The lint rules applied to this project can be customized in the
-  # section below to disable rules from the `package:flutter_lints/flutter.yaml`
-  # included above or to enable additional rules. A list of all available lints
-  # and their documentation is published at https://dart.dev/lints.
-  #
-  # Instead of disabling a lint rule for the entire project in the
-  # section below, it can also be suppressed for a single line of code
-  # or a specific dart file by using the `// ignore: name_of_lint` and
-  # `// ignore_for_file: name_of_lint` syntax on the line or in the file
-  # producing the lint.
   rules:
-    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
-    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
-
-# Additional information about this file can be found at
-# https://dart.dev/guides/language/analysis-options
+    # Project-specific overrides go here. Empty for now — we inherit the
+    # full very_good_analysis rule set.

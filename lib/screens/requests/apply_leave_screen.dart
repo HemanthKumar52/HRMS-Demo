@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import '../../animations/success_overlay.dart';
 import '../../providers/app_provider.dart';
 import '../../services/api_service.dart';
+import '../../services/live_activity_service.dart';
 import '../../services/notification_service.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/form_fields.dart';
 
 class ApplyLeaveScreen extends StatefulWidget {
@@ -19,11 +21,12 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   String? _selectedLeaveType;
   DateTime? _startDate;
   DateTime? _endDate;
-  String? _startBreakdown;
-  String? _endBreakdown;
+  late String _startBreakdown;
+  late String _endBreakdown;
   final _descriptionController = TextEditingController();
   bool _isSubmitting = false;
   String? _attachmentName;
+  bool _attachmentEnabled = false;
 
   List<String> _leaveTypes = [];
 
@@ -36,6 +39,8 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   @override
   void initState() {
     super.initState();
+    _startBreakdown = _breakdownOptions.first;
+    _endBreakdown = _breakdownOptions.first;
     _loadLeaveTypes();
   }
 
@@ -45,9 +50,15 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
       if (!mounted) return;
       setState(() {
         _leaveTypes = types.map<String>((t) => t['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+        if (_leaveTypes.isNotEmpty) {
+          _selectedLeaveType = _leaveTypes.first;
+        }
       });
     } catch (_) {
       _leaveTypes = ['Casual Leave', 'Sick Leave', 'Earned Leave'];
+      if (mounted) {
+        setState(() => _selectedLeaveType = _leaveTypes.first);
+      }
     }
   }
 
@@ -74,13 +85,19 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
         'leave_type': _selectedLeaveType!,
         'start_date': _startDate!.toIso8601String().split('T')[0],
         'end_date': _endDate!.toIso8601String().split('T')[0],
-        'start_breakdown': (_startBreakdown ?? 'Full Day').toLowerCase().replaceAll(' ', '_'),
-        'end_breakdown': (_endBreakdown ?? 'Full Day').toLowerCase().replaceAll(' ', '_'),
+        'start_breakdown': _startBreakdown.toLowerCase().replaceAll(' ', '_'),
+        'end_breakdown': _endBreakdown.toLowerCase().replaceAll(' ', '_'),
         'description': _descriptionController.text,
       });
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       NotificationService.instance.showRequestApplied('Leave');
+      // Start leave tracking live activity
+      LiveActivityService.instance.startLeaveTracking(
+        leaveType: _selectedLeaveType!,
+        dateRange: '${formatDate(_startDate)} - ${formatDate(_endDate)}',
+        status: 'submitted',
+      );
       // Refresh notifications so badge updates
       try { await ApiService.getNotifications().then((data) {
         if (!mounted) return;
@@ -108,7 +125,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(title: const Text('Leave')),
+      appBar: adaptiveAppBar(context: context, title: 'Leave', showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Form(
@@ -125,8 +142,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                 value: _selectedLeaveType,
                 hint: 'Select leave type',
                 items: _leaveTypes,
-                onChanged: (v) => setState(() => _selectedLeaveType = v),
-                validator: (v) => v == null ? 'Please select a leave type' : null,
+                onChanged: (v) => setState(() => _selectedLeaveType = v ?? (_leaveTypes.isNotEmpty ? _leaveTypes.first : null)),
               ),
               formFieldGap,
 
@@ -153,7 +169,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                 value: _startBreakdown,
                 hint: 'Select breakdown',
                 items: _breakdownOptions,
-                onChanged: (v) => setState(() => _startBreakdown = v),
+                onChanged: (v) => setState(() => _startBreakdown = v ?? _breakdownOptions.first),
               ),
               formFieldGap,
 
@@ -175,15 +191,23 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                 value: _endBreakdown,
                 hint: 'Select breakdown',
                 items: _breakdownOptions,
-                onChanged: (v) => setState(() => _endBreakdown = v),
+                onChanged: (v) => setState(() => _endBreakdown = v ?? _breakdownOptions.first),
               ),
               formFieldGap,
 
-              const FormLabel('Attachment'),
+              const FormLabel('Description'),
               formLabelGap,
-              FormAttachment(
+              FormInput(controller: _descriptionController, hint: 'Description', maxLines: 4),
+              formFieldGap,
+
+              FormAttachmentToggle(
+                enabled: _attachmentEnabled,
                 fileName: _attachmentName,
-                onTap: () async {
+                onToggle: (v) => setState(() {
+                  _attachmentEnabled = v;
+                  if (!v) _attachmentName = null;
+                }),
+                onPick: () async {
                   final picker = ImagePicker();
                   final XFile? file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
                   if (file != null) {
@@ -192,11 +216,6 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                 },
                 onRemove: () => setState(() => _attachmentName = null),
               ),
-              formFieldGap,
-
-              const FormLabel('Description'),
-              formLabelGap,
-              FormInput(controller: _descriptionController, hint: 'Description', maxLines: 4),
               formSectionGap,
 
               FormActionButtons(isSubmitting: _isSubmitting, onSubmit: _submit),

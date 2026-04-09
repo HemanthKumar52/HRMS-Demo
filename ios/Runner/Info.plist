@@ -30,6 +30,10 @@
 	<string>This app needs access to your photo library to attach images to requests and claims.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>This app needs access to your camera to capture receipts and documents.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app uses your location to verify attendance punch in/out for compliance and audit purposes.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>This app uses your location to verify attendance punch in/out for compliance and audit purposes.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -51,6 +55,8 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

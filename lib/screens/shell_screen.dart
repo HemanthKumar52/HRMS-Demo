@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
+import '../utils/platform_adaptive.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/dynamic_island.dart';
 import '../theme/app_theme.dart';
@@ -102,6 +105,134 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       PayslipScreen(),
     ];
 
+    if (isApplePlatform) {
+      return _buildIOSShell(context, provider, isDark, screens);
+    }
+    return _buildAndroidShell(context, provider, isDark, screens);
+  }
+
+  Widget _buildIOSShell(BuildContext context, AppProvider provider, bool isDark, List<Widget> screens) {
+    return Scaffold(
+      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+      appBar: AppBar(
+        toolbarHeight: 52,
+        backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Good ${_getGreeting()},',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+              ),
+            ),
+            Text(
+              provider.userName.split(' ').first,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppColors.darkText : AppColors.lightText,
+                letterSpacing: -0.3,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _showNotifications(context);
+            },
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  CupertinoIcons.bell,
+                  color: isDark ? AppColors.darkText : AppColors.lightText,
+                  size: 22,
+                ),
+                if (provider.unreadNotifications > 0)
+                  Positioned(
+                    top: -4,
+                    right: -6,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: AppColors.danger,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isDark ? AppColors.darkBg : AppColors.lightBg,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Text(
+                        '${provider.unreadNotifications > 9 ? '9+' : provider.unreadNotifications}',
+                        style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: () => showProfileSheet(context),
+              child: _buildProfileAvatar(provider, isDark, 36),
+            ),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          IndexedStack(
+            index: provider.bottomNavIndex.clamp(0, screens.length - 1),
+            children: screens,
+          ),
+          const DynamicIslandOverlay(),
+        ],
+      ),
+      bottomNavigationBar: CupertinoTabBar(
+        currentIndex: provider.bottomNavIndex,
+        onTap: (index) {
+          HapticFeedback.selectionClick();
+          provider.setBottomNavIndex(index);
+        },
+        activeColor: AppColors.primary,
+        inactiveColor: CupertinoColors.systemGrey,
+        backgroundColor: isDark
+            ? AppColors.darkBg.withValues(alpha: 0.9)
+            : AppColors.lightBg.withValues(alpha: 0.9),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.square_grid_2x2_fill),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.doc_text_fill),
+            label: 'Requests',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.hand_raised_fill),
+            label: 'Attendance',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.creditcard_fill),
+            label: 'Payroll',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAndroidShell(BuildContext context, AppProvider provider, bool isDark, List<Widget> screens) {
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 52,
@@ -127,63 +258,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           ],
         ),
         actions: [
-          // Notification bell with red dot badge
-          Padding(
-            padding: const EdgeInsets.only(right: 4),
-            child: GestureDetector(
-              onTap: () => _showNotifications(context),
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: isDark
-                    ? null
-                    : BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0xFFE4E8EE),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFBEC3CE).withValues(alpha: 0.5),
-                            offset: const Offset(3, 3),
-                            blurRadius: 6,
-                          ),
-                          const BoxShadow(
-                            color: Color(0xFFFDFFFF),
-                            offset: Offset(-2, -2),
-                            blurRadius: 6,
-                          ),
-                        ],
-                      ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    const Icon(Icons.notifications_outlined, size: 22),
-                    if (provider.unreadNotifications > 0)
-                      Positioned(
-                        top: 6,
-                        right: 6,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                          decoration: BoxDecoration(
-                            color: AppColors.danger,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: isDark ? const Color(0xFF1A1B2E) : const Color(0xFFE4E8EE),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Text(
-                            '${provider.unreadNotifications > 9 ? '9+' : provider.unreadNotifications}',
-                            style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          _buildNotificationButton(provider, isDark),
           // Profile avatar
           Padding(
             padding: const EdgeInsets.only(right: 16),
@@ -203,6 +278,71 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           const FloatingBottomNav(),
           const DynamicIslandOverlay(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationButton(AppProvider provider, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 4),
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          _showNotifications(context);
+        },
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: isDark || isApplePlatform
+              ? null
+              : BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFFE4E8EE),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFBEC3CE).withValues(alpha: 0.5),
+                      offset: const Offset(3, 3),
+                      blurRadius: 6,
+                    ),
+                    const BoxShadow(
+                      color: Color(0xFFFDFFFF),
+                      offset: Offset(-2, -2),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Icon(
+                isApplePlatform ? CupertinoIcons.bell : Icons.notifications_outlined,
+                size: 22,
+              ),
+              if (provider.unreadNotifications > 0)
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.danger,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF1A1B2E) : const Color(0xFFE4E8EE),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Text(
+                      '${provider.unreadNotifications > 9 ? '9+' : provider.unreadNotifications}',
+                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

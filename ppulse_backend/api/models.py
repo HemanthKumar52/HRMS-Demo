@@ -1,5 +1,5 @@
-from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.db import models
 
 
 class UserManager(BaseUserManager):
@@ -75,7 +75,7 @@ class Employee(models.Model):
 
     @property
     def name(self):
-        return f"{self.employee_first_name or ''} {self.employee_last_name or ''}".strip()
+        return f'{self.employee_first_name or ""} {self.employee_last_name or ""}'.strip()
 
     @property
     def avatar_url(self):
@@ -254,6 +254,22 @@ class Attendance(models.Model):
     expected_check_out = models.TimeField(blank=True, null=True)
     attendance_attachment = models.CharField(max_length=100, blank=True, null=True)
 
+    # ── Source tracking (mobile/biometric/web) ───────────────
+    punch_in_source = models.CharField(max_length=20, blank=True, null=True)
+    punch_out_source = models.CharField(max_length=20, blank=True, null=True)
+
+    # ── Location capture (silent, backend-only) ──────────────
+    punch_in_lat = models.FloatField(blank=True, null=True)
+    punch_in_lng = models.FloatField(blank=True, null=True)
+    punch_in_location = models.CharField(max_length=255, blank=True, null=True)
+    punch_out_lat = models.FloatField(blank=True, null=True)
+    punch_out_lng = models.FloatField(blank=True, null=True)
+    punch_out_location = models.CharField(max_length=255, blank=True, null=True)
+
+    # ── Device info (silent, backend-only) ───────────────────
+    punch_in_device = models.CharField(max_length=255, blank=True, null=True)
+    punch_out_device = models.CharField(max_length=255, blank=True, null=True)
+
     class Meta:
         managed = True
         db_table = 'attendance_attendance'
@@ -302,6 +318,7 @@ class TicketType(models.Model):
 
 class ClaimRequest(models.Model):
     """Maps to helpdesk_claimrequest - approval on a ticket"""
+
     is_active = models.BooleanField(default=True)
     is_approved = models.BooleanField(default=False)
     is_rejected = models.BooleanField(default=False)
@@ -415,6 +432,7 @@ class WorkTypeRequest(models.Model):
 
 class AttendanceRequest(models.Model):
     """Maps to attendance_permission_request"""
+
     requested_date = models.DateField(blank=True, null=True)
     from_time = models.TimeField(blank=True, null=True)
     to_time = models.TimeField(blank=True, null=True)
@@ -422,6 +440,9 @@ class AttendanceRequest(models.Model):
     status = models.TextField(default='requested', blank=True, null=True)
     employee_id = models.BigIntegerField(db_column='employee_id', blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
+    attendance_type = models.TextField(blank=True, null=True)
+    shift_name = models.TextField(blank=True, null=True)
+    attachment_name = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = True
@@ -519,6 +540,29 @@ class DeviceToken(models.Model):
     class Meta:
         managed = True
         db_table = 'device_token'
+
+
+class EmployeeFaceData(models.Model):
+    """Stores face embedding(s) for an employee, used for WFH face-verified punch-in.
+
+    One row per employee. `embedding` is a packed float32 vector (512 dims for ArcFace
+    buffalo_l) representing the L2-normalized average of all enrolled samples.
+    """
+
+    employee_id_id = models.BigIntegerField(unique=True, blank=True, null=True)
+    embedding = models.BinaryField(blank=True, null=True)
+    embedding_dim = models.IntegerField(default=512)
+    num_samples = models.IntegerField(default=0)
+    source_files = models.TextField(blank=True, null=True)  # comma-separated filenames
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        managed = True
+        db_table = 'employee_face_data'
+
+    def __str__(self):
+        return f'FaceData(emp={self.employee_id_id}, samples={self.num_samples})'
 
 
 class UserSettings(models.Model):

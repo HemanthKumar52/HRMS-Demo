@@ -6,8 +6,50 @@ import '../../providers/app_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/form_fields.dart';
 import '../../widgets/neu_card.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/status_chip.dart';
+
+/// Build a human-readable duration string from the request's metadata.
+/// Returns null if no date info is available.
+String? _buildDuration(Map<String, dynamic> data) {
+  final md = data['metadata'] as Map<String, dynamic>? ?? {};
+  final fmt = DateFormat('dd MMM yyyy');
+
+  // Leave, Work Type, Shift — have start_date / end_date
+  final startRaw = md['start_date'] ?? md['date'];
+  final endRaw = md['end_date'];
+
+  if (startRaw != null) {
+    try {
+      final start = DateTime.parse(startRaw.toString());
+      final startStr = fmt.format(start);
+      if (endRaw != null && endRaw.toString().isNotEmpty && endRaw != startRaw) {
+        final end = DateTime.parse(endRaw.toString());
+        final days = end.difference(start).inDays + 1;
+        return '$startStr – ${fmt.format(end)} ($days day${days > 1 ? 's' : ''})';
+      }
+      final reqDays = md['requested_days'];
+      if (reqDays != null) {
+        final d = (reqDays as num).toDouble();
+        return '$startStr (${d % 1 == 0 ? d.toInt() : d} day${d > 1 ? 's' : ''})';
+      }
+      return startStr;
+    } catch (_) {
+      return startRaw.toString();
+    }
+  }
+
+  // Attendance Requests — from_time / to_time
+  final from = md['from_time'];
+  final to = md['to_time'];
+  if (from != null || to != null) {
+    return '${from ?? '--:--'} – ${to ?? '--:--'}';
+  }
+
+  return null;
+}
 
 class RequestDetailScreen extends StatefulWidget {
   final Map<String, dynamic>? requestData;
@@ -163,10 +205,10 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text(isManagerViewingEmployee
-            ? 'Employee Request'
-            : 'Request Details'),
+      appBar: adaptiveAppBar(
+        context: context,
+        title: isManagerViewingEmployee ? 'Employee Request' : 'Request Details',
+        showBackButton: true,
         actions: [
           // Only show edit icon for employee viewing their own pending request
           if (!isManagerViewingEmployee && isPending)
@@ -302,12 +344,12 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                     label: 'Type',
                     value: data['type'] as String? ?? '-',
                   ),
-                  if (data['subtitle'] != null) ...[
+                  if (_buildDuration(data) != null) ...[
                     const SizedBox(height: 12),
                     _DetailRow(
                       icon: Icons.date_range_rounded,
                       label: 'Duration',
-                      value: data['subtitle'] as String,
+                      value: _buildDuration(data)!,
                     ),
                   ],
                   // Removed duplicate Status row - already shown in header chip
@@ -672,43 +714,19 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   width: double.infinity,
                   height: 50,
                   child: OutlinedButton(
-                    onPressed: () {
-                      showDialog(
+                    onPressed: () async {
+                      final confirmed = await showAdaptiveConfirmDialog(
                         context: context,
-                        builder: (ctx) => AlertDialog(
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20)),
-                          title: const Text('Cancel Request?'),
-                          content: const Text(
-                              'Are you sure you want to cancel this request? This action cannot be undone.'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('No, Keep It'),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content:
-                                        const Text('Request cancelled'),
-                                    backgroundColor: AppColors.danger,
-                                    behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12)),
-                                  ),
-                                );
-                              },
-                              child: const Text('Yes, Cancel',
-                                  style:
-                                      TextStyle(color: AppColors.danger)),
-                            ),
-                          ],
-                        ),
+                        title: 'Cancel Request?',
+                        content: 'Are you sure you want to cancel this request? This action cannot be undone.',
+                        cancelText: 'No, Keep It',
+                        confirmText: 'Yes, Cancel',
+                        isDestructive: true,
                       );
+                      if (confirmed == true && context.mounted) {
+                        Navigator.pop(context);
+                        showErrorSnackbar(context, 'Request cancelled');
+                      }
                     },
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: AppColors.danger),
@@ -739,10 +757,6 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     final submittedTime = DateFormat('hh:mm a').format(now);
 
     if (status == 'Accepted') {
-      final reviewDate =
-          DateFormat('dd MMM yyyy').format(now.subtract(const Duration(hours: 4)));
-      final reviewTime =
-          DateFormat('hh:mm a').format(now.subtract(const Duration(hours: 4)));
       final approveDate =
           DateFormat('dd MMM yyyy').format(now.subtract(const Duration(hours: 1)));
       final approveTime =
@@ -755,12 +769,6 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
           'done': true
         },
         {
-          'step': 'Under Review',
-          'date': reviewDate,
-          'time': reviewTime,
-          'done': true
-        },
-        {
           'step': 'Approved',
           'date': approveDate,
           'time': approveTime,
@@ -768,10 +776,6 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
         },
       ];
     } else if (status == 'Rejected') {
-      final reviewDate =
-          DateFormat('dd MMM yyyy').format(now.subtract(const Duration(hours: 3)));
-      final reviewTime =
-          DateFormat('hh:mm a').format(now.subtract(const Duration(hours: 3)));
       final rejectDate =
           DateFormat('dd MMM yyyy').format(now.subtract(const Duration(hours: 1)));
       final rejectTime =
@@ -781,12 +785,6 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
           'step': 'Submitted',
           'date': submittedDate,
           'time': submittedTime,
-          'done': true
-        },
-        {
-          'step': 'Under Review',
-          'date': reviewDate,
-          'time': reviewTime,
           'done': true
         },
         {
@@ -806,13 +804,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
           'time': submittedTime,
           'done': true
         },
-        {
-          'step': 'Under Review',
-          'date': 'Pending',
-          'time': '',
-          'done': false
-        },
-        {'step': 'Final Approval', 'date': '', 'time': '', 'done': false},
+        {'step': 'Pending Approval', 'date': '', 'time': '', 'done': false},
       ];
     }
   }

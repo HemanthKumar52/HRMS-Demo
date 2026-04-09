@@ -353,7 +353,7 @@ class EmployeeHome extends StatelessWidget {
                         icon: Icons.login_rounded,
                         color: AppColors.primary,
                         title: 'Attendance Today',
-                        subtitle: provider.isPunchedIn 
+                        subtitle: provider.isPunchedIn
                             ? 'Punched in at ${provider.punchInTime?.hour ?? 0}:${provider.punchInTime?.minute.toString().padLeft(2, '0') ?? '00'}'
                             : 'Not punched in yet',
                         time: provider.isPunchedIn ? 'Today' : 'N/A',
@@ -568,37 +568,64 @@ class _AttendanceTimerCard extends StatelessWidget {
             Text('Punched in at', style: theme.textTheme.bodySmall),
             const SizedBox(height: 16),
           ],
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                if (!isPunchedIn) {
-                  showDialog(
-                    context: context,
-                    builder: (_) => const FaceVerificationDialog(),
-                  );
-                } else {
-                  provider.togglePunch();
-                }
-              },
-              icon: Icon(isPunchedIn ? Icons.logout : Icons.login),
-              label: Text(
-                isPunchedIn ? 'Punch Out' : 'Punch In',
-                style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.w600),
+          if (provider.isBiometricPunch && isPunchedIn)
+            Container(
+              width: double.infinity,
+              height: 50,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    isPunchedIn ? AppColors.danger : AppColors.success,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.fingerprint, color: AppColors.primary, size: 22),
+                  SizedBox(width: 10),
+                  Text(
+                    'Synced from Biometric',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  if (!isPunchedIn) {
+                    showDialog(
+                      context: context,
+                      builder: (_) => const FaceVerificationDialog(),
+                    );
+                  } else {
+                    provider.togglePunch();
+                  }
+                },
+                icon: Icon(isPunchedIn ? Icons.logout : Icons.login),
+                label: Text(
+                  isPunchedIn ? 'Punch Out' : 'Punch In',
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600),
                 ),
-                elevation: 0,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      isPunchedIn ? AppColors.danger : AppColors.success,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 0,
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

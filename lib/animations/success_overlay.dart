@@ -75,7 +75,9 @@ class _SuccessDialogState extends State<_SuccessDialog>
           child: ScaleTransition(
             scale: _scaleAnim,
             child: Center(
-              child: Container(
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
                 width: 200,
                 padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
                 decoration: BoxDecoration(
@@ -111,6 +113,7 @@ class _SuccessDialogState extends State<_SuccessDialog>
                     ),
                   ],
                 ),
+              ),
               ),
             ),
           ),

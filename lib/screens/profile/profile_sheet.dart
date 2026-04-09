@@ -6,6 +6,7 @@ import '../auth/login_screen.dart';
 import 'profile_screen.dart';
 import '../directory/directory_screen.dart';
 import '../settings/settings_screen.dart';
+import '../dashboard/org_chart_screen.dart';
 import '../../animations/motion.dart';
 
 void showProfileSheet(BuildContext context) {
@@ -165,6 +166,17 @@ class _ProfileSheet extends StatelessWidget {
                   Navigator.push(
                     context,
                     Motion.pageRoute(const DirectoryScreen()),
+                  );
+                },
+              ),
+              _MenuItem(
+                icon: Icons.account_tree_outlined,
+                label: 'Organization Chart',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    Motion.pageRoute(const OrgChartScreen()),
                   );
                 },
               ),
