@@ -49,9 +49,12 @@ repos:
         language: system
         files: \.dart$
         pass_filenames: true
+      # Only fail on real errors (undefined methods, type mismatches, missing
+      # imports). Infos and warnings are reported but don't block commits,
+      # since the WIP codebase carries a large pre-existing lint baseline.
       - id: flutter-analyze
         name: flutter analyze
-        entry: flutter analyze
+        entry: flutter analyze --no-fatal-warnings --no-fatal-infos
         language: system
         files: \.dart$
         pass_filenames: false

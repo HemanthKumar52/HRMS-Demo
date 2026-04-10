@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
+import '../../widgets/request_action_dialog.dart';
 import '../../widgets/status_chip.dart';
 
 /// Manager approvals screen — driven entirely from `/v1/requests?role=manager&status=pending&type=...`.
@@ -43,40 +44,49 @@ class _ApprovalsScreenState extends State<ApprovalsScreen>
       children: [
         // Tab Bar
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-          child: NeuCard(
-            padding: const EdgeInsets.all(4),
-            child: TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              indicator: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(16),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: NeuCard(
+                padding: const EdgeInsets.all(4),
+                child: TabBar(
+                  controller: _tabController,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  indicator: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  labelColor: Colors.white,
+                  unselectedLabelColor: isDark
+                      ? AppColors.darkSubtext
+                      : AppColors.lightSubtext,
+                  labelStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  unselectedLabelStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  dividerHeight: 0,
+                  tabs: const [
+                    Tab(text: 'Leave'),
+                    Tab(text: 'Claims'),
+                    Tab(text: 'Tickets'),
+                    Tab(text: 'Work Type'),
+                    Tab(text: 'Regularization'),
+                  ],
+                ),
               ),
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: Colors.white,
-              unselectedLabelColor:
-                  isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
-              labelStyle:
-                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-              unselectedLabelStyle:
-                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-              dividerHeight: 0,
-              tabs: const [
-                Tab(text: 'Leave'),
-                Tab(text: 'Claims'),
-                Tab(text: 'Tickets'),
-                Tab(text: 'Work Type'),
-                Tab(text: 'Regularization'),
-              ],
+            )
+            .animate()
+            .fadeIn(duration: 420.ms)
+            .slideY(
+              begin: 0.12,
+              end: 0,
+              duration: 400.ms,
+              curve: Curves.easeOutCubic,
             ),
-          ),
-        ).animate().fadeIn(duration: 420.ms).slideY(
-            begin: 0.12,
-            end: 0,
-            duration: 400.ms,
-            curve: Curves.easeOutCubic),
         const SizedBox(height: 8),
 
         // Tab Views
@@ -102,10 +112,15 @@ class _ApprovalsScreenState extends State<ApprovalsScreen>
 // ---------------------------------------------------------------------------
 
 String _initialsOf(String name) {
-  final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  final parts = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((p) => p.isNotEmpty)
+      .toList();
   if (parts.isEmpty) return '?';
   if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-  return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
+  return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
+      .toUpperCase();
 }
 
 const _avatarPalette = [
@@ -134,7 +149,8 @@ String _formatDate(String? iso) {
 }
 
 String _formatDateRange(String? start, String? end) {
-  if ((start == null || start.isEmpty) && (end == null || end.isEmpty)) return '—';
+  if ((start == null || start.isEmpty) && (end == null || end.isEmpty))
+    return '—';
   if (end == null || end.isEmpty || start == end) return _formatDate(start);
   return '${_formatDate(start)} – ${_formatDate(end)}';
 }
@@ -195,7 +211,9 @@ class _RequestsTabState extends State<_RequestsTab>
         status: 'pending',
         type: widget.typeFilter,
       );
-      final list = List<Map<String, dynamic>>.from(resp['requests'] ?? const []);
+      final list = List<Map<String, dynamic>>.from(
+        resp['requests'] ?? const [],
+      );
       if (!mounted) return;
       setState(() {
         _items = list;
@@ -210,12 +228,20 @@ class _RequestsTabState extends State<_RequestsTab>
     }
   }
 
-  /// Optimistically removes the row, calls the API, restores on failure.
+  /// Open the action dialog (mandatory reason for reject, optional comment for
+  /// approve), then call the API. Optimistic removal with rollback on failure.
   Future<void> _act({
     required Map<String, dynamic> req,
     required bool approve,
-    String? reason,
   }) async {
+    final type = (req['type'] as String? ?? 'Request');
+    final reason = await RequestActionDialog.show(
+      context,
+      approve: approve,
+      requestType: _humanType(type),
+    );
+    if (reason == null) return; // user cancelled
+
     final id = int.tryParse(req['id']?.toString() ?? '');
     if (id == null) return;
 
@@ -225,7 +251,10 @@ class _RequestsTabState extends State<_RequestsTab>
 
     try {
       if (approve) {
-        await ApiService.acceptRequest(id);
+        await ApiService.acceptRequest(
+          id,
+          comment: reason.isEmpty ? null : reason,
+        );
       } else {
         await ApiService.rejectRequest(id, reason: reason);
       }
@@ -245,6 +274,29 @@ class _RequestsTabState extends State<_RequestsTab>
         }
       });
       _showSnack('Action failed: ${e.toString()}', AppColors.danger);
+    }
+  }
+
+  /// Convert a backend type label like "Work Type Requests" or "Attendance
+  /// Requests" into a friendlier dialog title.
+  String _humanType(String type) {
+    switch (type) {
+      case 'Leave':
+        return 'Leave Request';
+      case 'Claims':
+        return 'Claim Request';
+      case 'Tickets':
+        return 'Ticket Request';
+      case 'Work Type Requests':
+        return 'Work Type Request';
+      case 'Attendance Requests':
+        return 'Regularization Request';
+      case 'Shift Requests':
+        return 'Shift Request';
+      case 'Asset Requests':
+        return 'Asset Request';
+      default:
+        return type;
     }
   }
 
@@ -275,7 +327,10 @@ class _RequestsTabState extends State<_RequestsTab>
       return _ErrorState(message: _error!, onRetry: _load);
     }
     if (_items.isEmpty) {
-      return _EmptyState(label: 'No pending ${widget.typeFilter.toLowerCase()} to review', onRefresh: _load);
+      return _EmptyState(
+        label: 'No pending ${widget.typeFilter.toLowerCase()} to review',
+        onRefresh: _load,
+      );
     }
 
     return RefreshIndicator(
@@ -307,22 +362,48 @@ class _RequestsTabState extends State<_RequestsTab>
   }
 
   Widget _buildCard(Map<String, dynamic> req) {
-    VoidCallback approve() => () => _act(req: req, approve: true);
-    VoidCallback reject() => () => _act(req: req, approve: false);
+    VoidCallback approve() =>
+        () => _act(req: req, approve: true);
+    VoidCallback reject() =>
+        () => _act(req: req, approve: false);
     final type = (req['type'] ?? '').toString();
     switch (type) {
       case 'Leave':
-        return _LeaveCard(request: req, onApprove: approve(), onReject: reject());
+        return _LeaveCard(
+          request: req,
+          onApprove: approve(),
+          onReject: reject(),
+        );
       case 'Claims':
-        return _ClaimCard(request: req, onApprove: approve(), onReject: reject());
+        return _ClaimCard(
+          request: req,
+          onApprove: approve(),
+          onReject: reject(),
+        );
       case 'Tickets':
-        return _TicketCard(request: req, onApprove: approve(), onReject: reject());
+        return _TicketCard(
+          request: req,
+          onApprove: approve(),
+          onReject: reject(),
+        );
       case 'Work Type Requests':
-        return _WorkTypeCard(request: req, onApprove: approve(), onReject: reject());
+        return _WorkTypeCard(
+          request: req,
+          onApprove: approve(),
+          onReject: reject(),
+        );
       case 'Attendance Requests':
-        return _RegularizationCard(request: req, onApprove: approve(), onReject: reject());
+        return _RegularizationCard(
+          request: req,
+          onApprove: approve(),
+          onReject: reject(),
+        );
       default:
-        return _LeaveCard(request: req, onApprove: approve(), onReject: reject());
+        return _LeaveCard(
+          request: req,
+          onApprove: approve(),
+          onReject: reject(),
+        );
     }
   }
 }
@@ -465,7 +546,10 @@ class _CardHeader extends StatelessWidget {
 class _ApproveRejectButtons extends StatelessWidget {
   final VoidCallback onApprove;
   final VoidCallback onReject;
-  const _ApproveRejectButtons({required this.onApprove, required this.onReject});
+  const _ApproveRejectButtons({
+    required this.onApprove,
+    required this.onReject,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -477,8 +561,10 @@ class _ApproveRejectButtons extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: onApprove,
               icon: const Icon(Icons.check, size: 18),
-              label: const Text('Approve',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
+              label: const Text(
+                'Approve',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.success,
                 foregroundColor: Colors.white,
@@ -497,8 +583,10 @@ class _ApproveRejectButtons extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: onReject,
               icon: const Icon(Icons.close, size: 18),
-              label: const Text('Reject',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
+              label: const Text(
+                'Reject',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.danger,
                 foregroundColor: Colors.white,
@@ -522,7 +610,11 @@ class _LeaveCard extends StatelessWidget {
   final Map<String, dynamic> request;
   final VoidCallback onApprove;
   final VoidCallback onReject;
-  const _LeaveCard({required this.request, required this.onApprove, required this.onReject});
+  const _LeaveCard({
+    required this.request,
+    required this.onApprove,
+    required this.onReject,
+  });
 
   Color _typeColor(String t) {
     final lower = t.toLowerCase();
@@ -546,7 +638,10 @@ class _LeaveCard extends StatelessWidget {
     final md = (request['metadata'] ?? {}) as Map;
     final leaveType = (md['leave_type'] ?? 'Leave').toString();
     final reason = (md['reason'] ?? request['description'] ?? '').toString();
-    final dateRange = _formatDateRange(md['start_date']?.toString(), md['end_date']?.toString());
+    final dateRange = _formatDateRange(
+      md['start_date']?.toString(),
+      md['end_date']?.toString(),
+    );
     final color = _typeColor(leaveType);
 
     return NeuCard(
@@ -560,14 +655,36 @@ class _LeaveCard extends StatelessWidget {
                 Icon(_typeIcon(leaveType), size: 14, color: color),
                 const SizedBox(width: 4),
                 Text(
-                  leaveType,
-                  style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+                  'Leave Request',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
             trailing: StatusChip.pending(),
           ),
           const SizedBox(height: 14),
+          // Type chip (sick / casual / earned …).
+          if (leaveType.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                leaveType,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          if (leaveType.isNotEmpty) const SizedBox(height: 10),
           Row(
             children: [
               const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
@@ -604,7 +721,11 @@ class _ClaimCard extends StatelessWidget {
   final Map<String, dynamic> request;
   final VoidCallback onApprove;
   final VoidCallback onReject;
-  const _ClaimCard({required this.request, required this.onApprove, required this.onReject});
+  const _ClaimCard({
+    required this.request,
+    required this.onApprove,
+    required this.onReject,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -612,7 +733,8 @@ class _ClaimCard extends StatelessWidget {
     final emp = (request['employee'] ?? {}) as Map;
     final md = (request['metadata'] ?? {}) as Map;
     final category = (md['category'] ?? 'Claim').toString();
-    final description = (md['description'] ?? request['description'] ?? '').toString();
+    final description = (md['description'] ?? request['description'] ?? '')
+        .toString();
     final amount = md['amount'];
     final date = _formatDate(request['created_date']?.toString());
 
@@ -622,13 +744,13 @@ class _ClaimCard extends StatelessWidget {
         children: [
           _CardHeader(
             employeeName: (emp['name'] ?? '').toString(),
-            badge: Row(
+            badge: const Row(
               children: [
-                const Icon(Icons.receipt_long, size: 14, color: AppColors.orange),
-                const SizedBox(width: 4),
+                Icon(Icons.receipt_long, size: 14, color: AppColors.orange),
+                SizedBox(width: 4),
                 Text(
-                  category,
-                  style: const TextStyle(
+                  'Claim Request',
+                  style: TextStyle(
                     color: AppColors.orange,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -639,10 +761,37 @@ class _ClaimCard extends StatelessWidget {
             trailing: StatusChip.pending(),
           ),
           const SizedBox(height: 14),
+          // Category chip (Travel, Food, …) — sourced from the linked ticket title.
+          if (category.isNotEmpty && category != 'Claim')
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.orange.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  category,
+                  style: const TextStyle(
+                    color: AppColors.orange,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
           if (amount != null)
             Row(
               children: [
-                const Icon(Icons.currency_rupee, size: 16, color: AppColors.success),
+                const Icon(
+                  Icons.currency_rupee,
+                  size: 16,
+                  color: AppColors.success,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   amount.toString(),
@@ -672,7 +821,9 @@ class _ClaimCard extends StatelessWidget {
               children: [
                 const Icon(Icons.notes, size: 14, color: Colors.grey),
                 const SizedBox(width: 6),
-                Expanded(child: Text(description, style: theme.textTheme.bodyMedium)),
+                Expanded(
+                  child: Text(description, style: theme.textTheme.bodyMedium),
+                ),
               ],
             ),
           const SizedBox(height: 16),
@@ -690,7 +841,11 @@ class _TicketCard extends StatelessWidget {
   final Map<String, dynamic> request;
   final VoidCallback onApprove;
   final VoidCallback onReject;
-  const _TicketCard({required this.request, required this.onApprove, required this.onReject});
+  const _TicketCard({
+    required this.request,
+    required this.onApprove,
+    required this.onReject,
+  });
 
   Color _priorityColor(String p) {
     switch (p.toLowerCase()) {
@@ -737,57 +892,58 @@ class _TicketCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: _avatarColorFor(empName).withValues(alpha: 0.15),
-                child: Text(
-                  _initialsOf(empName),
+          _CardHeader(
+            employeeName: empName,
+            badge: Row(
+              children: [
+                Icon(Icons.support_agent, size: 14, color: color),
+                const SizedBox(width: 4),
+                Text(
+                  'Ticket Request',
                   style: TextStyle(
-                    color: _avatarColorFor(empName),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
+              ],
+            ),
+            trailing: StatusChip(
+              label: priority,
+              color: color,
+              icon: _priorityIcon(priority),
+            ),
+          ),
+          const SizedBox(height: 14),
+          // Ticket title + type chip.
+          if (title.isNotEmpty)
+            Text(
+              title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Text(empName, style: theme.textTheme.bodySmall),
-                        if (ticketType.isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.secondary.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              ticketType,
-                              style: const TextStyle(
-                                color: AppColors.secondary,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          if (ticketType.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                ticketType,
+                style: const TextStyle(
+                  color: AppColors.secondary,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              StatusChip(label: priority, color: color, icon: _priorityIcon(priority)),
-            ],
-          ),
-          const SizedBox(height: 12),
+            ),
+          ],
+          const SizedBox(height: 10),
           Row(
             children: [
               const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
@@ -819,7 +975,11 @@ class _WorkTypeCard extends StatelessWidget {
   final Map<String, dynamic> request;
   final VoidCallback onApprove;
   final VoidCallback onReject;
-  const _WorkTypeCard({required this.request, required this.onApprove, required this.onReject});
+  const _WorkTypeCard({
+    required this.request,
+    required this.onApprove,
+    required this.onReject,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -829,7 +989,10 @@ class _WorkTypeCard extends StatelessWidget {
     final workType = (md['work_type'] ?? 'Work From Home').toString();
     final currentType = (md['current_work_type'] ?? 'Office').toString();
     final reason = (md['reason'] ?? '').toString();
-    final dateRange = _formatDateRange(md['start_date']?.toString(), md['end_date']?.toString());
+    final dateRange = _formatDateRange(
+      md['start_date']?.toString(),
+      md['end_date']?.toString(),
+    );
     final isWfh = workType.toLowerCase().contains('home');
     final color = isWfh ? AppColors.primary : AppColors.secondary;
     final icon = isWfh ? Icons.home_work : Icons.swap_horiz;
@@ -845,8 +1008,12 @@ class _WorkTypeCard extends StatelessWidget {
                 Icon(icon, size: 14, color: color),
                 const SizedBox(width: 4),
                 Text(
-                  workType,
-                  style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+                  'Work Type Request',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -862,24 +1029,33 @@ class _WorkTypeCard extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  currentType,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade600,
+                Flexible(
+                  child: Text(
+                    currentType,
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Icon(Icons.arrow_forward, size: 16, color: color),
                 ),
-                Text(
-                  workType,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: color,
+                Flexible(
+                  child: Text(
+                    workType,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -900,7 +1076,9 @@ class _WorkTypeCard extends StatelessWidget {
               children: [
                 const Icon(Icons.notes, size: 14, color: Colors.grey),
                 const SizedBox(width: 6),
-                Expanded(child: Text(reason, style: theme.textTheme.bodyMedium)),
+                Expanded(
+                  child: Text(reason, style: theme.textTheme.bodyMedium),
+                ),
               ],
             ),
           const SizedBox(height: 16),
@@ -918,7 +1096,11 @@ class _RegularizationCard extends StatelessWidget {
   final Map<String, dynamic> request;
   final VoidCallback onApprove;
   final VoidCallback onReject;
-  const _RegularizationCard({required this.request, required this.onApprove, required this.onReject});
+  const _RegularizationCard({
+    required this.request,
+    required this.onApprove,
+    required this.onReject,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -926,7 +1108,9 @@ class _RegularizationCard extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final emp = (request['employee'] ?? {}) as Map;
     final md = (request['metadata'] ?? {}) as Map;
-    final date = _formatDate(md['date']?.toString() ?? request['created_date']?.toString());
+    final date = _formatDate(
+      md['date']?.toString() ?? request['created_date']?.toString(),
+    );
     final fromTime = _formatTime(md['from_time']?.toString());
     final toTime = _formatTime(md['to_time']?.toString());
     final reason = (md['reason'] ?? request['description'] ?? '').toString();
@@ -942,7 +1126,7 @@ class _RegularizationCard extends StatelessWidget {
                 Icon(Icons.access_time, size: 14, color: AppColors.secondary),
                 SizedBox(width: 4),
                 Text(
-                  'Attendance Regularization',
+                  'Regularization Request',
                   style: TextStyle(
                     color: AppColors.secondary,
                     fontSize: 12,
@@ -985,7 +1169,9 @@ class _RegularizationCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+                          color: isDark
+                              ? AppColors.darkSubtext
+                              : AppColors.lightSubtext,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -1009,7 +1195,9 @@ class _RegularizationCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+                          color: isDark
+                              ? AppColors.darkSubtext
+                              : AppColors.lightSubtext,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -1034,7 +1222,9 @@ class _RegularizationCard extends StatelessWidget {
               children: [
                 const Icon(Icons.notes, size: 14, color: Colors.grey),
                 const SizedBox(width: 6),
-                Expanded(child: Text(reason, style: theme.textTheme.bodyMedium)),
+                Expanded(
+                  child: Text(reason, style: theme.textTheme.bodyMedium),
+                ),
               ],
             ),
           const SizedBox(height: 16),
