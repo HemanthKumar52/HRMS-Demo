@@ -80,7 +80,9 @@ class _ProfileSheet extends StatelessWidget {
                               content: const Text('Image picker coming soon'),
                               backgroundColor: AppColors.primary,
                               behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                               duration: const Duration(seconds: 1),
                             ),
                           );
@@ -129,8 +131,10 @@ class _ProfileSheet extends StatelessWidget {
               // Employee ID
               Center(
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -169,17 +173,8 @@ class _ProfileSheet extends StatelessWidget {
                   );
                 },
               ),
-              _MenuItem(
-                icon: Icons.account_tree_outlined,
-                label: 'Organization Chart',
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    Motion.pageRoute(const OrgChartScreen()),
-                  );
-                },
-              ),
+              // Organization Chart removed — already exposed via the
+              // dashboard "Management" grid for manager/HR/admin roles.
               _MenuItem(
                 icon: Icons.settings_outlined,
                 label: 'Settings',
@@ -217,7 +212,11 @@ class _ProfileSheet extends StatelessWidget {
 Widget _buildAvatar(AppProvider provider, ThemeData theme, double radius) {
   final avatarUrl = provider.userProfile['avatar_url'] as String?;
   final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
-  final initials = provider.userName.split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join();
+  final initials = provider.userName
+      .split(' ')
+      .map((e) => e.isNotEmpty ? e[0] : '')
+      .take(2)
+      .join();
 
   if (hasAvatar) {
     return CircleAvatar(
@@ -230,8 +229,14 @@ Widget _buildAvatar(AppProvider provider, ThemeData theme, double radius) {
   return CircleAvatar(
     radius: radius,
     backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-    child: Text(initials, style: theme.textTheme.headlineLarge?.copyWith(
-      color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: radius * 0.6)),
+    child: Text(
+      initials,
+      style: theme.textTheme.headlineLarge?.copyWith(
+        color: AppColors.primary,
+        fontWeight: FontWeight.w700,
+        fontSize: radius * 0.6,
+      ),
+    ),
   );
 }
 

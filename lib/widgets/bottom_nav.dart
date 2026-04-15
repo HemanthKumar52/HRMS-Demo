@@ -13,8 +13,8 @@ class FloatingBottomNav extends StatelessWidget {
     final provider = context.watch<AppProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Unified nav items for all roles
-    final items = [
+    // Same tabs for everyone — admin tools are accessed via the dashboard.
+    final items = <_NavItem>[
       _NavItem(Icons.grid_view_rounded, 'Dashboard'),
       _NavItem(Icons.assignment_outlined, 'Requests'),
       _NavItem(Icons.fingerprint_rounded, 'Attendance'),
@@ -25,53 +25,61 @@ class FloatingBottomNav extends StatelessWidget {
       bottom: 16,
       left: 20,
       right: 20,
-      child: Container(
-        height: 70,
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E2030) : const Color(0xFFE4E8EE),
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: isDark
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
-                  ),
-                ]
-              : [
-                  BoxShadow(
-                    color: const Color(0xFFBEC3CE).withValues(alpha: 0.6),
-                    offset: const Offset(6, 6),
-                    blurRadius: 15,
-                    spreadRadius: 1,
-                  ),
-                  const BoxShadow(
-                    color: Color(0xFFFDFFFF),
-                    offset: Offset(-6, -6),
-                    blurRadius: 15,
-                    spreadRadius: 1,
-                  ),
-                ],
-        ),
-        child: Row(
-          children: List.generate(items.length, (index) {
-            final isActive = provider.bottomNavIndex == index;
-            return Expanded(
-              child: _NavButton(
-                item: items[index],
-                isActive: isActive,
-                onTap: () => provider.setBottomNavIndex(index),
+      child:
+          Container(
+                height: 70,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF1E2030)
+                      : const Color(0xFFE4E8EE),
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: isDark
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 24,
+                            offset: const Offset(0, 8),
+                          ),
+                        ]
+                      : [
+                          BoxShadow(
+                            color: const Color(
+                              0xFFBEC3CE,
+                            ).withValues(alpha: 0.6),
+                            offset: const Offset(6, 6),
+                            blurRadius: 15,
+                            spreadRadius: 1,
+                          ),
+                          const BoxShadow(
+                            color: Color(0xFFFDFFFF),
+                            offset: Offset(-6, -6),
+                            blurRadius: 15,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                ),
+                child: Row(
+                  children: List.generate(items.length, (index) {
+                    final isActive = provider.bottomNavIndex == index;
+                    return Expanded(
+                      child: _NavButton(
+                        item: items[index],
+                        isActive: isActive,
+                        onTap: () => provider.setBottomNavIndex(index),
+                      ),
+                    );
+                  }),
+                ),
+              )
+              .animate()
+              .fadeIn(duration: 500.ms, delay: 200.ms)
+              .slideY(
+                begin: 0.3,
+                end: 0,
+                duration: 500.ms,
+                delay: 200.ms,
+                curve: Curves.easeOutCubic,
               ),
-            );
-          }),
-        ),
-      ).animate().fadeIn(duration: 500.ms, delay: 200.ms).slideY(
-            begin: 0.3,
-            end: 0,
-            duration: 500.ms,
-            delay: 200.ms,
-            curve: Curves.easeOutCubic,
-          ),
     );
   }
 }
@@ -103,14 +111,17 @@ class _NavButtonState extends State<_NavButton>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _bounceAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.85), weight: 30),
-      TweenSequenceItem(tween: Tween(begin: 0.85, end: 1.1), weight: 40),
-      TweenSequenceItem(tween: Tween(begin: 1.1, end: 1.0), weight: 30),
-    ]).animate(CurvedAnimation(
-      parent: _bounceController,
-      curve: Curves.easeInOut,
-    ));
+    _bounceAnimation =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.85), weight: 30),
+          TweenSequenceItem(tween: Tween(begin: 0.85, end: 1.1), weight: 40),
+          TweenSequenceItem(tween: Tween(begin: 1.1, end: 1.0), weight: 30),
+        ]).animate(
+          CurvedAnimation(
+            parent: _bounceController,
+            curve: Curves.easeInOut,
+          ),
+        );
   }
 
   @override
@@ -160,8 +171,9 @@ class _NavButtonState extends State<_NavButton>
                   style: TextStyle(
                     color: widget.isActive ? AppColors.primary : Colors.grey,
                     fontSize: 11,
-                    fontWeight:
-                        widget.isActive ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: widget.isActive
+                        ? FontWeight.w600
+                        : FontWeight.w400,
                   ),
                 ),
               ],

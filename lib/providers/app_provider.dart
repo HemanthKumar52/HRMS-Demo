@@ -52,8 +52,7 @@ class AppProvider extends ChangeNotifier {
 
   Timer? _attendancePollTimer;
   Timer? _heartbeatTimer;
-  Timer? _timesheetReminderTimer;
-  DateTime? _lastTimesheetReminderAt;
+  // Timesheet removed — timers cleaned up.
 
   AppProvider() {
     _loadUserData();
@@ -63,7 +62,6 @@ class AppProvider extends ChangeNotifier {
   void dispose() {
     _attendancePollTimer?.cancel();
     _heartbeatTimer?.cancel();
-    _timesheetReminderTimer?.cancel();
     super.dispose();
   }
 
@@ -76,50 +74,6 @@ class AppProvider extends ChangeNotifier {
     _heartbeatTimer = Timer.periodic(interval, (_) {
       if (_isLoggedIn) ApiService.heartbeat();
     });
-  }
-
-  /// Hourly timesheet reminder. After punch-in, every 60 minutes we ask the
-  /// backend how many hours are unfilled vs. worked. If the gap is ≥ 1h
-  /// AND the user has timesheet reminders enabled, fire a local push.
-  void _startTimesheetReminder({
-    Duration interval = const Duration(minutes: 60),
-  }) {
-    _timesheetReminderTimer?.cancel();
-    _timesheetReminderTimer = Timer.periodic(interval, (_) async {
-      if (!_isLoggedIn || !_isPunchedIn) return;
-      try {
-        final r = await ApiService.getTimesheetUnfilled();
-        final unfilled = ((r['unfilled_hours'] ?? 0) as num).toDouble();
-        if (unfilled >= 1.0) {
-          await NotificationService.instance.show(
-            title: 'Fill your timesheet',
-            body:
-                '${unfilled.toStringAsFixed(1)}h not yet logged. Open the Attendance tab to add an entry.',
-            payload: 'timesheet_reminder',
-          );
-          _lastTimesheetReminderAt = DateTime.now();
-        }
-      } catch (_) {
-        /* network blip — try next tick */
-      }
-    });
-  }
-
-  /// Fire a final high-priority timesheet reminder when the user logs out
-  /// if there's still un-logged time today.
-  Future<void> _flushTimesheetReminderOnLogout() async {
-    try {
-      final r = await ApiService.getTimesheetUnfilled();
-      final unfilled = ((r['unfilled_hours'] ?? 0) as num).toDouble();
-      if (unfilled >= 0.5) {
-        await NotificationService.instance.show(
-          title: '⚠ Timesheet incomplete',
-          body:
-              'You logged out with ${unfilled.toStringAsFixed(1)}h not filled in your timesheet.',
-          payload: 'timesheet_logout',
-        );
-      }
-    } catch (_) {}
   }
 
   /// Start polling /attendance/today every [interval] so a biometric punch made
@@ -232,7 +186,6 @@ class AppProvider extends ChangeNotifier {
       await fetchDashboardData();
       _startAttendancePolling();
       _startHeartbeat();
-      _startTimesheetReminder();
     }
   }
 
@@ -459,12 +412,16 @@ class AppProvider extends ChangeNotifier {
   /// WFH face-verified punch-in. Returns null on success, or an error code string
   /// on failure (e.g. 'GEOFENCE_OFFICE', 'WFH_OUT_OF_ZONE', 'FACE_VERIFICATION_FAILED',
   /// 'FACE_MISMATCH', 'BIOMETRIC_PUNCH_ACTIVE', 'ALREADY_PUNCHED_IN').
-  Future<String?> facePunchIn(String imageBase64) async {
+  Future<String?> facePunchIn(
+    String imageBase64, {
+    List<String>? extraFrames,
+  }) async {
     try {
       final metadata = await PunchMetadataService.instance.capture();
       await ApiService.facePunchIn(
         imageBase64: imageBase64,
         metadata: metadata,
+        extraFrames: extraFrames,
       );
       _isPunchedIn = true;
       _punchInTime = DateTime.now();
@@ -663,18 +620,13 @@ class AppProvider extends ChangeNotifier {
     );
     _startAttendancePolling();
     _startHeartbeat();
-    _startTimesheetReminder();
   }
 
   void logout() async {
-    // Fire one final timesheet reminder before tearing everything down.
-    await _flushTimesheetReminderOnLogout();
     _attendancePollTimer?.cancel();
     _attendancePollTimer = null;
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
-    _timesheetReminderTimer?.cancel();
-    _timesheetReminderTimer = null;
     _isLoggedIn = false;
     _userName = '';
     _designation = '';

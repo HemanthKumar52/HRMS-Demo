@@ -1,6 +1,7 @@
 from calendar import monthrange
 from datetime import date, datetime, timedelta
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Q, Sum
 from django.shortcuts import get_object_or_404
@@ -42,7 +43,6 @@ from .serializers import (
     ClaimSubmitSerializer,
     DeviceRegisterSerializer,
     LeaveApplySerializer,
-    LoginSerializer,
     PunchInSerializer,
     PunchOutSerializer,
     RefreshTokenSerializer,
@@ -88,6 +88,107 @@ def create_notification(recipient_user_id, verb, description=''):
         pass
 
 
+def save_cc_for_request(request_type, request_id, cc_user_ids, *, requester_name, request_title):
+    """Persist CC user IDs for a request and fire read-only notifications.
+
+    `cc_user_ids` is a list of `User.id` values (NOT employee.id). The CC'd
+    users get a Notification row that they can read in the Notifications tab
+    but they have no approval rights — the listing screens skip them in the
+    "Approvals" tab because the filter is by `reporting_manager_id_id`.
+    """
+    if not cc_user_ids:
+        return
+    from .models import RequestCc
+
+    seen = set()
+    for raw in cc_user_ids:
+        try:
+            uid = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if uid in seen:
+            continue
+        seen.add(uid)
+        try:
+            user = User.objects.filter(id=uid).first()
+            if not user:
+                continue
+            RequestCc.objects.update_or_create(
+                request_type=request_type,
+                request_id=request_id,
+                user_id=uid,
+                defaults={'user_name': user.username or ''},
+            )
+            # Fire notification on the cc'd user.
+            create_notification(
+                uid,
+                f"You were CC'd on a {request_type} request",
+                f'{requester_name} CC\'d you on "{request_title}".',
+            )
+        except Exception:
+            continue
+
+
+def cc_users_for_request(request_type, request_id):
+    """Return the list of CC'd users for a (type, id) pair."""
+    from .models import RequestCc
+
+    rows = RequestCc.objects.filter(request_type=request_type, request_id=request_id).order_by('id')
+    return [
+        {
+            'user_id': r.user_id,
+            'user_name': r.user_name,
+        }
+        for r in rows
+    ]
+
+
+def write_audit(
+    request, *, action, target_type=None, target_id=None, target_user_id=None, target_name=None, payload=None
+):
+    """Append an entry to the AuditLog table. Best-effort, never raises."""
+    try:
+        import json as _json
+
+        from .models import AuditLog
+
+        actor = getattr(request, 'user', None)
+        actor_user_id = getattr(actor, 'id', None) if actor else None
+        actor_name = ''
+        actor_role = ''
+        if actor and getattr(actor, 'id', None):
+            emp = get_employee_from_user(actor)
+            if emp:
+                actor_name = emp.name
+            if actor.is_superuser:
+                actor_role = 'admin'
+            elif actor.is_staff:
+                actor_role = 'hr'
+            else:
+                actor_role = 'employee'
+        ip = ''
+        try:
+            ip = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or request.META.get(
+                'REMOTE_ADDR', ''
+            )
+        except Exception:
+            pass
+        AuditLog.objects.create(
+            actor_user_id=actor_user_id,
+            actor_name=actor_name or None,
+            actor_role=actor_role or None,
+            target_user_id=target_user_id,
+            target_name=target_name,
+            action=action,
+            target_type=target_type,
+            target_id=str(target_id) if target_id is not None else None,
+            payload=_json.dumps(payload, default=str) if payload else None,
+            ip_address=ip or None,
+        )
+    except Exception:
+        pass
+
+
 def notify_managers_of_request(employee, request_type, title):
     """Notify the employee's manager about a new request."""
     work_info = EmployeeWorkInformation.objects.filter(employee_id_id=employee.id).first()
@@ -101,16 +202,192 @@ def notify_managers_of_request(employee, request_type, title):
             )
 
 
+# ── Failed-login monitor tunables ────────────────────────────────────────
+FAILED_LOGIN_LOCKOUT_THRESHOLD = 50  # raised for dev; tighten to 5 in production
+FAILED_LOGIN_LOCKOUT_MINUTES = 1  # short lockout during dev
+
+
+def _client_ip(request):
+    """Best-effort client IP — honors X-Forwarded-For for proxy chains."""
+    try:
+        xff = request.META.get('HTTP_X_FORWARDED_FOR', '')
+        if xff:
+            return xff.split(',')[0].strip()
+        return request.META.get('REMOTE_ADDR', '') or ''
+    except Exception:
+        return ''
+
+
+def _ip_allowed(ip):
+    """Check the AllowedIp table.
+
+    • Empty / no active rows → allowed (backwards compatible)
+    • Otherwise: allow only when `ip` matches any active CIDR
+    """
+    import ipaddress as _ipa
+
+    from .models import AllowedIp
+
+    if not ip:
+        return True  # cannot resolve — don't block (would lock everyone out)
+    try:
+        rows = list(AllowedIp.objects.filter(is_active=True).values_list('cidr', flat=True))
+    except Exception:
+        return True
+    if not rows:
+        return True
+    try:
+        addr = _ipa.ip_address(ip)
+    except ValueError:
+        return True  # malformed IP — don't block
+    for cidr in rows:
+        try:
+            if addr in _ipa.ip_network(cidr.strip(), strict=False):
+                return True
+        except ValueError:
+            continue
+    return False
+
+
+def _record_login(request, *, user, role, success=True):
+    """Append a row to LoginRecord with everything we know about this attempt."""
+    try:
+        from .models import LoginRecord
+
+        LoginRecord.objects.create(
+            user_id=getattr(user, 'id', 0) or 0,
+            user_name=getattr(user, 'username', '') or '',
+            role=role or '',
+            latitude=request.data.get('latitude'),
+            longitude=request.data.get('longitude'),
+            location_name=(request.data.get('location_name') or '')[:255],
+            device_info=(request.data.get('device_info') or '')[:255],
+            ip_address=_client_ip(request)[:64],
+            user_agent=(request.META.get('HTTP_USER_AGENT', '') or '')[:1000],
+            success=success,
+        )
+    except Exception:
+        pass
+
+
+def _user_role(user, employee):
+    """Compute the public role string for a user. superuser > hr > manager > employee."""
+    if user.is_superuser:
+        return 'admin'
+    if user.is_staff:
+        return 'hr'
+    if employee and EmployeeWorkInformation.objects.filter(reporting_manager_id_id=employee.id).exists():
+        return 'manager'
+    return 'employee'
+
+
+def _issue_tokens(user):
+    """Build a versioned RefreshToken/AccessToken pair for a user. Bumps fail
+    counters reset on successful issue."""
+    refresh = RefreshToken.for_user(user)
+    refresh['tv'] = int(getattr(user, 'token_version', 0) or 0)
+    access = refresh.access_token
+    access['tv'] = int(getattr(user, 'token_version', 0) or 0)
+    return access, refresh
+
+
 class AuthView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = LoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data['user']
+        from datetime import timedelta
+
+        from django.contrib.auth import authenticate
+
+        username = (request.data.get('username') or '').strip()
+        password = request.data.get('password') or ''
+        if not username or not password:
+            return Response(
+                {'error': {'code': 'INVALID_CREDENTIALS', 'message': 'Username and password are required'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # IP allowlist (admin-managed). Empty table = allow all.
+        client_ip = _client_ip(request)
+        if not _ip_allowed(client_ip):
+            write_audit(
+                request,
+                action='login_blocked_ip',
+                payload={'ip': client_ip, 'username': username},
+            )
+            return Response(
+                {
+                    'error': {
+                        'code': 'IP_NOT_ALLOWED',
+                        'message': 'Login from this network is not permitted.',
+                        'ip': client_ip,
+                    }
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Look up the user up-front so we can apply lockout BEFORE trying to
+        # validate the password. (We don't reveal which step failed.)
+        user_row = User.objects.filter(username__iexact=username).first()
+
+        # Lockout check.
+        if user_row and user_row.locked_until and user_row.locked_until > timezone.now():
+            mins = int((user_row.locked_until - timezone.now()).total_seconds() / 60) + 1
+            write_audit(
+                request,
+                action='login_blocked_locked',
+                target_type='User',
+                target_id=user_row.id,
+                target_user_id=user_row.id,
+                target_name=user_row.username,
+            )
+            return Response(
+                {
+                    'error': {
+                        'code': 'ACCOUNT_LOCKED',
+                        'message': f'Too many failed attempts. Try again in {mins} minute(s).',
+                    }
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        # Now actually try to authenticate.
+        user = authenticate(username=username, password=password)
+        if not user:
+            # Increment failed-login counter on the looked-up row (if any) and
+            # lock when the threshold is crossed.
+            if user_row:
+                user_row.failed_login_count = (user_row.failed_login_count or 0) + 1
+                if user_row.failed_login_count >= FAILED_LOGIN_LOCKOUT_THRESHOLD:
+                    user_row.locked_until = timezone.now() + timedelta(minutes=FAILED_LOGIN_LOCKOUT_MINUTES)
+                user_row.save(update_fields=['failed_login_count', 'locked_until'])
+                write_audit(
+                    request,
+                    action='login_failed',
+                    target_type='User',
+                    target_id=user_row.id,
+                    target_user_id=user_row.id,
+                    target_name=user_row.username,
+                    payload={'failed_count': user_row.failed_login_count},
+                )
+            return Response(
+                {'error': {'code': 'INVALID_CREDENTIALS', 'message': 'Invalid credentials'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not user.is_active:
+            return Response(
+                {'error': {'code': 'ACCOUNT_DISABLED', 'message': 'User account is disabled'}},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Successful auth — reset the failed counter.
+        if user.failed_login_count or user.locked_until:
+            user.failed_login_count = 0
+            user.locked_until = None
+            user.save(update_fields=['failed_login_count', 'locked_until'])
 
         employee = get_employee_from_user(user)
-
         if not employee:
             return Response({'error': 'Employee profile not found'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -129,19 +406,30 @@ class AuthView(APIView):
             department = ''
             designation = ''
 
-        # Determine role
-        if user.is_staff:
-            role = 'hr'
-        elif EmployeeWorkInformation.objects.filter(reporting_manager_id_id=employee.id).exists():
-            role = 'manager'
-        else:
-            role = 'employee'
+        role = _user_role(user, employee)
+        access, refresh = _issue_tokens(user)
 
-        refresh = RefreshToken.for_user(user)
+        write_audit(
+            request,
+            action='login_success',
+            target_type='User',
+            target_id=user.id,
+            target_user_id=user.id,
+            target_name=user.username,
+            payload={
+                'role': role,
+                'lat': request.data.get('latitude'),
+                'lng': request.data.get('longitude'),
+                'location_name': request.data.get('location_name'),
+                'device': request.data.get('device_info'),
+                'ip': client_ip,
+            },
+        )
+        _record_login(request, user=user, role=role, success=True)
 
         return Response(
             {
-                'access_token': str(refresh.access_token),
+                'access_token': str(access),
                 'refresh_token': str(refresh),
                 'expires_in': 3600,
                 'user': {
@@ -204,6 +492,60 @@ class ChangePasswordView(APIView):
         return Response({'message': 'Password changed successfully'})
 
 
+class ForgotPasswordView(APIView):
+    """Mobile-friendly version of Horilla's HorillaPasswordResetView.
+
+    Accepts a username or email and triggers Django's standard password-reset
+    email — same token machinery the web side uses, so the link the user
+    receives is identical and lands on the existing reset_password.html page.
+
+    Always returns 200 (regardless of whether the user exists) so the endpoint
+    can't be used to enumerate accounts.
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        from django.contrib.auth.forms import PasswordResetForm
+
+        identifier = (request.data.get('email') or request.data.get('username') or '').strip()
+        if not identifier:
+            return Response(
+                {'error': {'code': 'IDENTIFIER_REQUIRED', 'message': 'Email or username is required'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Look up the user by username OR email so the user can use either.
+        user = (
+            User.objects.filter(username__iexact=identifier).first()
+            or User.objects.filter(email__iexact=identifier).first()
+        )
+
+        if user and user.is_active and user.email:
+            try:
+                form = PasswordResetForm({'email': user.email})
+                if form.is_valid():
+                    form.save(
+                        use_https=request.is_secure(),
+                        request=request,
+                        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', None),
+                        email_template_name='registration/password_reset_email.html',
+                        subject_template_name='registration/password_reset_subject.txt',
+                    )
+            except Exception as e:
+                # Best-effort: log but never reveal failure to the caller.
+                import logging as _log
+
+                _log.getLogger(__name__).warning('FORGOT_PASSWORD email send failed: %s', e)
+
+        # Same response shape regardless of outcome to prevent enumeration.
+        return Response(
+            {
+                'message': "If that account exists, we've sent a password reset link to the email on file.",
+            }
+        )
+
+
 class UserMeView(APIView):
     def get(self, request):
         user = request.user
@@ -235,8 +577,10 @@ class UserMeView(APIView):
                         'employee_id': reporting_emp.badge_id or str(reporting_emp.id),
                     }
 
-        # Determine role: hr if is_staff, manager if has direct reports, else employee
-        if user.is_staff:
+        # Determine role: superuser > hr > manager > employee.
+        if user.is_superuser:
+            role = 'admin'
+        elif user.is_staff:
             role = 'hr'
         elif EmployeeWorkInformation.objects.filter(reporting_manager_id_id=employee.id).exists():
             role = 'manager'
@@ -348,7 +692,9 @@ def _is_biometric_source(source):
 
 
 # ── Office geofence ──────────────────────────────────────────────
-# Olympia Pinnacle (Smartworks), Thoraipakkam, Chennai
+# Office geofences are now stored in the `api_geofence` table and managed via
+# the admin Settings → Geofences screen. The legacy hardcoded list below is
+# kept only as a seed reference and is no longer consulted at runtime.
 OFFICE_LOCATIONS = [
     {
         'name': 'Olympia Pinnacle (Smartworks) - Thoraipakkam',
@@ -379,7 +725,10 @@ def _haversine_meters(lat1, lon1, lat2, lon2):
 
 
 def _office_for_location(lat, lng):
-    """Return the office dict if (lat,lng) is within any office radius, else None."""
+    """Return the office geofence dict if (lat,lng) is within any office
+    radius, else None. Reads from the `api_geofence` table — the admin can
+    edit/add/disable zones without a code change.
+    """
     if lat is None or lng is None:
         return None
     try:
@@ -387,10 +736,22 @@ def _office_for_location(lat, lng):
         lng_f = float(lng)
     except (TypeError, ValueError):
         return None
-    for office in OFFICE_LOCATIONS:
-        dist = _haversine_meters(lat_f, lng_f, office['latitude'], office['longitude'])
-        if dist <= office['radius_meters']:
-            return office
+    from .models import Geofence
+
+    try:
+        zones = Geofence.objects.filter(is_office=True, is_active=True)
+    except Exception:
+        return None
+    for z in zones:
+        dist = _haversine_meters(lat_f, lng_f, z.latitude, z.longitude)
+        if dist <= z.radius_meters:
+            return {
+                'id': z.id,
+                'name': z.name,
+                'latitude': z.latitude,
+                'longitude': z.longitude,
+                'radius_meters': z.radius_meters,
+            }
     return None
 
 
@@ -546,6 +907,30 @@ class AttendanceFaceVerifyPunchInView(APIView):
         lat = data.get('latitude')
         lng = data.get('longitude')
 
+        import logging as _log
+
+        _log.getLogger(__name__).info(
+            'FACE_PUNCH_IN emp=%s source=%s lat=%s lng=%s device=%r',
+            employee.id,
+            source,
+            lat,
+            lng,
+            data.get('device_info', ''),
+        )
+
+        # 0. Location is mandatory for the WFH face flow — without it we can't
+        #    enforce the office geofence and the audit trail is meaningless.
+        if lat is None or lng is None:
+            return Response(
+                {
+                    'error': {
+                        'code': 'LOCATION_REQUIRED',
+                        'message': 'Location permission is required for face check-in. Enable it in Settings.',
+                    }
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         # 1. Office geofence — same rule as the regular punch-in path.
         if _is_mobile_source(source):
             office = _office_for_location(lat, lng)
@@ -594,14 +979,41 @@ class AttendanceFaceVerifyPunchInView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # 4. Face verification.
-        result = face_verify(data['image'])
+        # 4. Face verification (with multi-frame liveness when available).
+        extra_frames = data.get('extra_frames')  # list of base64 strings
+        result = face_verify(data['image'], extra_frames=extra_frames)
+        import logging as _log
+
+        _log.getLogger(__name__).info(
+            'FACE_VERIFY emp=%s authed_emp=%s matched=%s conf=%.4f reason=%s elapsed=%.0fms',
+            result.employee_id,
+            employee.id,
+            result.matched,
+            result.confidence,
+            result.reason,
+            result.elapsed_ms,
+        )
         if not result.matched:
+            write_audit(
+                request,
+                action='face_punch_in_failed',
+                target_type='Employee',
+                target_id=employee.id,
+                target_user_id=employee.id,
+                target_name=employee.name,
+                payload={
+                    'reason': result.reason,
+                    'confidence': round(result.confidence, 4),
+                    'lat': lat,
+                    'lng': lng,
+                },
+            )
             return Response(
                 {
                     'error': {
                         'code': 'FACE_VERIFICATION_FAILED',
-                        'reason': result.reason,  # unknown_user / no_face / too_dark / liveness_failed / ...
+                        'message': 'Face verification failed',
+                        'reason': result.reason,
                         'confidence': round(result.confidence, 4),
                         'elapsed_ms': round(result.elapsed_ms, 1),
                     }
@@ -609,12 +1021,34 @@ class AttendanceFaceVerifyPunchInView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        if result.employee_id != employee.id:
+        # Compare as ints to avoid str/int mismatch silently passing the check.
+        try:
+            matched_id = int(result.employee_id) if result.employee_id is not None else None
+            authed_id = int(employee.id)
+        except (TypeError, ValueError):
+            matched_id, authed_id = result.employee_id, employee.id
+
+        if matched_id != authed_id:
+            write_audit(
+                request,
+                action='face_punch_in_mismatch',
+                target_type='Employee',
+                target_id=employee.id,
+                target_user_id=employee.id,
+                target_name=employee.name,
+                payload={
+                    'matched_employee_id': matched_id,
+                    'confidence': round(result.confidence, 4),
+                    'lat': lat,
+                    'lng': lng,
+                },
+            )
             # Face matched a different enrolled employee — reject as imposter.
             return Response(
                 {
                     'error': {
                         'code': 'FACE_MISMATCH',
+                        'message': 'Face does not match this account',
                         'reason': 'face_does_not_match_user',
                         'confidence': round(result.confidence, 4),
                         'elapsed_ms': round(result.elapsed_ms, 1),
@@ -659,6 +1093,21 @@ class AttendanceFaceVerifyPunchInView(APIView):
                 excluded_gaps='',
                 **meta,
             )
+
+        write_audit(
+            request,
+            action='face_punch_in_succeeded',
+            target_type='Attendance',
+            target_id=attendance.id,
+            target_user_id=employee.id,
+            target_name=employee.name,
+            payload={
+                'confidence': round(result.confidence, 4),
+                'lat': lat,
+                'lng': lng,
+                'source': source,
+            },
+        )
 
         return Response(
             {
@@ -994,47 +1443,101 @@ class AttendanceWeeklyView(APIView):
 
 
 class AttendanceTeamView(APIView):
-    def get(self, request):
-        month = int(request.query_params.get('month', datetime.now().month))
-        year = int(request.query_params.get('year', datetime.now().year))
+    """Return today's attendance for the manager's direct reports.
 
-        employees = Employee.objects.filter(is_active=True)
+    Includes per-employee: check-in/out time, location name, work type,
+    punch source, and status.  Filtered by reporting_manager so each
+    manager only sees their own team.  Admins see everyone.
+    """
+
+    def get(self, request):
+        employee = get_employee_from_user(request.user)
         today = date.today()
 
-        present_today = 0
-        absent_today = 0
-        on_leave_today = 0
+        # Determine which employees this user manages.
+        if request.user.is_superuser:
+            team_emp_ids = list(Employee.objects.filter(is_active=True).values_list('id', flat=True))
+        elif employee:
+            team_emp_ids = list(
+                EmployeeWorkInformation.objects.filter(
+                    reporting_manager_id_id=employee.id,
+                ).values_list('employee_id_id', flat=True)
+            )
+        else:
+            team_emp_ids = []
 
-        team_members = []
+        team = list(Employee.objects.filter(id__in=team_emp_ids, is_active=True))
 
-        for emp in employees[:50]:
-            attendance = Attendance.objects.filter(employee_id_id=emp.id, attendance_date=today).first()
+        # Batch-fetch today's attendance for the whole team.
+        att_map = {}
+        for att in Attendance.objects.filter(
+            employee_id_id__in=team_emp_ids,
+            attendance_date=today,
+        ):
+            att_map[att.employee_id_id] = att
 
-            if attendance and attendance.attendance_clock_in is not None:
+        # Batch-fetch approved leaves covering today.
+        leave_emp_ids = set(
+            LeaveRequest.objects.filter(
+                status='approved',
+                employee_id_id__in=team_emp_ids,
+                start_date__lte=today,
+                end_date__gte=today,
+            ).values_list('employee_id_id', flat=True)
+        )
+
+        present = 0
+        absent = 0
+        on_leave = 0
+        members = []
+
+        for emp in team:
+            att = att_map.get(emp.id)
+            if emp.id in leave_emp_ids:
+                status_val = 'on_leave'
+                on_leave += 1
+            elif att and att.attendance_clock_in is not None:
                 status_val = 'present'
-                present_today += 1
+                present += 1
             else:
                 status_val = 'absent'
-                absent_today += 1
+                absent += 1
 
-            team_members.append(
+            # Work type from EmployeeWorkInformation (office / remote / hybrid).
+            wi = EmployeeWorkInformation.objects.filter(employee_id_id=emp.id).first()
+            work_type = ''
+            department = ''
+            if wi:
+                work_type = wi.work_type or ''
+                if wi.department_id_id:
+                    dept = Department.objects.filter(id=wi.department_id_id).first()
+                    department = dept.department if dept else ''
+
+            members.append(
                 {
                     'employee_id': emp.badge_id or str(emp.id),
-                    'name': emp.name,
+                    'name': f'{emp.employee_first_name} {emp.employee_last_name}'.strip() or emp.name,
                     'status': status_val,
-                    'punch_in': attendance.attendance_clock_in.isoformat()
-                    if attendance and attendance.attendance_clock_in
+                    'department': department,
+                    'work_type': work_type,
+                    'punch_in': att.attendance_clock_in.isoformat()
+                    if att and att.attendance_clock_in
                     else None,
+                    'punch_out': att.attendance_clock_out.isoformat()
+                    if att and att.attendance_clock_out
+                    else None,
+                    'punch_in_location': getattr(att, 'punch_in_location', None) or '' if att else '',
+                    'punch_in_source': getattr(att, 'punch_in_source', None) or '' if att else '',
                 }
             )
 
         return Response(
             {
-                'total_employees': employees.count(),
-                'present_today': present_today,
-                'absent_today': absent_today,
-                'on_leave_today': on_leave_today,
-                'team_members': team_members,
+                'total_employees': len(team),
+                'present_today': present,
+                'absent_today': absent,
+                'on_leave_today': on_leave,
+                'team_members': members,
             }
         )
 
@@ -1122,6 +1625,15 @@ class LeaveApplyView(APIView):
         )
         notify_managers_of_request(employee, 'Leave', f'{leave_type.name} Leave')
 
+        # CC list — fire read-only notifications.
+        save_cc_for_request(
+            'Leave',
+            leave_request.id,
+            request.data.get('cc') or [],
+            requester_name=employee.name,
+            request_title=f'{leave_type.name} Leave',
+        )
+
         return Response(
             {
                 'id': str(leave_request.id),
@@ -1177,6 +1689,13 @@ class ClaimSubmitView(APIView):
 
         create_notification(request.user.id, 'Claim Submitted', f'{title} - {amount}')
         notify_managers_of_request(employee, 'Claim', title)
+        save_cc_for_request(
+            'Claims',
+            ticket.id,
+            request.data.get('cc') or [],
+            requester_name=employee.name,
+            request_title=title,
+        )
 
         return Response(
             {
@@ -1214,6 +1733,13 @@ class TicketRaiseView(APIView):
             assigning_type='direct',
             raised_on='other',
             ticket_type_id=ticket_type_id,
+        )
+        save_cc_for_request(
+            'Tickets',
+            ticket.id,
+            request.data.get('cc') or [],
+            requester_name=employee.name,
+            request_title=ticket.title,
         )
 
         return Response(
@@ -1256,6 +1782,13 @@ class ShiftRequestView(APIView):
             description=serializer.validated_data.get('description', ''),
             approved=False,
             canceled=False,
+        )
+        save_cc_for_request(
+            'Shift Requests',
+            shift_request.id,
+            request.data.get('cc') or [],
+            requester_name=employee.name,
+            request_title=f'Shift Change to {shift.employee_shift}',
         )
 
         return Response(
@@ -1303,6 +1836,13 @@ class WorkTypeRequestView(APIView):
             approved=False,
             canceled=False,
         )
+        save_cc_for_request(
+            'Work Type Requests',
+            work_request.id,
+            request.data.get('cc') or [],
+            requester_name=employee.name,
+            request_title=f'Work Type Change to {work_type.work_type}',
+        )
 
         return Response(
             {
@@ -1341,6 +1881,13 @@ class AttendanceRegularizeView(APIView):
             attachment_name=data.get('attachment_name', '') or None,
             status='requested',
             created_at=timezone.now(),
+        )
+        save_cc_for_request(
+            'Attendance Requests',
+            att_request.id,
+            request.data.get('cc') or [],
+            requester_name=employee.name,
+            request_title=f'{att_request.attendance_type or "Regularization"} for {att_date}',
         )
 
         return Response(
@@ -1390,6 +1937,13 @@ class AssetRequestView(APIView):
             asset_request_date=date.today(),
             description=f'[{cat_name}] {desc}' if cat_name else desc,
             asset_request_status='Requested',
+        )
+        save_cc_for_request(
+            'Asset Requests',
+            asset_request.id,
+            request.data.get('cc') or [],
+            requester_name=employee.name,
+            request_title=f'{cat_name} Request',
         )
 
         return Response(
@@ -1597,6 +2151,7 @@ class RequestsListView(APIView):
                         'description': getattr(item, 'description', ''),
                         'created_date': date_str,
                         'metadata': metadata,
+                        'cc': cc_users_for_request(type_name, item.id),
                     }
                 )
 
@@ -1668,6 +2223,7 @@ class RequestDetailView(APIView):
                 'rejection_reason': getattr(item, 'reject_reason', None),
                 'timeline': [],
                 'metadata': {},
+                'cc': cc_users_for_request(type_name, item.id),
             }
         )
 
@@ -1676,6 +2232,7 @@ class RequestAcceptView(APIView):
     def put(self, request, pk):
         serializer = RequestActionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        comment = (serializer.validated_data.get('comment') or '').strip()
 
         type_models = [
             LeaveRequest,
@@ -1708,15 +2265,27 @@ class RequestAcceptView(APIView):
             item.status = 'approved'
             item.save()
 
-        # Notify the request owner
+        # Notify the request owner — include the manager's optional comment.
         emp_id = getattr(item, 'employee_id_id', None) or getattr(item, 'requested_employee_id_id', None)
+        target_emp = None
         if emp_id:
-            emp = get_employee_by_id(emp_id)
-            if emp and emp.employee_user_id_id:
+            target_emp = get_employee_by_id(emp_id)
+            if target_emp and target_emp.employee_user_id_id:
                 title = getattr(item, 'title', 'Request')
-                create_notification(
-                    emp.employee_user_id_id, 'Request Approved', f'Your request "{title}" has been approved'
-                )
+                body = f'Your request "{title}" has been approved'
+                if comment:
+                    body = f'{body} — {comment}'
+                create_notification(target_emp.employee_user_id_id, 'Request Approved', body)
+
+        write_audit(
+            request,
+            action='request_approved',
+            target_type=type(item).__name__,
+            target_id=item.id,
+            target_user_id=emp_id,
+            target_name=target_emp.name if target_emp else None,
+            payload={'comment': comment} if comment else None,
+        )
 
         return Response(
             {
@@ -1768,16 +2337,27 @@ class RequestRejectView(APIView):
 
         # Notify the request owner
         emp_id = getattr(item, 'employee_id_id', None) or getattr(item, 'requested_employee_id_id', None)
+        target_emp = None
         if emp_id:
-            emp = get_employee_by_id(emp_id)
-            if emp and emp.employee_user_id_id:
+            target_emp = get_employee_by_id(emp_id)
+            if target_emp and target_emp.employee_user_id_id:
                 title = getattr(item, 'title', 'Request')
                 create_notification(
-                    emp.employee_user_id_id,
+                    target_emp.employee_user_id_id,
                     'Request Rejected',
                     f'Your request "{title}" was rejected'
                     + (f': {rejection_reason}' if rejection_reason else ''),
                 )
+
+        write_audit(
+            request,
+            action='request_rejected',
+            target_type=type(item).__name__,
+            target_id=item.id,
+            target_user_id=emp_id,
+            target_name=target_emp.name if target_emp else None,
+            payload={'rejection_reason': rejection_reason} if rejection_reason else None,
+        )
 
         return Response(
             {
@@ -2144,6 +2724,504 @@ class DeviceRegisterView(APIView):
         return Response({'message': 'Device registered successfully'})
 
 
+def _get_or_create_period(employee_id, user_id, target_date=None):
+    """Find or create a timesheet period for the Mon-Sun week containing
+    *target_date* (defaults to today)."""
+    from datetime import timedelta
+
+    from .models import SimpleTimesheetPeriod
+
+    day = target_date or date.today()
+    weekday = day.weekday()  # Mon=0, Sun=6
+    period_start = day - timedelta(days=weekday)
+    period_end = period_start + timedelta(days=6)
+    period = SimpleTimesheetPeriod.objects.filter(
+        employee_id=employee_id,
+        period_start=period_start,
+    ).first()
+    if period:
+        return period
+    return SimpleTimesheetPeriod.objects.create(
+        employee_id=employee_id,
+        period_start=period_start,
+        period_end=period_end,
+        status='draft',
+        is_active=True,
+        total_hours=0,
+        total_wfo_days=0,
+        total_wfh_days=0,
+        total_wfo_hours=0,
+        total_wfh_hours=0,
+        created_by_id=user_id,
+        created_at=timezone.now(),
+    )
+
+
+# Backward compat alias used elsewhere.
+_get_or_create_current_period = _get_or_create_period
+
+
+def _recompute_period_totals(period):
+    """Recompute period.total_hours from its entries."""
+    from .models import SimpleTimesheetEntry
+
+    rows = list(SimpleTimesheetEntry.objects.filter(timesheet_period_id=period.id))
+    total = sum((r.hours or 0) for r in rows)
+    wfo_h = sum((r.hours or 0) for r in rows if (r.work_location or '').lower() == 'wfo')
+    wfh_h = sum((r.hours or 0) for r in rows if (r.work_location or '').lower() == 'wfh')
+    period.total_hours = total
+    period.total_wfo_hours = wfo_h
+    period.total_wfh_hours = wfh_h
+    period.save(update_fields=['total_hours', 'total_wfo_hours', 'total_wfh_hours'])
+
+
+class TimesheetProjectsView(APIView):
+    """List active projects for the timesheet entry form."""
+
+    def get(self, request):
+        from .models import TimesheetProject
+
+        rows = TimesheetProject.objects.filter(is_active=True).order_by('name')
+        return Response(
+            {
+                'items': [
+                    {'id': r.id, 'name': r.name, 'project_code': r.project_code, 'client_name': r.client_name}
+                    for r in rows
+                ],
+            }
+        )
+
+
+class TimesheetTasksView(APIView):
+    """List active tasks (optionally filtered by project_id)."""
+
+    def get(self, request):
+        from .models import TimesheetTask
+
+        qs = TimesheetTask.objects.filter(is_active=True)
+        project_id = request.query_params.get('project_id')
+        if project_id:
+            qs = qs.filter(project_id=int(project_id))
+        return Response(
+            {
+                'items': [
+                    {'id': r.id, 'name': r.name, 'project_id': r.project_id, 'task_code': r.task_code}
+                    for r in qs.order_by('name')
+                ],
+            }
+        )
+
+
+class TimesheetCurrentPeriodView(APIView):
+    """Return a week's period + entries for the authenticated user.
+
+    Optional query param ``week_start`` (YYYY-MM-DD, must be a Monday).
+    Defaults to the current week.
+    """
+
+    def get(self, request):
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+        from datetime import datetime as _dt
+
+        from .models import SimpleTimesheetEntry, TimesheetProject, TimesheetTask
+
+        target = None
+        ws = request.query_params.get('week_start')
+        if ws:
+            try:
+                target = _dt.fromisoformat(ws).date()
+            except ValueError:
+                return Response(
+                    {'error': 'week_start must be YYYY-MM-DD'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        period = _get_or_create_period(employee.id, request.user.id, target_date=target)
+        rows = list(
+            SimpleTimesheetEntry.objects.filter(timesheet_period_id=period.id, is_active=True).order_by(
+                'date', 'id'
+            )
+        )
+        # Pre-load project + task names for the entries.
+        proj_ids = [r.timesheet_project_id for r in rows if r.timesheet_project_id]
+        task_ids = [r.timesheet_task_id for r in rows if r.timesheet_task_id]
+        proj_map = {p.id: p.name for p in TimesheetProject.objects.filter(id__in=proj_ids)}
+        task_map = {t.id: t.name for t in TimesheetTask.objects.filter(id__in=task_ids)}
+
+        return Response(
+            {
+                'period': {
+                    'id': period.id,
+                    'period_start': period.period_start.isoformat(),
+                    'period_end': period.period_end.isoformat(),
+                    'status': period.status,
+                    'total_hours': period.total_hours,
+                    'total_wfo_hours': period.total_wfo_hours,
+                    'total_wfh_hours': period.total_wfh_hours,
+                },
+                'entries': [
+                    {
+                        'id': r.id,
+                        'date': r.date.isoformat(),
+                        'hours': r.hours,
+                        'work_location': r.work_location,
+                        'comments': r.comments,
+                        'activity_name': r.activity_name or '',
+                        'project_id': r.timesheet_project_id,
+                        'project_name': proj_map.get(r.timesheet_project_id),
+                        'task_id': r.timesheet_task_id,
+                        'task_name': task_map.get(r.timesheet_task_id),
+                    }
+                    for r in rows
+                ],
+            }
+        )
+
+
+class TimesheetEntriesView(APIView):
+    """Create / update / delete timesheet entries."""
+
+    def post(self, request):
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+        from datetime import datetime as _dt
+
+        from .models import SimpleTimesheetEntry
+
+        try:
+            entry_date = _dt.fromisoformat(request.data['date']).date()
+        except (KeyError, ValueError):
+            return Response(
+                {'error': {'code': 'BAD_DATA', 'message': 'date required (YYYY-MM-DD)'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        hours = float(request.data.get('hours', 0))
+        if hours < 0 or hours > 24:
+            return Response(
+                {'error': {'code': 'BAD_HOURS', 'message': 'hours must be 0-24'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # Accept optional period_id so the client can target an arbitrary week.
+        period_id = request.data.get('period_id')
+        if period_id:
+            from .models import SimpleTimesheetPeriod
+
+            period = SimpleTimesheetPeriod.objects.filter(
+                id=int(period_id),
+                employee_id=employee.id,
+            ).first()
+            if not period:
+                return Response({'error': 'Period not found'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            period = _get_or_create_period(employee.id, request.user.id, target_date=entry_date)
+        e = SimpleTimesheetEntry.objects.create(
+            date=entry_date,
+            hours=hours,
+            work_location=(request.data.get('work_location') or 'wfo').lower(),
+            comments=request.data.get('comments', ''),
+            activity_name=request.data.get('activity_name', ''),
+            timesheet_project_id=request.data.get('project_id'),
+            timesheet_task_id=request.data.get('task_id'),
+            timesheet_period_id=period.id,
+            is_active=True,
+            created_by_id=request.user.id,
+            created_at=timezone.now(),
+        )
+        _recompute_period_totals(period)
+        write_audit(
+            request,
+            action='timesheet_entry_created',
+            target_type='SimpleTimesheetEntry',
+            target_id=e.id,
+            payload={'date': str(entry_date), 'hours': hours},
+        )
+        return Response({'id': e.id, 'period_id': period.id}, status=status.HTTP_201_CREATED)
+
+    def patch(self, request):
+        """Update an existing entry's hours, project, task, work_location, or
+        comments.  Recalculates period totals automatically."""
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+        from .models import SimpleTimesheetEntry
+
+        entry_id = request.data.get('id')
+        if not entry_id:
+            return Response(
+                {'error': {'code': 'BAD_DATA', 'message': 'id required'}}, status=status.HTTP_400_BAD_REQUEST
+            )
+        e = SimpleTimesheetEntry.objects.filter(id=int(entry_id), created_by_id=request.user.id).first()
+        if not e:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        updated = []
+        if 'hours' in request.data:
+            h = float(request.data['hours'])
+            if h < 0 or h > 24:
+                return Response(
+                    {'error': {'code': 'BAD_HOURS', 'message': 'hours must be 0-24'}},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            e.hours = h
+            updated.append('hours')
+        if 'project_id' in request.data:
+            e.timesheet_project_id = request.data['project_id']
+            updated.append('timesheet_project_id')
+        if 'task_id' in request.data:
+            e.timesheet_task_id = request.data['task_id']
+            updated.append('timesheet_task_id')
+        if 'activity_name' in request.data:
+            e.activity_name = request.data['activity_name']
+            updated.append('activity_name')
+        if 'work_location' in request.data:
+            e.work_location = (request.data['work_location'] or 'wfo').lower()
+            updated.append('work_location')
+        if 'comments' in request.data:
+            e.comments = request.data['comments']
+            updated.append('comments')
+        if updated:
+            e.modified_by_id = request.user.id
+            updated.append('modified_by_id')
+            e.save(update_fields=updated)
+            if e.timesheet_period_id:
+                from .models import SimpleTimesheetPeriod
+
+                period = SimpleTimesheetPeriod.objects.filter(id=e.timesheet_period_id).first()
+                if period:
+                    _recompute_period_totals(period)
+        return Response({'status': 'updated', 'id': e.id})
+
+    def delete(self, request):
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+        from .models import SimpleTimesheetEntry
+
+        entry_id = request.query_params.get('id')
+        if not entry_id:
+            return Response(
+                {'error': {'code': 'BAD_DATA', 'message': 'id required'}}, status=status.HTTP_400_BAD_REQUEST
+            )
+        e = SimpleTimesheetEntry.objects.filter(id=int(entry_id), created_by_id=request.user.id).first()
+        if not e:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        period_id = e.timesheet_period_id
+        e.delete()
+        if period_id:
+            from .models import SimpleTimesheetPeriod
+
+            period = SimpleTimesheetPeriod.objects.filter(id=period_id).first()
+            if period:
+                _recompute_period_totals(period)
+        write_audit(
+            request,
+            action='timesheet_entry_deleted',
+            target_type='SimpleTimesheetEntry',
+            target_id=int(entry_id),
+        )
+        return Response({'status': 'deleted'})
+
+
+class TimesheetUnfilledHoursView(APIView):
+    """Return how many hours of "missing" timesheet entries exist for the
+    user **today** (used by the hourly reminder logic on the client).
+    Calculation: hours since punch_in - hours already logged today.
+    """
+
+    def get(self, request):
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        from .models import SimpleTimesheetEntry
+
+        today = date.today()
+        att = Attendance.objects.filter(employee_id_id=employee.id, attendance_date=today).first()
+        if not att or not att.attendance_clock_in:
+            return Response({'unfilled_hours': 0, 'logged_hours': 0, 'worked_hours': 0})
+        # Worked hours so far: clock-in → now (or clock-out if already out).
+        now = timezone.now().time()
+        out = att.attendance_clock_out or now
+        worked_seconds = max(
+            0,
+            (out.hour * 3600 + out.minute * 60 + out.second)
+            - (
+                att.attendance_clock_in.hour * 3600
+                + att.attendance_clock_in.minute * 60
+                + att.attendance_clock_in.second
+            ),
+        )
+        worked_hours = round(worked_seconds / 3600.0, 2)
+        logged_hours = sum(
+            (r.hours or 0)
+            for r in SimpleTimesheetEntry.objects.filter(
+                date=today, created_by_id=request.user.id, is_active=True
+            )
+        )
+        unfilled = max(0.0, round(worked_hours - logged_hours, 2))
+        return Response(
+            {
+                'unfilled_hours': unfilled,
+                'logged_hours': logged_hours,
+                'worked_hours': worked_hours,
+            }
+        )
+
+
+class TimesheetSubmitView(APIView):
+    """Submit a timesheet period for approval."""
+
+    def post(self, request):
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+        from .models import SimpleTimesheetPeriod
+
+        period_id = request.data.get('period_id')
+        if not period_id:
+            return Response({'error': 'period_id required'}, status=status.HTTP_400_BAD_REQUEST)
+        period = SimpleTimesheetPeriod.objects.filter(
+            id=int(period_id),
+            employee_id=employee.id,
+        ).first()
+        if not period:
+            return Response({'error': 'Period not found'}, status=status.HTTP_404_NOT_FOUND)
+        if period.status == 'approved':
+            return Response({'error': 'Already approved'}, status=status.HTTP_400_BAD_REQUEST)
+        period.status = 'submitted'
+        period.submitted_at = timezone.now()
+        period.save(update_fields=['status', 'submitted_at'])
+        write_audit(
+            request, action='timesheet_submitted', target_type='SimpleTimesheetPeriod', target_id=period.id
+        )
+        return Response(
+            {
+                'status': period.status,
+                'submitted_at': period.submitted_at.isoformat() if period.submitted_at else None,
+            }
+        )
+
+
+# ── Activity status (Round 5) ───────────────────────────────────────────
+
+
+class MeHeartbeatView(APIView):
+    """Update the calling user's last_seen_at timestamp. Called every 30s
+    while the app is foregrounded so other users can see them as 'online'."""
+
+    def post(self, request):
+        from .models import UserPresence
+
+        UserPresence.objects.update_or_create(
+            user_id=request.user.id,
+            defaults={},  # last_seen_at auto-updates
+        )
+        return Response({'status': 'ok', 'now': timezone.now().isoformat()})
+
+
+class MePresenceSettingsView(APIView):
+    """Read / write the calling user's presence + push preferences."""
+
+    def get(self, request):
+        from .models import UserPresence
+
+        p, _ = UserPresence.objects.get_or_create(user_id=request.user.id)
+        return Response(
+            {
+                'is_visible': p.is_visible,
+                'push_enabled': p.push_enabled,
+                'timesheet_reminders_enabled': p.timesheet_reminders_enabled,
+            }
+        )
+
+    def post(self, request):
+        from .models import UserPresence
+
+        p, _ = UserPresence.objects.get_or_create(user_id=request.user.id)
+        for f in ('is_visible', 'push_enabled', 'timesheet_reminders_enabled'):
+            if f in request.data:
+                setattr(p, f, bool(request.data[f]))
+        p.save()
+        return Response(
+            {
+                'is_visible': p.is_visible,
+                'push_enabled': p.push_enabled,
+                'timesheet_reminders_enabled': p.timesheet_reminders_enabled,
+            }
+        )
+
+
+class PresenceListView(APIView):
+    """Bulk presence query — returns last_seen_at for the requested user IDs.
+    Filters out users who have hidden their visibility."""
+
+    def get(self, request):
+        from datetime import timedelta
+
+        from .models import UserPresence
+
+        ids = (request.query_params.get('user_ids') or '').strip()
+        if not ids:
+            return Response({'items': []})
+        try:
+            id_list = [int(x) for x in ids.split(',') if x.strip()]
+        except ValueError:
+            return Response({'items': []})
+        rows = UserPresence.objects.filter(user_id__in=id_list, is_visible=True)
+        threshold = timezone.now() - timedelta(minutes=5)
+        return Response(
+            {
+                'items': [
+                    {
+                        'user_id': r.user_id,
+                        'last_seen_at': r.last_seen_at.isoformat(),
+                        'is_online': r.last_seen_at >= threshold,
+                    }
+                    for r in rows
+                ],
+            }
+        )
+
+
+class EmployeesSearchView(APIView):
+    """Lightweight typeahead for the CC field. Matches on name / email /
+    badge id and returns the linked auth `user_id` so the client can submit
+    that directly into the request payload's `cc` array.
+    """
+
+    def get(self, request):
+        q = (request.query_params.get('q') or '').strip()
+        limit = min(int(request.query_params.get('limit', 12)), 50)
+        if len(q) < 2:
+            return Response({'items': []})
+        employees = (
+            Employee.objects.filter(is_active=True)
+            .filter(
+                Q(employee_first_name__icontains=q)
+                | Q(employee_last_name__icontains=q)
+                | Q(email__icontains=q)
+                | Q(badge_id__icontains=q)
+            )
+            .exclude(employee_user_id_id__isnull=True)[:limit]
+        )
+
+        items = []
+        for emp in employees:
+            items.append(
+                {
+                    'user_id': emp.employee_user_id_id,
+                    'employee_id': emp.id,
+                    'badge_id': emp.badge_id,
+                    'name': emp.name,
+                    'email': emp.email,
+                    'avatar_url': emp.avatar_url,
+                }
+            )
+        return Response({'items': items})
+
+
 class EmployeesListView(APIView):
     def get(self, request):
         search = request.query_params.get('search', '')
@@ -2387,16 +3465,112 @@ class DashboardSummaryView(APIView):
         recent_activity.sort(key=lambda x: x.get('date') or '', reverse=True)
         recent_activity = recent_activity[:8]
 
-        # Pending requests counts for manager view
-        pending_leaves = LeaveRequest.objects.filter(status='requested').count()
-        try:
-            pending_claims = ClaimRequest.objects.filter(status='requested').count()
-        except Exception:
-            pending_claims = 0
-        try:
-            pending_tickets = Ticket.objects.filter(status='open').count()
-        except Exception:
-            pending_tickets = 0
+        # ── Pending approvals (filtered to the caller's direct reports for
+        #    managers; HR sees the whole org). All 7 request types so the
+        #    Manager Insights tile renders zeros instead of "n/a".
+        is_manager_or_hr = bool(getattr(employee, 'id', None))  # always true here
+        if request.user.is_staff:
+            team_ids = list(Employee.objects.exclude(id=employee.id).values_list('id', flat=True))
+        else:
+            team_ids = list(
+                EmployeeWorkInformation.objects.filter(reporting_manager_id_id=employee.id).values_list(
+                    'employee_id_id', flat=True
+                )
+            )
+
+        def _safe_count(qs):
+            try:
+                return qs.count()
+            except Exception:
+                return 0
+
+        if is_manager_or_hr and team_ids:
+            pending_leaves = _safe_count(
+                LeaveRequest.objects.filter(status='requested', employee_id_id__in=team_ids)
+            )
+            pending_claims = _safe_count(
+                ClaimRequest.objects.filter(is_approved=False, is_rejected=False, employee_id_id__in=team_ids)
+            )
+            pending_tickets = _safe_count(Ticket.objects.filter(status='open', employee_id_id__in=team_ids))
+            pending_shift = _safe_count(
+                ShiftRequestModel.objects.filter(approved=False, canceled=False, employee_id_id__in=team_ids)
+            )
+            pending_worktype = _safe_count(
+                WorkTypeRequestModel.objects.filter(
+                    approved=False, canceled=False, employee_id_id__in=team_ids
+                )
+            )
+            pending_attendance = _safe_count(
+                AttendanceRequestModel.objects.filter(status='requested', employee_id__in=team_ids)
+            )
+            pending_assets = _safe_count(
+                AssetRequestModel.objects.filter(
+                    asset_request_status__icontains='request', requested_employee_id_id__in=team_ids
+                )
+            )
+        else:
+            pending_leaves = pending_claims = pending_tickets = 0
+            pending_shift = pending_worktype = pending_attendance = pending_assets = 0
+
+        pending_total = (
+            pending_leaves
+            + pending_claims
+            + pending_tickets
+            + pending_shift
+            + pending_worktype
+            + pending_attendance
+            + pending_assets
+        )
+
+        # ── Team stats (size, departments, work-type split, today snapshot).
+        team_block = {
+            'size': 0,
+            'departments': [],
+            'work_types': [],
+            'today': {'present': 0, 'wfh': 0, 'on_leave': 0, 'absent': 0},
+        }
+        if team_ids:
+            team_block['size'] = len(team_ids)
+
+            # Departments — name + headcount.
+            dept_counts = {}
+            wtype_counts = {}
+            for wi in EmployeeWorkInformation.objects.filter(employee_id_id__in=team_ids):
+                if wi.department_id_id:
+                    dept = Department.objects.filter(id=wi.department_id_id).first()
+                    if dept and dept.department:
+                        dept_counts[dept.department] = dept_counts.get(dept.department, 0) + 1
+                if wi.work_type_id_id:
+                    wt = WorkType.objects.filter(id=wi.work_type_id_id).first()
+                    if wt and wt.work_type:
+                        wtype_counts[wt.work_type] = wtype_counts.get(wt.work_type, 0) + 1
+            team_block['departments'] = [
+                {'name': k, 'count': v}
+                for k, v in sorted(dept_counts.items(), key=lambda kv: kv[1], reverse=True)
+            ]
+            team_block['work_types'] = [
+                {'name': k, 'count': v}
+                for k, v in sorted(wtype_counts.items(), key=lambda kv: kv[1], reverse=True)
+            ]
+
+            # Today's snapshot for the team.
+            present_today = Attendance.objects.filter(
+                employee_id_id__in=team_ids,
+                attendance_date=today,
+                attendance_clock_in__isnull=False,
+            ).count()
+            on_leave = LeaveRequest.objects.filter(
+                status='approved',
+                employee_id_id__in=team_ids,
+                start_date__lte=today,
+                end_date__gte=today,
+            ).count()
+            team_block['today'] = {
+                'present': present_today,
+                'wfh': 0,  # could be derived from work_type_id later
+                'on_leave': on_leave,
+                'absent': max(0, len(team_ids) - present_today - on_leave),
+            }
 
         return Response(
             {
@@ -2418,8 +3592,13 @@ class DashboardSummaryView(APIView):
                     'leave_requests': pending_leaves,
                     'claims': pending_claims,
                     'tickets': pending_tickets,
-                    'total': pending_leaves + pending_claims + pending_tickets,
+                    'shift_requests': pending_shift,
+                    'work_type_requests': pending_worktype,
+                    'attendance_requests': pending_attendance,
+                    'asset_requests': pending_assets,
+                    'total': pending_total,
                 },
+                'team': team_block,
             }
         )
 
@@ -2550,6 +3729,1587 @@ class LeaveTypesListView(APIView):
                     }
                     for lt in filtered
                 ]
+            }
+        )
+
+
+class AdminGeofencesView(APIView):
+    """List + create geofences (admin-managed allowed punch-in zones)."""
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import Geofence
+
+        rows = Geofence.objects.all().order_by('-is_office', 'name')
+        return Response(
+            {
+                'items': [
+                    {
+                        'id': r.id,
+                        'name': r.name,
+                        'latitude': r.latitude,
+                        'longitude': r.longitude,
+                        'radius_meters': r.radius_meters,
+                        'is_office': r.is_office,
+                        'is_active': r.is_active,
+                        'updated_at': r.updated_at.isoformat() if r.updated_at else None,
+                    }
+                    for r in rows
+                ],
+            }
+        )
+
+    def post(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import Geofence
+
+        try:
+            g = Geofence.objects.create(
+                name=request.data.get('name', '').strip() or 'New Zone',
+                latitude=float(request.data.get('latitude', 0)),
+                longitude=float(request.data.get('longitude', 0)),
+                radius_meters=int(request.data.get('radius_meters', 50)),
+                is_office=bool(request.data.get('is_office', True)),
+                is_active=bool(request.data.get('is_active', True)),
+            )
+        except (TypeError, ValueError) as e:
+            return Response(
+                {'error': {'code': 'BAD_DATA', 'message': str(e)}}, status=status.HTTP_400_BAD_REQUEST
+            )
+        write_audit(
+            request,
+            action='geofence_created',
+            target_type='Geofence',
+            target_id=g.id,
+            payload={'name': g.name},
+        )
+        return Response({'id': g.id, 'name': g.name}, status=status.HTTP_201_CREATED)
+
+
+class AdminGeofenceDetailView(APIView):
+    """Update / delete a single geofence."""
+
+    def put(self, request, pk):
+        return self.patch(request, pk)
+
+    def patch(self, request, pk):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import Geofence
+
+        g = Geofence.objects.filter(id=pk).first()
+        if not g:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        for field in ('name', 'latitude', 'longitude', 'radius_meters', 'is_office', 'is_active'):
+            if field in request.data:
+                setattr(g, field, request.data[field])
+        g.save()
+        write_audit(request, action='geofence_updated', target_type='Geofence', target_id=g.id)
+        return Response({'id': g.id, 'name': g.name})
+
+    def delete(self, request, pk):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import Geofence
+
+        g = Geofence.objects.filter(id=pk).first()
+        if not g:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        name = g.name
+        g.delete()
+        write_audit(
+            request, action='geofence_deleted', target_type='Geofence', target_id=pk, payload={'name': name}
+        )
+        return Response({'status': 'deleted'})
+
+
+class AdminHolidaysView(APIView):
+    """List + create holidays."""
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import Holiday
+
+        rows = Holiday.objects.all().order_by('holiday_date')
+        return Response(
+            {
+                'items': [
+                    {
+                        'id': r.id,
+                        'name': r.name,
+                        'holiday_date': r.holiday_date.isoformat(),
+                        'is_recurring': r.is_recurring,
+                        'description': r.description or '',
+                    }
+                    for r in rows
+                ],
+            }
+        )
+
+    def post(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from datetime import datetime
+
+        from .models import Holiday
+
+        try:
+            h = Holiday.objects.create(
+                name=request.data.get('name', '').strip() or 'New Holiday',
+                holiday_date=datetime.fromisoformat(request.data['holiday_date']).date(),
+                is_recurring=bool(request.data.get('is_recurring', False)),
+                description=request.data.get('description', ''),
+            )
+        except (KeyError, ValueError) as e:
+            return Response(
+                {'error': {'code': 'BAD_DATA', 'message': str(e)}}, status=status.HTTP_400_BAD_REQUEST
+            )
+        write_audit(
+            request, action='holiday_created', target_type='Holiday', target_id=h.id, payload={'name': h.name}
+        )
+        return Response({'id': h.id, 'name': h.name}, status=status.HTTP_201_CREATED)
+
+
+class AdminHolidayDetailView(APIView):
+    """Update / delete a holiday."""
+
+    def put(self, request, pk):
+        return self.patch(request, pk)
+
+    def patch(self, request, pk):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from datetime import datetime
+
+        from .models import Holiday
+
+        h = Holiday.objects.filter(id=pk).first()
+        if not h:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        if 'name' in request.data:
+            h.name = request.data['name']
+        if 'holiday_date' in request.data:
+            try:
+                h.holiday_date = datetime.fromisoformat(request.data['holiday_date']).date()
+            except ValueError:
+                pass
+        if 'is_recurring' in request.data:
+            h.is_recurring = bool(request.data['is_recurring'])
+        if 'description' in request.data:
+            h.description = request.data['description']
+        h.save()
+        write_audit(request, action='holiday_updated', target_type='Holiday', target_id=h.id)
+        return Response({'id': h.id})
+
+    def delete(self, request, pk):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import Holiday
+
+        h = Holiday.objects.filter(id=pk).first()
+        if not h:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        name = h.name
+        h.delete()
+        write_audit(
+            request, action='holiday_deleted', target_type='Holiday', target_id=pk, payload={'name': name}
+        )
+        return Response({'status': 'deleted'})
+
+
+class AdminEmployeesCsvExportView(APIView):
+    """Stream every Employee row as CSV. Admin-only."""
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        import csv as _csv
+
+        from django.http import HttpResponse
+
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="employees.csv"'
+        writer = _csv.writer(response)
+        writer.writerow(
+            [
+                'id',
+                'badge_id',
+                'first_name',
+                'last_name',
+                'email',
+                'phone',
+                'gender',
+                'dob',
+                'department',
+                'designation',
+                'is_active',
+            ]
+        )
+        for e in Employee.objects.all().order_by('id'):
+            wi = EmployeeWorkInformation.objects.filter(employee_id_id=e.id).first()
+            dept = ''
+            desig = ''
+            if wi:
+                if wi.department_id_id:
+                    d = Department.objects.filter(id=wi.department_id_id).first()
+                    dept = d.department if d else ''
+                if wi.job_position_id_id:
+                    jp = JobPosition.objects.filter(id=wi.job_position_id_id).first()
+                    desig = jp.job_position if jp else ''
+            writer.writerow(
+                [
+                    e.id,
+                    e.badge_id or '',
+                    e.employee_first_name or '',
+                    e.employee_last_name or '',
+                    e.email or '',
+                    e.phone or '',
+                    e.gender or '',
+                    e.dob.isoformat() if e.dob else '',
+                    dept,
+                    desig,
+                    e.is_active,
+                ]
+            )
+        write_audit(request, action='employees_csv_exported', target_type='Employee')
+        return response
+
+
+class AdminEmployeesCsvImportView(APIView):
+    """Bulk-create / update employees from a CSV file.
+
+    Expected columns (header row): badge_id, first_name, last_name, email,
+    phone, gender, dob, department, designation. `dry_run=true` query param
+    validates without writing.
+    """
+
+    def post(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        import csv as _csv
+        import io as _io
+
+        upload = request.FILES.get('file')
+        if not upload:
+            return Response(
+                {'error': {'code': 'NO_FILE', 'message': 'Upload a CSV file in the `file` field'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        dry_run = request.query_params.get('dry_run', '').lower() in {'1', 'true', 'yes'}
+
+        try:
+            text = upload.read().decode('utf-8-sig')
+        except UnicodeDecodeError:
+            return Response(
+                {'error': {'code': 'BAD_ENCODING', 'message': 'CSV must be UTF-8'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        reader = _csv.DictReader(_io.StringIO(text))
+
+        created = 0
+        updated = 0
+        errors = []
+        for i, row in enumerate(reader, start=2):  # start=2 → first data row is line 2
+            badge = (row.get('badge_id') or '').strip()
+            first = (row.get('first_name') or '').strip()
+            last = (row.get('last_name') or '').strip()
+            email = (row.get('email') or '').strip()
+            if not badge or not first:
+                errors.append({'line': i, 'reason': 'badge_id and first_name are required'})
+                continue
+            if dry_run:
+                if Employee.objects.filter(badge_id__iexact=badge).exists():
+                    updated += 1
+                else:
+                    created += 1
+                continue
+            try:
+                _emp, created_now = Employee.objects.update_or_create(
+                    badge_id=badge,
+                    defaults={
+                        'employee_first_name': first,
+                        'employee_last_name': last,
+                        'email': email or None,
+                        'phone': (row.get('phone') or '').strip() or None,
+                        'gender': (row.get('gender') or '').strip() or None,
+                        'is_active': True,
+                    },
+                )
+                if created_now:
+                    created += 1
+                else:
+                    updated += 1
+            except Exception as e:
+                errors.append({'line': i, 'reason': str(e)})
+
+        write_audit(
+            request,
+            action='employees_csv_imported',
+            target_type='Employee',
+            payload={'created': created, 'updated': updated, 'errors': len(errors), 'dry_run': dry_run},
+        )
+        return Response(
+            {
+                'dry_run': dry_run,
+                'created': created,
+                'updated': updated,
+                'errors': errors,
+            }
+        )
+
+
+class AdminBackupView(APIView):
+    """Trigger a database backup. For SQLite this copies db.sqlite3 to
+    MEDIA_ROOT/backups/db_<timestamp>.sqlite3. For Postgres it returns 501."""
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        import os as _os
+
+        from django.conf import settings as dj_settings
+
+        backups_dir = _os.path.join(dj_settings.MEDIA_ROOT, 'backups')
+        items = []
+        if _os.path.isdir(backups_dir):
+            for fn in sorted(_os.listdir(backups_dir), reverse=True):
+                fp = _os.path.join(backups_dir, fn)
+                if _os.path.isfile(fp):
+                    items.append(
+                        {
+                            'filename': fn,
+                            'size_bytes': _os.path.getsize(fp),
+                            'modified': _os.path.getmtime(fp),
+                        }
+                    )
+        return Response({'backups': items[:30]})
+
+    def post(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        import os as _os
+        import shutil as _shutil
+        import subprocess as _sp
+        from datetime import datetime
+
+        from django.conf import settings as dj_settings
+
+        engine = dj_settings.DATABASES['default']['ENGINE']
+        backups_dir = _os.path.join(dj_settings.MEDIA_ROOT, 'backups')
+        _os.makedirs(backups_dir, exist_ok=True)
+        ts = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+
+        # ── SQLite path: just copy the file ────────────────────────────
+        if 'sqlite' in engine:
+            src = dj_settings.DATABASES['default']['NAME']
+            dest = _os.path.join(backups_dir, f'db_{ts}.sqlite3')
+            try:
+                _shutil.copy2(src, dest)
+            except Exception as e:
+                return Response(
+                    {'error': {'code': 'BACKUP_FAILED', 'message': str(e)}},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+        # ── Postgres path: pg_dump to a .sql file ──────────────────────
+        elif 'postgresql' in engine:
+            db = dj_settings.DATABASES['default']
+            dest = _os.path.join(backups_dir, f'db_{ts}.sql')
+            env = _os.environ.copy()
+            if db.get('PASSWORD'):
+                env['PGPASSWORD'] = db['PASSWORD']
+            # Find pg_dump — Homebrew + Postgres.app + Linux all in one go.
+            pg_dump = (
+                _shutil.which('pg_dump')
+                or '/opt/homebrew/opt/postgresql@18/bin/pg_dump'
+                or '/opt/homebrew/opt/postgresql@16/bin/pg_dump'
+                or '/opt/homebrew/opt/postgresql/bin/pg_dump'
+            )
+            if not _os.path.exists(pg_dump):
+                pg_dump = 'pg_dump'  # last-ditch
+            cmd = [
+                pg_dump,
+                '--host',
+                db.get('HOST') or 'localhost',
+                '--port',
+                str(db.get('PORT') or '5432'),
+                '--username',
+                db.get('USER') or 'postgres',
+                '--no-owner',
+                '--no-privileges',
+                '--file',
+                dest,
+                db['NAME'],
+            ]
+            try:
+                proc = _sp.run(cmd, env=env, capture_output=True, text=True, timeout=120)
+            except FileNotFoundError:
+                return Response(
+                    {
+                        'error': {
+                            'code': 'PG_DUMP_MISSING',
+                            'message': 'pg_dump not on PATH — install postgresql-client',
+                        }
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+            except Exception as e:
+                return Response(
+                    {'error': {'code': 'BACKUP_FAILED', 'message': str(e)}},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+            if proc.returncode != 0:
+                return Response(
+                    {'error': {'code': 'BACKUP_FAILED', 'message': proc.stderr.strip() or 'pg_dump failed'}},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+        else:
+            return Response(
+                {
+                    'error': {
+                        'code': 'NOT_IMPLEMENTED',
+                        'message': f'Backup not implemented for engine {engine}',
+                    }
+                },
+                status=status.HTTP_501_NOT_IMPLEMENTED,
+            )
+
+        size = _os.path.getsize(dest)
+        write_audit(
+            request,
+            action='db_backup_created',
+            target_type='Database',
+            payload={'filename': _os.path.basename(dest), 'size_bytes': size, 'engine': engine},
+        )
+        return Response(
+            {
+                'filename': _os.path.basename(dest),
+                'size_bytes': size,
+                'engine': engine,
+            }
+        )
+
+
+class AdminEmailTemplatesView(APIView):
+    """List + upsert system email templates."""
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import EmailTemplate
+
+        rows = EmailTemplate.objects.all().order_by('key')
+        return Response(
+            {
+                'items': [
+                    {
+                        'id': r.id,
+                        'key': r.key,
+                        'subject': r.subject,
+                        'body': r.body,
+                        'html_body': r.html_body or '',
+                        'is_active': r.is_active,
+                        'updated_at': r.updated_at.isoformat() if r.updated_at else None,
+                    }
+                    for r in rows
+                ],
+            }
+        )
+
+    def post(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import EmailTemplate
+
+        key = (request.data.get('key') or '').strip()
+        if not key:
+            return Response(
+                {'error': {'code': 'KEY_REQUIRED', 'message': 'key is required'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        t, created = EmailTemplate.objects.update_or_create(
+            key=key,
+            defaults={
+                'subject': request.data.get('subject', ''),
+                'body': request.data.get('body', ''),
+                'html_body': request.data.get('html_body') or None,
+                'is_active': bool(request.data.get('is_active', True)),
+            },
+        )
+        write_audit(
+            request,
+            action='email_template_saved',
+            target_type='EmailTemplate',
+            target_id=t.id,
+            payload={'key': key, 'created': created},
+        )
+        return Response({'id': t.id, 'key': t.key, 'created': created})
+
+
+# ── Round 3 — Tier 3/4 admin endpoints ─────────────────────────────────
+
+
+class AdminSystemStatsView(APIView):
+    """Storage / DB / media usage gauges. Admin only."""
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        import os as _os
+        import shutil as _shutil
+
+        from django.conf import settings as dj_settings
+        from django.db import connection
+
+        from .models import AuditLog
+
+        media_root = dj_settings.MEDIA_ROOT
+        media_size = 0
+        media_files = 0
+        if _os.path.isdir(media_root):
+            for root, _dirs, files in _os.walk(media_root):
+                for fn in files:
+                    fp = _os.path.join(root, fn)
+                    try:
+                        media_size += _os.path.getsize(fp)
+                        media_files += 1
+                    except OSError:
+                        pass
+
+        # Disk usage of the partition holding the media folder.
+        disk = _shutil.disk_usage(media_root if _os.path.isdir(media_root) else '/')
+
+        # DB size — best-effort. SQLite = file size, Postgres = pg_database_size.
+        db_engine = dj_settings.DATABASES['default']['ENGINE']
+        db_size = 0
+        try:
+            if 'sqlite' in db_engine:
+                db_size = _os.path.getsize(dj_settings.DATABASES['default']['NAME'])
+            elif 'postgresql' in db_engine:
+                with connection.cursor() as cur:
+                    cur.execute('SELECT pg_database_size(current_database())')
+                    db_size = int(cur.fetchone()[0])
+        except Exception:
+            db_size = 0
+
+        return Response(
+            {
+                'engine': db_engine,
+                'db_size_bytes': db_size,
+                'media': {
+                    'root': media_root,
+                    'size_bytes': media_size,
+                    'file_count': media_files,
+                },
+                'disk': {
+                    'total_bytes': disk.total,
+                    'used_bytes': disk.used,
+                    'free_bytes': disk.free,
+                    'percent_used': round(disk.used / disk.total * 100, 1) if disk.total else 0,
+                },
+                'audit_log_rows': AuditLog.objects.count(),
+            }
+        )
+
+
+class AdminLiveActivityView(APIView):
+    """Live attendance feed for the admin map. Returns today's punches with
+    employee + lat/lng. Admin only."""
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        today = date.today()
+        rows = Attendance.objects.filter(
+            attendance_date=today,
+            attendance_clock_in__isnull=False,
+        ).order_by('-id')[:200]
+        items = []
+        for a in rows:
+            emp = get_employee_by_id(a.employee_id_id)
+            items.append(
+                {
+                    'id': a.id,
+                    'employee_id': a.employee_id_id,
+                    'employee_name': emp.name if emp else 'Unknown',
+                    'badge_id': emp.badge_id if emp else None,
+                    'punch_in': a.attendance_clock_in.isoformat() if a.attendance_clock_in else None,
+                    'punch_out': a.attendance_clock_out.isoformat() if a.attendance_clock_out else None,
+                    'lat': a.punch_in_lat,
+                    'lng': a.punch_in_lng,
+                    'location': a.punch_in_location,
+                    'source': a.punch_in_source,
+                    'device': a.punch_in_device,
+                }
+            )
+        return Response({'count': len(items), 'as_of': timezone.now().isoformat(), 'items': items})
+
+
+class AdminPushCampaignView(APIView):
+    """Send a notification to a filtered audience. The MVP just creates
+    NotificationModel rows for the matched employees — the existing app
+    polling will then surface + push them via the device's local handler."""
+
+    def post(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        title = (request.data.get('title') or '').strip()
+        body = (request.data.get('body') or '').strip()
+        audience = (request.data.get('audience') or 'all').lower()
+        if not title or not body:
+            return Response(
+                {'error': {'code': 'BAD_DATA', 'message': 'title and body are required'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if audience == 'all':
+            employees = Employee.objects.filter(is_active=True)
+        elif audience == 'managers':
+            mgr_ids = (
+                EmployeeWorkInformation.objects.exclude(reporting_manager_id_id__isnull=True)
+                .values_list('reporting_manager_id_id', flat=True)
+                .distinct()
+            )
+            employees = Employee.objects.filter(id__in=list(mgr_ids), is_active=True)
+        else:
+            employees = Employee.objects.filter(is_active=True)
+
+        sent = 0
+        for emp in employees:
+            if emp.employee_user_id_id:
+                create_notification(emp.employee_user_id_id, title, body)
+                sent += 1
+        write_audit(
+            request,
+            action='push_campaign_sent',
+            target_type='Notification',
+            payload={'audience': audience, 'sent': sent, 'title': title},
+        )
+        return Response({'sent': sent, 'audience': audience})
+
+
+class AdminFaceEnrollmentsView(APIView):
+    """List enrolled face data + delete a single enrollment. Admin only."""
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import EmployeeFaceData
+
+        rows = EmployeeFaceData.objects.exclude(embedding=None).order_by('-updated_at')
+        items = []
+        for r in rows:
+            emp = Employee.objects.filter(id=r.employee_id_id).first()
+            items.append(
+                {
+                    'id': r.id,
+                    'employee_id': r.employee_id_id,
+                    'employee_name': emp.name if emp else 'Unknown',
+                    'badge_id': emp.badge_id if emp else None,
+                    'num_samples': r.num_samples,
+                    'embedding_dim': r.embedding_dim,
+                    'updated_at': r.updated_at.isoformat() if r.updated_at else None,
+                    'source_files': r.source_files,
+                }
+            )
+        return Response({'count': len(items), 'items': items})
+
+    def delete(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import EmployeeFaceData
+
+        emp_id = request.query_params.get('employee_id')
+        if not emp_id:
+            return Response(
+                {'error': {'code': 'BAD_DATA', 'message': 'employee_id required'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        deleted, _ = EmployeeFaceData.objects.filter(employee_id_id=int(emp_id)).delete()
+        write_audit(
+            request,
+            action='face_enrollment_deleted',
+            target_type='EmployeeFaceData',
+            target_user_id=int(emp_id),
+            payload={'deleted': deleted},
+        )
+        return Response({'deleted': deleted})
+
+
+class AdminWebhooksView(APIView):
+    """List + create webhooks."""
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import Webhook
+
+        rows = Webhook.objects.all().order_by('-created_at')
+        return Response(
+            {
+                'items': [
+                    {
+                        'id': r.id,
+                        'name': r.name,
+                        'url': r.url,
+                        'events': (r.events or '').split(','),
+                        'is_active': r.is_active,
+                        'last_fired_at': r.last_fired_at.isoformat() if r.last_fired_at else None,
+                        'last_status': r.last_status,
+                        'failure_count': r.failure_count,
+                    }
+                    for r in rows
+                ],
+            }
+        )
+
+    def post(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import Webhook
+
+        events = request.data.get('events') or ''
+        if isinstance(events, list):
+            events = ','.join(events)
+        w = Webhook.objects.create(
+            name=(request.data.get('name') or '').strip() or 'Webhook',
+            url=(request.data.get('url') or '').strip(),
+            events=events,
+            secret=(request.data.get('secret') or '').strip() or None,
+            is_active=bool(request.data.get('is_active', True)),
+        )
+        write_audit(
+            request, action='webhook_created', target_type='Webhook', target_id=w.id, payload={'name': w.name}
+        )
+        return Response({'id': w.id, 'name': w.name}, status=status.HTTP_201_CREATED)
+
+
+class AdminWebhookDetailView(APIView):
+    def put(self, request, pk):
+        return self.patch(request, pk)
+
+    def patch(self, request, pk):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import Webhook
+
+        w = Webhook.objects.filter(id=pk).first()
+        if not w:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        for f in ('name', 'url', 'secret', 'is_active'):
+            if f in request.data:
+                setattr(w, f, request.data[f])
+        if 'events' in request.data:
+            events = request.data['events']
+            w.events = ','.join(events) if isinstance(events, list) else events
+        w.save()
+        write_audit(request, action='webhook_updated', target_type='Webhook', target_id=w.id)
+        return Response({'id': w.id})
+
+    def delete(self, request, pk):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import Webhook
+
+        w = Webhook.objects.filter(id=pk).first()
+        if not w:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        w.delete()
+        write_audit(request, action='webhook_deleted', target_type='Webhook', target_id=pk)
+        return Response({'status': 'deleted'})
+
+
+class AdminGdprExportView(APIView):
+    """Aggregate everything we hold about a single user into one JSON blob.
+    The admin downloads it and hands it to the data subject."""
+
+    def get(self, request, pk):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        target = User.objects.filter(id=pk).first()
+        if not target:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        emp = get_employee_from_user(target)
+        emp_id = emp.id if emp else None
+
+        from .models import (
+            AuditLog,
+            EmployeeFaceData,
+            UserConsent,
+        )
+
+        bundle = {
+            'user': {
+                'id': target.id,
+                'username': target.username,
+                'email': target.email,
+                'first_name': target.first_name,
+                'last_name': target.last_name,
+                'is_active': target.is_active,
+                'date_joined': target.date_joined.isoformat() if target.date_joined else None,
+                'last_login': target.last_login.isoformat() if target.last_login else None,
+            },
+            'employee': None,
+            'attendance': [],
+            'leave_requests': [],
+            'claims': [],
+            'tickets': [],
+            'face_data': [],
+            'audit_log_rows': [],
+            'consent_history': [],
+        }
+        if emp:
+            bundle['employee'] = {
+                'id': emp.id,
+                'badge_id': emp.badge_id,
+                'first_name': emp.employee_first_name,
+                'last_name': emp.employee_last_name,
+                'email': emp.email,
+                'phone': emp.phone,
+                'gender': emp.gender,
+                'dob': emp.dob.isoformat() if emp.dob else None,
+                'address': emp.address,
+                'city': emp.city,
+                'country': emp.country,
+            }
+        if emp_id:
+            for a in Attendance.objects.filter(employee_id_id=emp_id).order_by('-attendance_date')[:1000]:
+                bundle['attendance'].append(
+                    {
+                        'date': a.attendance_date.isoformat() if a.attendance_date else None,
+                        'in': a.attendance_clock_in.isoformat() if a.attendance_clock_in else None,
+                        'out': a.attendance_clock_out.isoformat() if a.attendance_clock_out else None,
+                        'source': a.punch_in_source,
+                        'lat': a.punch_in_lat,
+                        'lng': a.punch_in_lng,
+                    }
+                )
+            for lr in LeaveRequest.objects.filter(employee_id_id=emp_id).order_by('-id')[:500]:
+                bundle['leave_requests'].append(
+                    {
+                        'id': lr.id,
+                        'status': lr.status,
+                        'start_date': lr.start_date.isoformat() if lr.start_date else None,
+                        'end_date': lr.end_date.isoformat() if lr.end_date else None,
+                        'description': lr.description,
+                    }
+                )
+            for c in ClaimRequest.objects.filter(employee_id_id=emp_id):
+                bundle['claims'].append(
+                    {
+                        'id': c.id,
+                        'is_approved': c.is_approved,
+                        'is_rejected': c.is_rejected,
+                    }
+                )
+            for t in Ticket.objects.filter(employee_id_id=emp_id):
+                bundle['tickets'].append(
+                    {
+                        'id': t.id,
+                        'title': t.title,
+                        'status': t.status,
+                        'description': t.description,
+                    }
+                )
+            for f in EmployeeFaceData.objects.filter(employee_id_id=emp_id):
+                bundle['face_data'].append(
+                    {
+                        'num_samples': f.num_samples,
+                        'embedding_dim': f.embedding_dim,
+                        'updated_at': f.updated_at.isoformat() if f.updated_at else None,
+                    }
+                )
+        for r in AuditLog.objects.filter(target_user_id=target.id).order_by('-id')[:200]:
+            bundle['audit_log_rows'].append(
+                {
+                    'created_at': r.created_at.isoformat(),
+                    'action': r.action,
+                    'actor_name': r.actor_name,
+                    'payload': r.payload,
+                }
+            )
+        for c in UserConsent.objects.filter(user_id=target.id).order_by('-accepted_at'):
+            bundle['consent_history'].append(
+                {
+                    'consent_key': c.consent_key,
+                    'accepted_at': c.accepted_at.isoformat(),
+                    'ip_address': c.ip_address,
+                }
+            )
+        write_audit(
+            request,
+            action='gdpr_export',
+            target_type='User',
+            target_id=target.id,
+            target_user_id=target.id,
+            target_name=target.username,
+        )
+        return Response(bundle)
+
+
+class AdminGdprDeleteView(APIView):
+    """Right-to-be-forgotten. Anonymizes PII while keeping aggregates intact
+    so attendance compliance / payroll math doesn't break."""
+
+    def post(self, request, pk):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        target = User.objects.filter(id=pk).first()
+        if not target:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        if target.is_superuser:
+            return Response({'error': 'Cannot anonymize a superuser'}, status=status.HTTP_403_FORBIDDEN)
+
+        emp = get_employee_from_user(target)
+        old_username = target.username
+        # Anonymize the auth user.
+        target.username = f'anon_{target.id}'
+        target.email = ''
+        target.first_name = ''
+        target.last_name = ''
+        target.is_active = False
+        target.token_version = (target.token_version or 0) + 1
+        target.set_unusable_password()
+        target.save()
+
+        # Anonymize the linked Employee row.
+        if emp:
+            emp.employee_first_name = 'Anonymized'
+            emp.employee_last_name = f'#{emp.id}'
+            emp.email = None
+            emp.phone = None
+            emp.address = None
+            emp.is_active = False
+            emp.save()
+            # Wipe face embeddings.
+            from .models import EmployeeFaceData
+
+            EmployeeFaceData.objects.filter(employee_id_id=emp.id).delete()
+
+        write_audit(
+            request,
+            action='gdpr_anonymize',
+            target_type='User',
+            target_id=target.id,
+            target_user_id=target.id,
+            target_name=old_username,
+        )
+        return Response({'status': 'anonymized', 'user_id': target.id})
+
+
+class AdminRetentionPoliciesView(APIView):
+    """List + upsert retention policies."""
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import RetentionPolicy
+
+        rows = RetentionPolicy.objects.all().order_by('model_name')
+        return Response(
+            {
+                'items': [
+                    {
+                        'id': r.id,
+                        'model_name': r.model_name,
+                        'max_days': r.max_days,
+                        'is_active': r.is_active,
+                        'last_run_at': r.last_run_at.isoformat() if r.last_run_at else None,
+                        'last_purged_count': r.last_purged_count,
+                    }
+                    for r in rows
+                ],
+            }
+        )
+
+    def post(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import RetentionPolicy
+
+        model_name = (request.data.get('model_name') or '').strip().lower()
+        if not model_name:
+            return Response(
+                {'error': {'code': 'BAD_DATA', 'message': 'model_name required'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        p, _ = RetentionPolicy.objects.update_or_create(
+            model_name=model_name,
+            defaults={
+                'max_days': int(request.data.get('max_days', 365)),
+                'is_active': bool(request.data.get('is_active', True)),
+            },
+        )
+        write_audit(request, action='retention_policy_saved', target_type='RetentionPolicy', target_id=p.id)
+        return Response({'id': p.id, 'model_name': p.model_name})
+
+
+class AdminAllowedIpsView(APIView):
+    """List + create allowlisted CIDRs for login."""
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import AllowedIp
+
+        rows = AllowedIp.objects.all().order_by('-is_active', 'label')
+        return Response(
+            {
+                'items': [
+                    {
+                        'id': r.id,
+                        'label': r.label,
+                        'cidr': r.cidr,
+                        'is_active': r.is_active,
+                        'updated_at': r.updated_at.isoformat() if r.updated_at else None,
+                    }
+                    for r in rows
+                ],
+                'caller_ip': _client_ip(request),
+            }
+        )
+
+    def post(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        import ipaddress as _ipa
+
+        from .models import AllowedIp
+
+        cidr = (request.data.get('cidr') or '').strip()
+        try:
+            _ipa.ip_network(cidr, strict=False)
+        except ValueError:
+            return Response(
+                {'error': {'code': 'BAD_CIDR', 'message': 'Provide a single IP or CIDR block'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        row = AllowedIp.objects.create(
+            label=(request.data.get('label') or '').strip() or 'New Network',
+            cidr=cidr,
+            is_active=bool(request.data.get('is_active', True)),
+        )
+        write_audit(
+            request,
+            action='allowed_ip_created',
+            target_type='AllowedIp',
+            target_id=row.id,
+            payload={'label': row.label, 'cidr': cidr},
+        )
+        return Response({'id': row.id, 'label': row.label}, status=status.HTTP_201_CREATED)
+
+
+class AdminAllowedIpDetailView(APIView):
+    def put(self, request, pk):
+        return self.patch(request, pk)
+
+    def patch(self, request, pk):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import AllowedIp
+
+        row = AllowedIp.objects.filter(id=pk).first()
+        if not row:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        for f in ('label', 'cidr', 'is_active'):
+            if f in request.data:
+                setattr(row, f, request.data[f])
+        row.save()
+        write_audit(request, action='allowed_ip_updated', target_type='AllowedIp', target_id=row.id)
+        return Response({'id': row.id})
+
+    def delete(self, request, pk):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import AllowedIp
+
+        row = AllowedIp.objects.filter(id=pk).first()
+        if not row:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        row.delete()
+        write_audit(request, action='allowed_ip_deleted', target_type='AllowedIp', target_id=pk)
+        return Response({'status': 'deleted'})
+
+
+class AdminLoginRecordsView(APIView):
+    """Read-only feed of LoginRecord rows. Admin only."""
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import LoginRecord
+
+        limit = min(int(request.query_params.get('limit', 100)), 500)
+        offset = int(request.query_params.get('offset', 0))
+        user_id = request.query_params.get('user_id')
+        qs = LoginRecord.objects.all().order_by('-created_at')
+        if user_id:
+            qs = qs.filter(user_id=int(user_id))
+        total = qs.count()
+        rows = qs[offset : offset + limit]
+        return Response(
+            {
+                'total': total,
+                'limit': limit,
+                'offset': offset,
+                'items': [
+                    {
+                        'id': r.id,
+                        'created_at': r.created_at.isoformat(),
+                        'user_id': r.user_id,
+                        'user_name': r.user_name,
+                        'role': r.role,
+                        'lat': r.latitude,
+                        'lng': r.longitude,
+                        'location_name': r.location_name,
+                        'device_info': r.device_info,
+                        'ip_address': r.ip_address,
+                        'success': r.success,
+                    }
+                    for r in rows
+                ],
+            }
+        )
+
+
+class AdminConsentLedgerView(APIView):
+    """View consent rows for a user (or all users if no `user_id` filter)."""
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import UserConsent
+
+        qs = UserConsent.objects.all().order_by('-accepted_at')
+        user_id = request.query_params.get('user_id')
+        if user_id:
+            qs = qs.filter(user_id=int(user_id))
+        rows = list(qs[:500])
+        return Response(
+            {
+                'count': len(rows),
+                'items': [
+                    {
+                        'id': r.id,
+                        'user_id': r.user_id,
+                        'user_name': r.user_name,
+                        'consent_key': r.consent_key,
+                        'accepted_at': r.accepted_at.isoformat(),
+                        'ip_address': r.ip_address,
+                    }
+                    for r in rows
+                ],
+            }
+        )
+
+
+class AdminUsersListView(APIView):
+    """List every user with role + active status. Admin only."""
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        search = (request.query_params.get('search') or '').strip()
+        role_filter = (request.query_params.get('role') or '').strip().lower()
+        limit = min(int(request.query_params.get('limit', 100)), 500)
+        offset = int(request.query_params.get('offset', 0))
+
+        qs = User.objects.all().order_by('username')
+        if search:
+            qs = qs.filter(
+                Q(username__icontains=search)
+                | Q(email__icontains=search)
+                | Q(first_name__icontains=search)
+                | Q(last_name__icontains=search)
+            )
+
+        items = []
+        for u in qs[offset : offset + limit]:
+            emp = get_employee_from_user(u)
+            role = _user_role(u, emp)
+            if role_filter and role != role_filter:
+                continue
+            items.append(
+                {
+                    'id': u.id,
+                    'username': u.username,
+                    'name': emp.name if emp else (u.username or ''),
+                    'email': u.email,
+                    'badge_id': emp.badge_id if emp else None,
+                    'is_active': u.is_active,
+                    'role': role,
+                    'failed_login_count': u.failed_login_count,
+                    'locked_until': u.locked_until.isoformat() if u.locked_until else None,
+                    'token_version': u.token_version,
+                    'last_login': u.last_login.isoformat() if u.last_login else None,
+                }
+            )
+        return Response({'total': qs.count(), 'limit': limit, 'offset': offset, 'items': items})
+
+
+class AdminUserActionView(APIView):
+    """Per-user admin actions: enable / disable / promote / reset-password / force-logout."""
+
+    def post(self, request, pk, action):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        target = User.objects.filter(id=pk).first()
+        if not target:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        action = (action or '').lower().replace('_', '-')
+        result = {}
+
+        if action == 'enable':
+            target.is_active = True
+            target.failed_login_count = 0
+            target.locked_until = None
+            target.save(update_fields=['is_active', 'failed_login_count', 'locked_until'])
+            result = {'is_active': True}
+
+        elif action == 'disable':
+            target.is_active = False
+            # Also revoke any existing tokens.
+            target.token_version = (target.token_version or 0) + 1
+            target.save(update_fields=['is_active', 'token_version'])
+            result = {'is_active': False}
+
+        elif action == 'force-logout':
+            target.token_version = (target.token_version or 0) + 1
+            target.save(update_fields=['token_version'])
+            result = {'token_version': target.token_version}
+
+        elif action == 'reset-password':
+            # Fire the standard Django password-reset email (same as forgot-password).
+            from django.contrib.auth.forms import PasswordResetForm
+
+            sent = False
+            if target.email:
+                try:
+                    form = PasswordResetForm({'email': target.email})
+                    if form.is_valid():
+                        form.save(
+                            use_https=request.is_secure(),
+                            request=request,
+                            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', None),
+                            email_template_name='registration/password_reset_email.html',
+                            subject_template_name='registration/password_reset_subject.txt',
+                        )
+                        sent = True
+                except Exception:
+                    pass
+            # Also bump token_version so any active sessions are killed.
+            target.token_version = (target.token_version or 0) + 1
+            target.save(update_fields=['token_version'])
+            result = {'reset_email_sent': sent}
+
+        elif action == 'promote':
+            new_role = (request.data.get('role') or '').strip().lower()
+            if new_role not in {'admin', 'hr', 'manager', 'employee'}:
+                return Response(
+                    {'error': {'code': 'BAD_ROLE', 'message': 'role must be admin/hr/manager/employee'}},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if new_role == 'admin':
+                target.is_superuser = True
+                target.is_staff = True
+            elif new_role == 'hr':
+                target.is_superuser = False
+                target.is_staff = True
+            else:
+                # manager / employee — both have is_staff=False, is_superuser=False.
+                # The "manager" distinction is derived from reporting graph and
+                # can't be set from this endpoint without restructuring the org.
+                target.is_superuser = False
+                target.is_staff = False
+            target.save(update_fields=['is_superuser', 'is_staff'])
+            result = {'role': new_role}
+
+        else:
+            return Response(
+                {'error': {'code': 'UNKNOWN_ACTION', 'message': f'Unknown action: {action}'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        write_audit(
+            request,
+            action=f'admin_user_{action.replace("-", "_")}',
+            target_type='User',
+            target_id=target.id,
+            target_user_id=target.id,
+            target_name=target.username,
+            payload=result,
+        )
+        return Response({'status': 'ok', **result})
+
+
+class AdminAuditLogsCsvExportView(APIView):
+    """Stream the entire audit log as CSV. Admin only.
+
+    Optional ?action=<event> filter limits the export to a single event type
+    (matches the chip filter on the audit feed screen).
+    """
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        import csv as _csv
+
+        from django.http import HttpResponse
+
+        from .models import AuditLog
+
+        action_filter = (request.query_params.get('action') or '').strip()
+        qs = AuditLog.objects.all().order_by('-created_at')
+        if action_filter:
+            qs = qs.filter(action=action_filter)
+
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="audit_logs.csv"'
+        writer = _csv.writer(response)
+        writer.writerow(
+            [
+                'id',
+                'created_at',
+                'action',
+                'actor_user_id',
+                'actor_name',
+                'actor_role',
+                'target_user_id',
+                'target_name',
+                'target_type',
+                'target_id',
+                'ip_address',
+                'payload',
+            ]
+        )
+        for r in qs.iterator(chunk_size=500):
+            writer.writerow(
+                [
+                    r.id,
+                    r.created_at.isoformat(),
+                    r.action,
+                    r.actor_user_id or '',
+                    r.actor_name or '',
+                    r.actor_role or '',
+                    r.target_user_id or '',
+                    r.target_name or '',
+                    r.target_type or '',
+                    r.target_id or '',
+                    r.ip_address or '',
+                    r.payload or '',
+                ]
+            )
+        write_audit(
+            request,
+            action='audit_logs_exported',
+            target_type='AuditLog',
+            payload={'action_filter': action_filter or None},
+        )
+        return response
+
+
+class AdminAuditLogsView(APIView):
+    """Paginated audit log feed for the super-admin role."""
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .models import AuditLog
+
+        limit = min(int(request.query_params.get('limit', 50)), 200)
+        offset = int(request.query_params.get('offset', 0))
+        action_filter = request.query_params.get('action')
+        qs = AuditLog.objects.all().order_by('-created_at')
+        if action_filter:
+            qs = qs.filter(action=action_filter)
+        total = qs.count()
+        rows = qs[offset : offset + limit]
+        import json as _json
+
+        items = []
+        for r in rows:
+            payload = {}
+            if r.payload:
+                try:
+                    payload = _json.loads(r.payload)
+                except Exception:
+                    payload = {}
+            items.append(
+                {
+                    'id': r.id,
+                    'created_at': r.created_at.isoformat(),
+                    'actor_user_id': r.actor_user_id,
+                    'actor_name': r.actor_name,
+                    'actor_role': r.actor_role,
+                    'target_user_id': r.target_user_id,
+                    'target_name': r.target_name,
+                    'action': r.action,
+                    'target_type': r.target_type,
+                    'target_id': r.target_id,
+                    'payload': payload,
+                    'ip_address': r.ip_address,
+                }
+            )
+        return Response({'total': total, 'limit': limit, 'offset': offset, 'items': items})
+
+
+class AdminCommandCenterView(APIView):
+    """Org-wide command-center stats for the super-admin role.
+
+    Returns:
+      • headcount + today's split (present / wfh / leave / absent)
+      • attendance compliance % for the current month
+      • pending approvals broken down by type AND by manager (top N)
+      • alerts: late check-ins today, missing check-outs from yesterday
+    """
+
+    def get(self, request):
+        from datetime import timedelta
+
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+
+        today = date.today()
+        yday = today - timedelta(days=1)
+        month_start = date(today.year, today.month, 1)
+
+        total = Employee.objects.filter(is_active=True).count()
+        present_today = Attendance.objects.filter(
+            attendance_date=today,
+            attendance_clock_in__isnull=False,
+        ).count()
+        on_leave_today = LeaveRequest.objects.filter(
+            status='approved',
+            start_date__lte=today,
+            end_date__gte=today,
+        ).count()
+        absent_today = max(0, total - present_today - on_leave_today)
+
+        # Attendance compliance % for the month-to-date.
+        working_days = sum(
+            1
+            for d in range((today - month_start).days + 1)
+            if (month_start + timedelta(days=d)).weekday() < 5
+        )
+        total_possible = total * max(working_days, 1)
+        total_present = Attendance.objects.filter(
+            attendance_date__gte=month_start,
+            attendance_date__lte=today,
+            attendance_clock_in__isnull=False,
+        ).count()
+        compliance = round(total_present / total_possible * 100, 1) if total_possible > 0 else 0.0
+
+        # Pending approvals by type — global counts.
+        def _safe_count(qs):
+            try:
+                return qs.count()
+            except Exception:
+                return 0
+
+        pending = {
+            'leave_requests': _safe_count(LeaveRequest.objects.filter(status='requested')),
+            'claims': _safe_count(ClaimRequest.objects.filter(is_approved=False, is_rejected=False)),
+            'tickets': _safe_count(Ticket.objects.filter(status='open')),
+            'shift_requests': _safe_count(ShiftRequestModel.objects.filter(approved=False, canceled=False)),
+            'work_type_requests': _safe_count(
+                WorkTypeRequestModel.objects.filter(approved=False, canceled=False)
+            ),
+            'attendance_requests': _safe_count(AttendanceRequestModel.objects.filter(status='requested')),
+            'asset_requests': _safe_count(
+                AssetRequestModel.objects.filter(asset_request_status__icontains='request')
+            ),
+        }
+        pending['total'] = sum(pending.values())
+
+        # Pending approvals by manager (top 10 managers with the biggest backlog).
+        manager_backlog = {}
+        # All managers = anyone listed as reporting_manager_id_id.
+        manager_ids = set(
+            EmployeeWorkInformation.objects.exclude(reporting_manager_id_id__isnull=True).values_list(
+                'reporting_manager_id_id', flat=True
+            )
+        )
+        for mgr_id in manager_ids:
+            team_ids = list(
+                EmployeeWorkInformation.objects.filter(reporting_manager_id_id=mgr_id).values_list(
+                    'employee_id_id', flat=True
+                )
+            )
+            if not team_ids:
+                continue
+            count = (
+                _safe_count(LeaveRequest.objects.filter(status='requested', employee_id_id__in=team_ids))
+                + _safe_count(
+                    ClaimRequest.objects.filter(
+                        is_approved=False, is_rejected=False, employee_id_id__in=team_ids
+                    )
+                )
+                + _safe_count(Ticket.objects.filter(status='open', employee_id_id__in=team_ids))
+                + _safe_count(
+                    ShiftRequestModel.objects.filter(
+                        approved=False, canceled=False, employee_id_id__in=team_ids
+                    )
+                )
+                + _safe_count(
+                    WorkTypeRequestModel.objects.filter(
+                        approved=False, canceled=False, employee_id_id__in=team_ids
+                    )
+                )
+                + _safe_count(
+                    AttendanceRequestModel.objects.filter(status='requested', employee_id__in=team_ids)
+                )
+            )
+            if count > 0:
+                mgr = Employee.objects.filter(id=mgr_id).first()
+                if mgr:
+                    manager_backlog[mgr_id] = {
+                        'id': str(mgr.id),
+                        'name': mgr.name,
+                        'employee_id': mgr.badge_id or str(mgr.id),
+                        'pending': count,
+                    }
+        manager_backlog_list = sorted(manager_backlog.values(), key=lambda r: r['pending'], reverse=True)[:10]
+
+        # Alerts.
+        # Late = checked in after 09:30 today
+        late_today = Attendance.objects.filter(
+            attendance_date=today,
+            attendance_clock_in__gt='09:30:00',
+        ).count()
+        # Missing checkout = yesterday's punch in but no punch out
+        missing_checkout = Attendance.objects.filter(
+            attendance_date=yday,
+            attendance_clock_in__isnull=False,
+            attendance_clock_out__isnull=True,
+        ).count()
+        # Off-zone WFH = today's punches with no lat/lng (location refused)
+        off_zone = Attendance.objects.filter(
+            attendance_date=today,
+            attendance_clock_in__isnull=False,
+            punch_in_lat__isnull=True,
+        ).count()
+
+        return Response(
+            {
+                'headcount': {
+                    'total': total,
+                    'present': present_today,
+                    'on_leave': on_leave_today,
+                    'absent': absent_today,
+                },
+                'compliance_pct': compliance,
+                'pending_approvals': pending,
+                'manager_backlog': manager_backlog_list,
+                'alerts': {
+                    'late_today': late_today,
+                    'missing_checkout_yesterday': missing_checkout,
+                    'off_zone_today': off_zone,
+                },
+                'as_of': timezone.now().isoformat(),
             }
         )
 

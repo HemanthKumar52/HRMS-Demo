@@ -3,22 +3,24 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 
-/// WFH face-verification dialog.
+/// WFH face-verification dialog with **inline live camera preview** and
+/// **auto-capture** after a short countdown.
 ///
-/// Captures a selfie via the system camera, sends it base64-encoded to the
-/// backend `/attendance/face-punch-in` endpoint, and reflects the result
-/// inside the small avatar circle:
-///   • Verifying  → spinner, primary ring
-///   • Verified   → green check, success ring
-///   • Failed     → red X, danger ring + horizontal shake animation + haptic
+/// Stages, all rendered inside the same circular avatar:
+///   • idle      → static face icon, "Verify" button enabled
+///   • preview   → live front-camera feed, countdown ring
+///   • capturing → progress spinner overlay
+///   • verifying → progress spinner
+///   • verified  → green check
+///   • failed    → red X + horizontal damped-sine shake + heavy haptic
 class FaceVerificationDialog extends StatefulWidget {
   const FaceVerificationDialog({super.key});
 
@@ -26,14 +28,23 @@ class FaceVerificationDialog extends StatefulWidget {
   State<FaceVerificationDialog> createState() => _FaceVerificationDialogState();
 }
 
-enum _Stage { idle, capturing, verifying, verified, failed }
+enum _Stage { idle, preview, capturing, verifying, verified, failed }
 
 class _FaceVerificationDialogState extends State<FaceVerificationDialog>
     with SingleTickerProviderStateMixin {
-  final ImagePicker _picker = ImagePicker();
+  static const _ringDiameter = 200.0;
+  static const _autoCaptureDelay = Duration(milliseconds: 1500);
+
   _Stage _stage = _Stage.idle;
   String _statusMessage = 'Position your face within the circle';
   String? _errorCode;
+
+  CameraController? _cameraController;
+  Future<void>? _initFuture;
+  Timer? _captureTimer;
+  Timer? _frameSampleTimer;
+  final List<String> _extraFrames =
+      []; // base64 frames for multi-frame liveness
 
   // ── Shake animation ──────────────────────────────────────────────────────
   late final AnimationController _shakeController;
@@ -49,8 +60,22 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
 
   @override
   void dispose() {
+    _captureTimer?.cancel();
+    _frameSampleTimer?.cancel();
     _shakeController.dispose();
+    _disposeCamera();
     super.dispose();
+  }
+
+  Future<void> _disposeCamera() async {
+    final c = _cameraController;
+    _cameraController = null;
+    _initFuture = null;
+    if (c != null) {
+      try {
+        await c.dispose();
+      } catch (_) {}
+    }
   }
 
   /// Damped sine wave: amplitude * sin(2πfreq·t) * (1 - t)
@@ -67,28 +92,86 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
   }
 
   // ── Verification flow ────────────────────────────────────────────────────
+
   Future<void> _startVerification() async {
     setState(() {
-      _stage = _Stage.capturing;
-      _statusMessage = 'Opening camera…';
+      _stage = _Stage.preview;
+      _statusMessage = 'Hold still — capturing in 1.5 s';
       _errorCode = null;
     });
 
     try {
-      final XFile? shot = await _picker.pickImage(
-        source: ImageSource.camera,
-        preferredCameraDevice: CameraDevice.front,
-        imageQuality: 85,
-        maxWidth: 1080,
+      // Pick the front camera (fall back to first available).
+      final cameras = await availableCameras();
+      if (cameras.isEmpty)
+        throw CameraException('no_cameras', 'No cameras found on device');
+      final front = cameras.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.front,
+        orElse: () => cameras.first,
       );
-      if (shot == null) {
-        if (!mounted) return;
-        setState(() {
-          _stage = _Stage.idle;
-          _statusMessage = 'Position your face within the circle';
-        });
+
+      final controller = CameraController(
+        front,
+        ResolutionPreset
+            .medium, // good enough for face recognition, much faster than high
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.jpeg,
+      );
+      _cameraController = controller;
+      _initFuture = controller.initialize();
+      await _initFuture;
+
+      if (!mounted) {
+        await _disposeCamera();
         return;
       }
+      setState(() {});
+
+      // Sample 2 extra frames during the preview for multi-frame liveness.
+      _extraFrames.clear();
+      _frameSampleTimer = Timer.periodic(const Duration(milliseconds: 400), (
+        _,
+      ) async {
+        if (_extraFrames.length >= 2 || _cameraController == null) {
+          _frameSampleTimer?.cancel();
+          return;
+        }
+        try {
+          final snap = await _cameraController!.takePicture();
+          final bytes = await File(snap.path).readAsBytes();
+          _extraFrames.add(base64Encode(bytes));
+          unawaited(
+            File(snap.path).delete().catchError((_) => File(snap.path)),
+          );
+        } catch (_) {}
+      });
+
+      // Auto-capture the primary frame after the hold-still window.
+      _captureTimer = Timer(_autoCaptureDelay, _captureAndVerify);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _stage = _Stage.failed;
+        _statusMessage = _cameraErrorMessage(e);
+      });
+      _triggerFailureFeedback();
+      await _disposeCamera();
+    }
+  }
+
+  Future<void> _captureAndVerify() async {
+    final controller = _cameraController;
+    if (controller == null || !controller.value.isInitialized) return;
+    if (!mounted) return;
+
+    setState(() {
+      _stage = _Stage.capturing;
+      _statusMessage = 'Capturing…';
+    });
+
+    try {
+      final shot = await controller.takePicture();
+      await _disposeCamera();
 
       if (!mounted) return;
       setState(() {
@@ -96,13 +179,16 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
         _statusMessage = 'Verifying…';
       });
 
+      _frameSampleTimer?.cancel();
       final provider = context.read<AppProvider>();
       final bytes = await File(shot.path).readAsBytes();
       final b64 = base64Encode(bytes);
+      // Best-effort cleanup of the temp file.
+      unawaited(File(shot.path).delete().catchError((_) => File(shot.path)));
 
-      final err = await provider.facePunchIn(b64);
-
+      final err = await provider.facePunchIn(b64, extraFrames: _extraFrames);
       if (!mounted) return;
+
       if (err == null || err == 'ALREADY_PUNCHED_IN') {
         HapticFeedback.lightImpact();
         setState(() {
@@ -120,8 +206,9 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
         });
         _triggerFailureFeedback();
       }
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
+      await _disposeCamera();
       setState(() {
         _stage = _Stage.failed;
         _statusMessage = 'Could not capture image';
@@ -132,6 +219,8 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
 
   String _humanMessage(String code) {
     switch (code) {
+      case 'LOCATION_REQUIRED':
+        return 'Enable location permission in Settings — required for check-in.';
       case 'GEOFENCE_OFFICE':
         return "You're at the office — please punch in via biometric.";
       case 'WFH_OUT_OF_ZONE':
@@ -147,6 +236,19 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
     }
   }
 
+  String _cameraErrorMessage(Object e) {
+    final s = e.toString().toLowerCase();
+    if (s.contains('permission') || s.contains('denied')) {
+      return 'Camera permission denied. Enable it in Settings.';
+    }
+    if (s.contains('no_cameras') || s.contains('no cameras')) {
+      return 'No camera available on this device.';
+    }
+    return 'Could not start the camera.';
+  }
+
+  // ── Visuals ──────────────────────────────────────────────────────────────
+
   Color _ringColor() {
     switch (_stage) {
       case _Stage.verified:
@@ -155,6 +257,7 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
         return AppColors.danger;
       case _Stage.capturing:
       case _Stage.verifying:
+      case _Stage.preview:
         return AppColors.primary;
       case _Stage.idle:
         return Colors.grey.shade300;
@@ -172,8 +275,37 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
     }
   }
 
-  Widget _ringChild() {
+  Widget _ringContent() {
     switch (_stage) {
+      case _Stage.idle:
+        return Icon(Icons.face, color: Colors.grey[400], size: 70);
+      case _Stage.preview:
+        // Live front-camera feed clipped into the circle.
+        final controller = _cameraController;
+        if (controller == null || !controller.value.isInitialized) {
+          return const SizedBox(
+            width: 50,
+            height: 50,
+            child: CircularProgressIndicator(
+              color: AppColors.primary,
+              strokeWidth: 3.5,
+            ),
+          );
+        }
+        return ClipOval(
+          child: SizedBox(
+            width: _ringDiameter,
+            height: _ringDiameter,
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox(
+                width: controller.value.previewSize?.height ?? _ringDiameter,
+                height: controller.value.previewSize?.width ?? _ringDiameter,
+                child: CameraPreview(controller),
+              ),
+            ),
+          ),
+        );
       case _Stage.capturing:
       case _Stage.verifying:
         return const SizedBox(
@@ -188,23 +320,20 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
         return const Icon(
           Icons.check_circle,
           color: AppColors.success,
-          size: 80,
+          size: 90,
         );
       case _Stage.failed:
-        return const Icon(
-          Icons.cancel,
-          color: AppColors.danger,
-          size: 80,
-        );
-      case _Stage.idle:
-        return Icon(Icons.face, color: Colors.grey[400], size: 60);
+        return const Icon(Icons.cancel, color: AppColors.danger, size: 90);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final busy = _stage == _Stage.capturing || _stage == _Stage.verifying;
+    final busy =
+        _stage == _Stage.capturing ||
+        _stage == _Stage.verifying ||
+        _stage == _Stage.preview;
 
     return Dialog(
       backgroundColor: theme.cardColor,
@@ -214,20 +343,18 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Animated circle (shakes horizontally on failure).
+            // Animated avatar circle.
             AnimatedBuilder(
               animation: _shakeController,
-              builder: (context, child) {
-                return Transform.translate(
-                  offset: Offset(_shakeOffset(_shakeController.value), 0),
-                  child: child,
-                );
-              },
+              builder: (context, child) => Transform.translate(
+                offset: Offset(_shakeOffset(_shakeController.value), 0),
+                child: child,
+              ),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 curve: Curves.easeOut,
-                width: 160,
-                height: 160,
+                width: _ringDiameter,
+                height: _ringDiameter,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: _ringFill(),
@@ -241,25 +368,25 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
                           ),
                         ]
                       : _stage == _Stage.verified
-                          ? [
-                              BoxShadow(
-                                color: AppColors.success.withValues(alpha: 0.25),
-                                blurRadius: 16,
-                                spreadRadius: 2,
-                              ),
-                            ]
-                          : null,
+                      ? [
+                          BoxShadow(
+                            color: AppColors.success.withValues(alpha: 0.25),
+                            blurRadius: 16,
+                            spreadRadius: 2,
+                          ),
+                        ]
+                      : null,
                 ),
-                child: Center(
+                child: ClipOval(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 220),
                     transitionBuilder: (child, animation) => ScaleTransition(
                       scale: animation,
                       child: FadeTransition(opacity: animation, child: child),
                     ),
-                    child: KeyedSubtree(
+                    child: Center(
                       key: ValueKey(_stage),
-                      child: _ringChild(),
+                      child: _ringContent(),
                     ),
                   ),
                 ),
@@ -271,6 +398,7 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
                 _Stage.verified => 'Verified!',
                 _Stage.verifying => 'Verifying…',
                 _Stage.capturing => 'Capturing…',
+                _Stage.preview => 'Hold Still',
                 _Stage.failed => 'Verification Failed',
                 _Stage.idle => 'Face Verification',
               },
@@ -278,8 +406,8 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
                 color: _stage == _Stage.failed
                     ? AppColors.danger
                     : _stage == _Stage.verified
-                        ? AppColors.success
-                        : null,
+                    ? AppColors.success
+                    : null,
               ),
             ),
             const SizedBox(height: 8),
@@ -317,13 +445,14 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         elevation: 0,
                       ),
-                      child: Text(_stage == _Stage.failed ? 'Try Again' : 'Verify'),
+                      child: Text(
+                        _stage == _Stage.failed ? 'Try Again' : 'Verify',
+                      ),
                     ),
                   ),
                 ],
               ),
-            // Keep the unused-field warning quiet — _errorCode is reserved
-            // for telemetry / future detail-screen handoff.
+            // Reserved for future telemetry / detail-screen handoff.
             if (_errorCode != null) const SizedBox.shrink(),
           ],
         ),

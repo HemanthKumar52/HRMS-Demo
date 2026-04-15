@@ -25,7 +25,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: adaptiveAppBar(context: context, title: 'Settings', showBackButton: true),
+      appBar: adaptiveAppBar(
+        context: context,
+        title: 'Settings',
+        showBackButton: true,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
         child: Column(
@@ -33,275 +37,394 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             // Theme section
             Text(
-              'Appearance',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ).animate().fadeIn(duration: 420.ms, delay: (0 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (0 * 80).ms, curve: Curves.easeOutCubic),
+                  'Appearance',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: (0 * 80).ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: (0 * 80).ms,
+                  curve: Curves.easeOutCubic,
+                ),
             const SizedBox(height: 12),
             NeuCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Theme Mode',
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Theme Mode',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Choose your preferred appearance',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 16),
+                      _ThemeTile(
+                        icon: Icons.light_mode_rounded,
+                        label: 'Light Mode',
+                        subtitle: 'Clean and bright',
+                        color: AppColors.warning,
+                        isSelected:
+                            themeProvider.themeMode == AppThemeMode.light,
+                        onTap: () => themeProvider.setTheme(AppThemeMode.light),
+                      ),
+                      const SizedBox(height: 8),
+                      _ThemeTile(
+                        icon: Icons.dark_mode_rounded,
+                        label: 'Dark Mode',
+                        subtitle: 'Easy on the eyes',
+                        color: AppColors.secondary,
+                        isSelected:
+                            themeProvider.themeMode == AppThemeMode.dark,
+                        onTap: () => themeProvider.setTheme(AppThemeMode.dark),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Choose your preferred appearance',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 16),
-                  _ThemeTile(
-                    icon: Icons.light_mode_rounded,
-                    label: 'Light Mode',
-                    subtitle: 'Clean and bright',
-                    color: AppColors.warning,
-                    isSelected:
-                        themeProvider.themeMode == AppThemeMode.light,
-                    onTap: () =>
-                        themeProvider.setTheme(AppThemeMode.light),
-                  ),
-                  const SizedBox(height: 8),
-                  _ThemeTile(
-                    icon: Icons.dark_mode_rounded,
-                    label: 'Dark Mode',
-                    subtitle: 'Easy on the eyes',
-                    color: AppColors.secondary,
-                    isSelected:
-                        themeProvider.themeMode == AppThemeMode.dark,
-                    onTap: () =>
-                        themeProvider.setTheme(AppThemeMode.dark),
-                  ),
-                ],
-              ),
-            ).animate().fadeIn(duration: 420.ms, delay: (1 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (1 * 80).ms, curve: Curves.easeOutCubic),
+                )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: (1 * 80).ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: (1 * 80).ms,
+                  curve: Curves.easeOutCubic,
+                ),
             const SizedBox(height: 24),
 
             // Notifications section
             Text(
-              'Notifications',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ).animate().fadeIn(duration: 420.ms, delay: (2 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (2 * 80).ms, curve: Curves.easeOutCubic),
+                  'Notifications',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: (2 * 80).ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: (2 * 80).ms,
+                  curve: Curves.easeOutCubic,
+                ),
             const SizedBox(height: 12),
             NeuCard(
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.notifications_outlined,
-                      color: AppColors.primary,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Push Notifications',
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w500,
-                          ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Receive alerts for approvals, announcements',
-                          style: theme.textTheme.bodySmall,
+                        child: const Icon(
+                          Icons.notifications_outlined,
+                          color: AppColors.primary,
+                          size: 20,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Push Notifications',
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Receive alerts for approvals, announcements',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch.adaptive(
+                        value: _notificationsEnabled,
+                        onChanged: (v) =>
+                            setState(() => _notificationsEnabled = v),
+                        activeColor: AppColors.primary,
+                      ),
+                    ],
                   ),
-                  Switch.adaptive(
-                    value: _notificationsEnabled,
-                    onChanged: (v) =>
-                        setState(() => _notificationsEnabled = v),
-                    activeColor: AppColors.primary,
-                  ),
-                ],
-              ),
-            ).animate().fadeIn(duration: 420.ms, delay: (3 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (3 * 80).ms, curve: Curves.easeOutCubic),
+                )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: (3 * 80).ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: (3 * 80).ms,
+                  curve: Curves.easeOutCubic,
+                ),
             const SizedBox(height: 24),
 
             // Sync section
             Text(
-              'Data',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ).animate().fadeIn(duration: 420.ms, delay: (4 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (4 * 80).ms, curve: Curves.easeOutCubic),
+                  'Data',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: (4 * 80).ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: (4 * 80).ms,
+                  curve: Curves.easeOutCubic,
+                ),
             const SizedBox(height: 12),
             NeuCard(
-              onTap: _isSyncing ? null : () async {
-                setState(() => _isSyncing = true);
-                try {
-                  await context.read<AppProvider>().fetchDashboardData();
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: const Text('All data synced successfully'),
-                    backgroundColor: AppColors.success,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ));
-                } catch (e) {
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: const Text('Sync failed. Check your connection.'),
-                    backgroundColor: AppColors.danger,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ));
-                } finally {
-                  if (mounted) setState(() => _isSyncing = false);
-                }
-              },
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.success.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: _isSyncing
-                        ? SizedBox(
-                            width: 20, height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.success),
-                          )
-                        : const Icon(Icons.sync_rounded, color: AppColors.success, size: 20),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Sync Data',
-                          style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+                  onTap: _isSyncing
+                      ? null
+                      : () async {
+                          setState(() => _isSyncing = true);
+                          try {
+                            await context
+                                .read<AppProvider>()
+                                .fetchDashboardData();
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  'All data synced successfully',
+                                ),
+                                backgroundColor: AppColors.success,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            );
+                          } catch (e) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  'Sync failed. Check your connection.',
+                                ),
+                                backgroundColor: AppColors.danger,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            );
+                          } finally {
+                            if (mounted) setState(() => _isSyncing = false);
+                          }
+                        },
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Refresh all data from the server',
-                          style: theme.textTheme.bodySmall,
+                        child: _isSyncing
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.success,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.sync_rounded,
+                                color: AppColors.success,
+                                size: 20,
+                              ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Sync Data',
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Refresh all data from the server',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 20,
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.3)
+                            : Colors.black.withValues(alpha: 0.25),
+                      ),
+                    ],
                   ),
-                  Icon(Icons.chevron_right_rounded, size: 20,
-                    color: isDark ? Colors.white.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.25)),
-                ],
-              ),
-            ).animate().fadeIn(duration: 420.ms, delay: (5 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (5 * 80).ms, curve: Curves.easeOutCubic),
+                )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: (5 * 80).ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: (5 * 80).ms,
+                  curve: Curves.easeOutCubic,
+                ),
             const SizedBox(height: 24),
 
             // General section
             Text(
-              'General',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ).animate().fadeIn(duration: 420.ms, delay: (6 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (6 * 80).ms, curve: Curves.easeOutCubic),
+                  'General',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: (6 * 80).ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: (6 * 80).ms,
+                  curve: Curves.easeOutCubic,
+                ),
             const SizedBox(height: 12),
             NeuCard(
-              child: Column(
-                children: [
-                  _SettingsRow(
-                    icon: Icons.language_rounded,
-                    label: 'Language',
-                    trailing: Text(
-                      'English',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w500,
+                  child: Column(
+                    children: [
+                      _SettingsRow(
+                        icon: Icons.language_rounded,
+                        label: 'Language',
+                        trailing: Text(
+                          'English',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        onTap: () {
+                          // TODO: Language selector
+                        },
                       ),
-                    ),
-                    onTap: () {
-                      // TODO: Language selector
-                    },
+                      Divider(
+                        height: 24,
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.06)
+                            : Colors.black.withValues(alpha: 0.08),
+                      ),
+                      _SettingsRow(
+                        icon: Icons.info_outline_rounded,
+                        label: 'About',
+                        trailing: Text(
+                          'v1.0.0',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                        onTap: () {
+                          showAboutDialog(
+                            context: context,
+                            applicationName: 'PPULSE',
+                            applicationVersion: '1.0.0',
+                            applicationLegalese:
+                                '\u00a9 2026 PPULSE Technologies',
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                  Divider(
-                    height: 24,
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : Colors.black.withValues(alpha: 0.08),
-                  ),
-                  _SettingsRow(
-                    icon: Icons.info_outline_rounded,
-                    label: 'About',
-                    trailing: Text(
-                      'v1.0.0',
-                      style: theme.textTheme.bodySmall,
-                    ),
-                    onTap: () {
-                      showAboutDialog(
-                        context: context,
-                        applicationName: 'PPulse HRMS',
-                        applicationVersion: '1.0.0',
-                        applicationLegalese:
-                            '\u00a9 2026 PPulse Technologies',
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ).animate().fadeIn(duration: 420.ms, delay: (5 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (5 * 80).ms, curve: Curves.easeOutCubic),
+                )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: (5 * 80).ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: (5 * 80).ms,
+                  curve: Curves.easeOutCubic,
+                ),
             const SizedBox(height: 24),
 
             // Legal section
             Text(
-              'Legal',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ).animate().fadeIn(duration: 420.ms, delay: (6 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (6 * 80).ms, curve: Curves.easeOutCubic),
+                  'Legal',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: (6 * 80).ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: (6 * 80).ms,
+                  curve: Curves.easeOutCubic,
+                ),
             const SizedBox(height: 12),
             NeuCard(
-              child: Column(
-                children: [
-                  _SettingsRow(
-                    icon: Icons.privacy_tip_outlined,
-                    label: 'Privacy Policy',
-                    trailing: const Icon(
-                      Icons.open_in_new_rounded,
-                      size: 16,
-                      color: AppColors.primary,
-                    ),
-                    onTap: () {
-                      _showPrivacyPolicy(context);
-                    },
+                  child: Column(
+                    children: [
+                      _SettingsRow(
+                        icon: Icons.privacy_tip_outlined,
+                        label: 'Privacy Policy',
+                        trailing: const Icon(
+                          Icons.open_in_new_rounded,
+                          size: 16,
+                          color: AppColors.primary,
+                        ),
+                        onTap: () {
+                          _showPrivacyPolicy(context);
+                        },
+                      ),
+                      Divider(
+                        height: 24,
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.06)
+                            : Colors.black.withValues(alpha: 0.08),
+                      ),
+                      _SettingsRow(
+                        icon: Icons.description_outlined,
+                        label: 'Terms of Service',
+                        trailing: const Icon(
+                          Icons.open_in_new_rounded,
+                          size: 16,
+                          color: AppColors.primary,
+                        ),
+                        onTap: () {
+                          _showTermsOfService(context);
+                        },
+                      ),
+                    ],
                   ),
-                  Divider(
-                    height: 24,
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : Colors.black.withValues(alpha: 0.08),
-                  ),
-                  _SettingsRow(
-                    icon: Icons.description_outlined,
-                    label: 'Terms of Service',
-                    trailing: const Icon(
-                      Icons.open_in_new_rounded,
-                      size: 16,
-                      color: AppColors.primary,
-                    ),
-                    onTap: () {
-                      _showTermsOfService(context);
-                    },
-                  ),
-                ],
-              ),
-            ).animate().fadeIn(duration: 420.ms, delay: (7 * 80).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (7 * 80).ms, curve: Curves.easeOutCubic),
+                )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: (7 * 80).ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: (7 * 80).ms,
+                  curve: Curves.easeOutCubic,
+                ),
           ],
         ),
       ),
@@ -321,8 +444,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         builder: (context, scrollController) => Container(
           decoration: BoxDecoration(
             color: theme.cardColor,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: ListView(
             controller: scrollController,
@@ -339,24 +461,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ),
-              Text('Privacy Policy',
-                  style: theme.textTheme.titleLarge),
+              Text('Privacy Policy', style: theme.textTheme.titleLarge),
               const SizedBox(height: 16),
               Text(
                 'Last updated: March 1, 2026',
                 style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: 16),
-              _policySection(theme, 'Data Collection',
-                  'We collect personal information necessary for HR management including name, contact details, attendance records, and employment information.'),
-              _policySection(theme, 'Data Usage',
-                  'Your data is used solely for HR operations including attendance tracking, leave management, payroll processing, and performance management.'),
-              _policySection(theme, 'Data Protection',
-                  'We implement industry-standard security measures to protect your personal information. All data is encrypted in transit and at rest.'),
-              _policySection(theme, 'Data Sharing',
-                  'Your personal data is not shared with third parties except as required by law or with your explicit consent.'),
-              _policySection(theme, 'Your Rights',
-                  'You have the right to access, correct, or request deletion of your personal data. Contact HR for any privacy-related requests.'),
+              _policySection(
+                theme,
+                'Data Collection',
+                'We collect personal information necessary for HR management including name, contact details, attendance records, and employment information.',
+              ),
+              _policySection(
+                theme,
+                'Data Usage',
+                'Your data is used solely for HR operations including attendance tracking, leave management, payroll processing, and performance management.',
+              ),
+              _policySection(
+                theme,
+                'Data Protection',
+                'We implement industry-standard security measures to protect your personal information. All data is encrypted in transit and at rest.',
+              ),
+              _policySection(
+                theme,
+                'Data Sharing',
+                'Your personal data is not shared with third parties except as required by law or with your explicit consent.',
+              ),
+              _policySection(
+                theme,
+                'Your Rights',
+                'You have the right to access, correct, or request deletion of your personal data. Contact HR for any privacy-related requests.',
+              ),
             ],
           ),
         ),
@@ -377,8 +513,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         builder: (context, scrollController) => Container(
           decoration: BoxDecoration(
             color: theme.cardColor,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: ListView(
             controller: scrollController,
@@ -395,22 +530,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ),
-              Text('Terms of Service',
-                  style: theme.textTheme.titleLarge),
+              Text('Terms of Service', style: theme.textTheme.titleLarge),
               const SizedBox(height: 16),
               Text(
                 'Last updated: March 1, 2026',
                 style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: 16),
-              _policySection(theme, 'Acceptance',
-                  'By using PPulse HRMS, you agree to these terms of service and our privacy policy.'),
-              _policySection(theme, 'Usage',
-                  'This application is provided for employee self-service and HR management purposes only. Unauthorized use is prohibited.'),
-              _policySection(theme, 'Account Security',
-                  'You are responsible for maintaining the confidentiality of your login credentials and all activities under your account.'),
-              _policySection(theme, 'Modifications',
-                  'We reserve the right to modify these terms at any time. Continued use of the service constitutes acceptance of modified terms.'),
+              _policySection(
+                theme,
+                'Acceptance',
+                'By using PPULSE, you agree to these terms of service and our privacy policy.',
+              ),
+              _policySection(
+                theme,
+                'Usage',
+                'This application is provided for employee self-service and HR management purposes only. Unauthorized use is prohibited.',
+              ),
+              _policySection(
+                theme,
+                'Account Security',
+                'You are responsible for maintaining the confidentiality of your login credentials and all activities under your account.',
+              ),
+              _policySection(
+                theme,
+                'Modifications',
+                'We reserve the right to modify these terms at any time. Continued use of the service constitutes acceptance of modified terms.',
+              ),
             ],
           ),
         ),
@@ -469,15 +615,15 @@ class _ThemeTile extends StatelessWidget {
           color: isSelected
               ? color.withValues(alpha: 0.1)
               : (isDark
-                  ? Colors.white.withValues(alpha: 0.03)
-                  : Colors.black.withValues(alpha: 0.03)),
+                    ? Colors.white.withValues(alpha: 0.03)
+                    : Colors.black.withValues(alpha: 0.03)),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected
                 ? color.withValues(alpha: 0.4)
                 : (isDark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : Colors.black.withValues(alpha: 0.1)),
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : Colors.black.withValues(alpha: 0.1)),
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -513,14 +659,17 @@ class _ThemeTile extends StatelessWidget {
                   color: isSelected
                       ? color
                       : (isDark
-                          ? Colors.white.withValues(alpha: 0.2)
-                          : Colors.black.withValues(alpha: 0.2)),
+                            ? Colors.white.withValues(alpha: 0.2)
+                            : Colors.black.withValues(alpha: 0.2)),
                   width: 2,
                 ),
               ),
               child: isSelected
-                  ? const Icon(Icons.check_rounded,
-                      color: Colors.white, size: 14)
+                  ? const Icon(
+                      Icons.check_rounded,
+                      color: Colors.white,
+                      size: 14,
+                    )
                   : null,
             ),
           ],

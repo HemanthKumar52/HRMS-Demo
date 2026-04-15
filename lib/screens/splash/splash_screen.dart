@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../animations/motion.dart';
@@ -38,6 +41,9 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _checkLoginStatus() async {
+    // Request all permissions upfront during splash — no separate onboarding page.
+    unawaited(_requestPermissions());
+
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
     final name = prefs.getString('user_name');
@@ -46,15 +52,17 @@ class _SplashScreenState extends State<SplashScreen>
 
     bool isValidSession = false;
     if (token != null && name != null && name.isNotEmpty) {
-      // Validate token and restore role
       try {
-        final userData = await ApiService.getCurrentUser().timeout(const Duration(seconds: 5));
+        final userData = await ApiService.getCurrentUser().timeout(
+          const Duration(seconds: 5),
+        );
         isValidSession = true;
-        // Restore role from API response
         if (mounted) {
           final provider = context.read<AppProvider>();
           final roleStr = userData['role'] ?? 'employee';
-          if (roleStr == 'hr') {
+          if (roleStr == 'admin') {
+            provider.setRole(UserRole.admin);
+          } else if (roleStr == 'hr') {
             provider.setRole(UserRole.hr);
           } else if (roleStr == 'manager') {
             provider.setRole(UserRole.manager);
@@ -63,7 +71,6 @@ class _SplashScreenState extends State<SplashScreen>
           }
         }
       } catch (e) {
-        // Token expired or invalid - clear it
         await prefs.remove('auth_token');
         isValidSession = false;
       }
@@ -72,15 +79,21 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          Motion.pageRoute(
-            isValidSession ? const ShellScreen() : const LoginScreen(),
-          ),
-        );
-      }
+      if (!mounted) return;
+      final next = isValidSession ? const ShellScreen() : const LoginScreen();
+      Navigator.pushReplacement(context, Motion.pageRoute(next));
     });
+  }
+
+  /// Request camera, location, notifications, and photos all at once.
+  /// The OS shows its own native dialogs — we just fire and forget.
+  Future<void> _requestPermissions() async {
+    await [
+      Permission.camera,
+      Permission.location,
+      Permission.notification,
+      Permission.photos,
+    ].request();
   }
 
   @override
@@ -97,12 +110,40 @@ class _SplashScreenState extends State<SplashScreen>
         child: Stack(
           children: [
             Positioned(
-              top: -120, right: -100,
-              child: Container(width: 400, height: 400, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [const Color(0xFF6B3FA0).withValues(alpha: 0.5), const Color(0xFF3D1F6D).withValues(alpha: 0.15), Colors.transparent]))),
+              top: -120,
+              right: -100,
+              child: Container(
+                width: 400,
+                height: 400,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF6B3FA0).withValues(alpha: 0.5),
+                      const Color(0xFF3D1F6D).withValues(alpha: 0.15),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
             ),
             Positioned(
-              bottom: -80, left: -100,
-              child: Container(width: 380, height: 380, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [const Color(0xFF6B3FA0).withValues(alpha: 0.45), const Color(0xFF3D1F6D).withValues(alpha: 0.1), Colors.transparent]))),
+              bottom: -80,
+              left: -100,
+              child: Container(
+                width: 380,
+                height: 380,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF6B3FA0).withValues(alpha: 0.45),
+                      const Color(0xFF3D1F6D).withValues(alpha: 0.1),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
             ),
             Center(
               child: FadeTransition(
@@ -113,23 +154,65 @@ class _SplashScreenState extends State<SplashScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 100, height: 100,
+                        width: 100,
+                        height: 100,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF9B6DFF), Color(0xFF6B3FA0)]),
-                          boxShadow: [BoxShadow(color: const Color(0xFF9B6DFF).withValues(alpha: 0.5), blurRadius: 40, spreadRadius: 8)],
+                          gradient: const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(0xFF9B6DFF), Color(0xFF6B3FA0)],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(
+                                0xFF9B6DFF,
+                              ).withValues(alpha: 0.5),
+                              blurRadius: 40,
+                              spreadRadius: 8,
+                            ),
+                          ],
                         ),
-                        child: const Icon(Icons.person, color: Colors.white, size: 48),
+                        child: const Icon(
+                          Icons.person,
+                          color: Colors.white,
+                          size: 48,
+                        ),
                       ),
                       const SizedBox(height: 28),
                       RichText(
-                        text: const TextSpan(children: [
-                          TextSpan(text: 'p', style: TextStyle(color: Color(0xFF9B6DFF), fontSize: 36, fontWeight: FontWeight.w300, fontStyle: FontStyle.italic)),
-                          TextSpan(text: 'PULSE', style: TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w800, letterSpacing: 3)),
-                        ]),
+                        text: const TextSpan(
+                          children: [
+                            TextSpan(
+                              text: 'p',
+                              style: TextStyle(
+                                color: Color(0xFF9B6DFF),
+                                fontSize: 36,
+                                fontWeight: FontWeight.w300,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                            TextSpan(
+                              text: 'PULSE',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 36,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 3,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 10),
-                      Text('HRMS, as it should be...', style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 15, letterSpacing: 0.5)),
+                      Text(
+                        'HRMS, as it should be...',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontSize: 15,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
                     ],
                   ),
                 ),

@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:geocoding/geocoding.dart' as gc;
 import 'package:geolocator/geolocator.dart';
 
 /// Captures location and device info silently for punch in/out.
@@ -25,12 +26,46 @@ class PunchMetadataService {
       if (position != null) {
         result['latitude'] = position.latitude;
         result['longitude'] = position.longitude;
+        // Resolve a human-readable place name via the device's native
+        // geocoder (CLLocation on iOS, Geocoder on Android). No external
+        // API key, no network call to a third party — uses the OS service.
+        final name = await _reverseGeocode(
+          position.latitude,
+          position.longitude,
+        );
+        if (name != null && name.isNotEmpty) {
+          result['location_name'] = name;
+        }
       }
     } catch (e) {
       debugPrint('PUNCH_META: Location capture failed - $e');
     }
 
     return result;
+  }
+
+  Future<String?> _reverseGeocode(double lat, double lng) async {
+    try {
+      final placemarks = await gc
+          .placemarkFromCoordinates(lat, lng)
+          .timeout(
+            const Duration(seconds: 6),
+          );
+      if (placemarks.isEmpty) return null;
+      final p = placemarks.first;
+      // Compose a friendly label like "Thoraipakkam, Chennai, Tamil Nadu, IN".
+      final parts = <String>[
+        if ((p.subLocality ?? '').isNotEmpty) p.subLocality!,
+        if ((p.locality ?? '').isNotEmpty) p.locality!,
+        if ((p.administrativeArea ?? '').isNotEmpty) p.administrativeArea!,
+        if ((p.isoCountryCode ?? '').isNotEmpty) p.isoCountryCode!,
+      ];
+      final label = parts.where((s) => s.trim().isNotEmpty).toSet().join(', ');
+      return label.isEmpty ? null : label;
+    } catch (e) {
+      debugPrint('PUNCH_META: reverse geocode failed - $e');
+      return null;
+    }
   }
 
   String _getSource() {

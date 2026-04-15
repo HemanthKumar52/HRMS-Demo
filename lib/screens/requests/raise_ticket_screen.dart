@@ -5,6 +5,7 @@ import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../widgets/employee_cc_field.dart';
 import '../../widgets/form_fields.dart';
 
 class RaiseTicketScreen extends StatefulWidget {
@@ -18,7 +19,7 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _ccController = TextEditingController();
+  final List<Map<String, dynamic>> _ccUsers = [];
   late String _ticketType;
   late String _priority;
   late String _department;
@@ -62,7 +63,7 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    _ccController.dispose();
+    // _ccUsers is a plain list, no controller to dispose.
     super.dispose();
   }
 
@@ -76,16 +77,20 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
         'priority': _priority.toLowerCase(),
         'ticket_type': _ticketType,
         'department': _department,
+        'cc': _ccUsers.map((u) => u['user_id']).toList(),
       });
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       await SuccessOverlay.show(context, message: 'Ticket raised successfully');
-      NotificationService.instance.showRequestApplied('Ticket');
+      // (Single notification only — SuccessOverlay above covers it.)
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      showErrorSnackbar(context, 'Failed: ${e.toString().replaceAll('Exception: ', '')}');
+      showErrorSnackbar(
+        context,
+        'Failed: ${e.toString().replaceAll('Exception: ', '')}',
+      );
     }
   }
 
@@ -95,7 +100,11 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: adaptiveAppBar(context: context, title: 'Raise Ticket', showBackButton: true),
+      appBar: adaptiveAppBar(
+        context: context,
+        title: 'Raise Ticket',
+        showBackButton: true,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Form(
@@ -103,7 +112,12 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Create Ticket', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                'Create Ticket',
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               formFieldGap,
 
               const FormLabel('Title'),
@@ -111,7 +125,8 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
               FormInput(
                 controller: _titleController,
                 hint: 'Title',
-                validator: (v) => (v == null || v.isEmpty) ? 'Title is required' : null,
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? 'Title is required' : null,
               ),
               formFieldGap,
 
@@ -121,7 +136,8 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
                 value: _ticketType,
                 hint: 'Select ticket type',
                 items: _ticketTypes,
-                onChanged: (v) => setState(() => _ticketType = v ?? _ticketTypes.first),
+                onChanged: (v) =>
+                    setState(() => _ticketType = v ?? _ticketTypes.first),
               ),
               formFieldGap,
 
@@ -131,7 +147,8 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
                 value: _priority,
                 hint: 'Select priority',
                 items: _priorities,
-                onChanged: (v) => setState(() => _priority = v ?? _priorities.first),
+                onChanged: (v) =>
+                    setState(() => _priority = v ?? _priorities.first),
               ),
               formFieldGap,
 
@@ -141,13 +158,19 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
                 value: _department,
                 hint: 'Select department',
                 items: _departments,
-                onChanged: (v) => setState(() => _department = v ?? _departments.first),
+                onChanged: (v) =>
+                    setState(() => _department = v ?? _departments.first),
               ),
               formFieldGap,
 
-              const FormLabel('CC'),
-              formLabelGap,
-              FormInput(controller: _ccController, hint: 'Add CC (email addresses)'),
+              EmployeeCcField(
+                selected: _ccUsers,
+                onChanged: (next) => setState(() {
+                  _ccUsers
+                    ..clear()
+                    ..addAll(next);
+                }),
+              ),
               formFieldGap,
 
               const FormLabel('Description'),
@@ -156,7 +179,8 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
                 controller: _descriptionController,
                 hint: 'Describe your issue or request...',
                 maxLines: 4,
-                validator: (v) => (v == null || v.isEmpty) ? 'Description is required' : null,
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? 'Description is required' : null,
               ),
               formFieldGap,
 
@@ -169,7 +193,10 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
                 }),
                 onPick: () async {
                   final picker = ImagePicker();
-                  final XFile? file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                  final XFile? file = await picker.pickImage(
+                    source: ImageSource.gallery,
+                    imageQuality: 80,
+                  );
                   if (file != null) {
                     setState(() => _attachmentName = file.name);
                   }
@@ -178,7 +205,11 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
               ),
               formSectionGap,
 
-              FormActionButtons(isSubmitting: _isSubmitting, onSubmit: _submit, buttonColor: AppColors.orange),
+              FormActionButtons(
+                isSubmitting: _isSubmitting,
+                onSubmit: _submit,
+                buttonColor: AppColors.orange,
+              ),
             ],
           ),
         ),

@@ -3,15 +3,18 @@ Django settings for ppulse_backend project.
 """
 
 import os
-from pathlib import Path
 from datetime import timedelta
+from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-c%fg^^0bq=c_o9l0x80zlbdq9h%976bof@d3_g%xvylsq(z6ca')
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY', 'django-insecure-c%fg^^0bq=c_o9l0x80zlbdq9h%976bof@d3_g%xvylsq(z6ca'
+)
 
 DEBUG = True
 
@@ -95,11 +98,11 @@ AUTH_USER_MODEL = 'api.User'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        # Versioned wrapper that respects User.token_version so admin force-logout
+        # actually invalidates existing JWTs.
+        'api.auth.VersionedJWTAuthentication',
     ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
+    'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAuthenticated',),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
 }
@@ -119,7 +122,9 @@ CORS_ALLOW_CREDENTIALS = True
 # MICROSOFT SSO CONFIGURATION
 # ═══════════════════════════════════════════
 MICROSOFT_AUTH_CLIENT_ID = os.environ.get('MICROSOFT_AUTH_CLIENT_ID', '22a6161f-4a71-4a09-9b03-3eb026c8ec88')
-MICROSOFT_AUTH_CLIENT_SECRET = os.environ.get('MICROSOFT_AUTH_CLIENT_SECRET', 'Ij38Q~pO12WiOgwapwW2kGYVE7ouPBg3MCXKFch7')
+MICROSOFT_AUTH_CLIENT_SECRET = os.environ.get(
+    'MICROSOFT_AUTH_CLIENT_SECRET', 'Ij38Q~pO12WiOgwapwW2kGYVE7ouPBg3MCXKFch7'
+)
 MICROSOFT_AUTH_TENANT_ID = os.environ.get('MICROSOFT_AUTH_TENANT_ID', '6cf47e8a-fa07-4cb7-bc19-c75fb013d1fb')
 MICROSOFT_AUTH_ENABLED = os.environ.get('MICROSOFT_AUTH_LOGIN_ENABLED', 'True') == 'True'
 

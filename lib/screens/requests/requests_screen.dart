@@ -19,7 +19,6 @@ import 'attendance_request_screen.dart';
 import 'asset_request_screen.dart';
 import 'request_detail_screen.dart';
 
-
 class RequestsScreen extends StatefulWidget {
   const RequestsScreen({super.key});
 
@@ -44,13 +43,48 @@ class _RequestsScreenState extends State<RequestsScreen> {
 
   // Request types for the "Requests" tab
   final List<Map<String, dynamic>> _requestTypes = [
-    {'type': 'Leave', 'title': 'Apply Leave', 'icon': Icons.event_busy_rounded, 'color': AppColors.primary},
-    {'type': 'Claims', 'title': 'Submit Claim', 'icon': Icons.receipt_long_rounded, 'color': AppColors.success},
-    {'type': 'Tickets', 'title': 'Raise Ticket', 'icon': Icons.confirmation_number_rounded, 'color': AppColors.orange},
-    {'type': 'Shift', 'title': 'Shift Change', 'icon': Icons.swap_horiz_rounded, 'color': AppColors.secondary},
-    {'type': 'Work Type', 'title': 'Work Type Request', 'icon': Icons.home_work_rounded, 'color': AppColors.pink},
-    {'type': 'Attendance', 'title': 'Attendance Request', 'icon': Icons.fingerprint_rounded, 'color': AppColors.warning},
-    {'type': 'Asset', 'title': 'Asset Request', 'icon': Icons.devices_rounded, 'color': AppColors.neonPurple},
+    {
+      'type': 'Leave',
+      'title': 'Apply Leave',
+      'icon': Icons.event_busy_rounded,
+      'color': AppColors.primary,
+    },
+    {
+      'type': 'Claims',
+      'title': 'Submit Claim',
+      'icon': Icons.receipt_long_rounded,
+      'color': AppColors.success,
+    },
+    {
+      'type': 'Tickets',
+      'title': 'Raise Ticket',
+      'icon': Icons.confirmation_number_rounded,
+      'color': AppColors.orange,
+    },
+    {
+      'type': 'Shift',
+      'title': 'Shift Change',
+      'icon': Icons.swap_horiz_rounded,
+      'color': AppColors.secondary,
+    },
+    {
+      'type': 'Work Type',
+      'title': 'Work Type Request',
+      'icon': Icons.home_work_rounded,
+      'color': AppColors.pink,
+    },
+    {
+      'type': 'Attendance',
+      'title': 'Attendance Request',
+      'icon': Icons.fingerprint_rounded,
+      'color': AppColors.warning,
+    },
+    {
+      'type': 'Asset',
+      'title': 'Asset Request',
+      'icon': Icons.devices_rounded,
+      'color': AppColors.neonPurple,
+    },
   ];
 
   // Employee requests (visible to Manager/HR in Requested tab)
@@ -134,18 +168,28 @@ class _RequestsScreenState extends State<RequestsScreen> {
         : null;
     return {
       'id': apiReq['id']?.toString() ?? '',
+      // Forward the formatted Req ID (e.g. "LE-0032") so the detail screen
+      // shows it instead of the raw DB primary key.
+      'request_id': apiReq['request_id'] ?? '',
       'type': type,
       'title': apiReq['title'] ?? '',
       'status': status,
       'icon': _iconForType(type),
       'color': _colorForType(type),
+      // Per-type metadata (days requested, attachment, dates, etc.) — used by
+      // request_detail_screen for the "Days Requested" row, attachment preview,
+      // and Duration computation.
+      if (apiReq['metadata'] != null) 'metadata': apiReq['metadata'],
+      if (apiReq['employee'] != null) 'employee': apiReq['employee'],
       if (employeeName != null) 'employeeName': employeeName,
       if (apiReq['subtitle'] != null) 'subtitle': apiReq['subtitle'],
       if (apiReq['applied_date'] != null) 'appliedDate': apiReq['applied_date'],
       if (apiReq['appliedDate'] != null) 'appliedDate': apiReq['appliedDate'],
       if (apiReq['description'] != null) 'description': apiReq['description'],
-      if (apiReq['rejection_reason'] != null) 'rejectionReason': apiReq['rejection_reason'],
-      if (apiReq['rejectionReason'] != null) 'rejectionReason': apiReq['rejectionReason'],
+      if (apiReq['rejection_reason'] != null)
+        'rejectionReason': apiReq['rejection_reason'],
+      if (apiReq['rejectionReason'] != null)
+        'rejectionReason': apiReq['rejectionReason'],
       'created_date': apiReq['created_date'] ?? '',
     };
   }
@@ -157,27 +201,32 @@ class _RequestsScreenState extends State<RequestsScreen> {
       if (!mounted) return;
       final selfRaw = (selfData['requests'] as List?) ?? [];
       final selfMapped = selfRaw
-          .map<Map<String, dynamic>>((r) => _mapApiRequest(Map<String, dynamic>.from(r)))
+          .map<Map<String, dynamic>>(
+            (r) => _mapApiRequest(Map<String, dynamic>.from(r)),
+          )
           .toList();
 
       // For manager/HR, also fetch team requests (role=all)
       var teamMapped = <Map<String, dynamic>>[];
       final provider = context.read<AppProvider>();
-      if (provider.role == UserRole.manager || provider.role == UserRole.hr) {
+      if (provider.isManagerOrAbove) {
         try {
           final teamData = await ApiService.getRequests(role: 'all');
           if (!mounted) return;
           final teamRaw = (teamData['requests'] as List?) ?? [];
           teamMapped = teamRaw
-              .map<Map<String, dynamic>>((r) => _mapApiRequest(Map<String, dynamic>.from(r)))
+              .map<Map<String, dynamic>>(
+                (r) => _mapApiRequest(Map<String, dynamic>.from(r)),
+              )
               .toList();
         } catch (_) {}
       }
 
       setState(() {
-        _requests = selfMapped;       // Employee's own submitted requests
-        _myRequests = selfMapped;     // Manager's own requests (My Requests tab)
-        _employeeRequests = teamMapped; // Team requests for manager/HR (Requested tab)
+        _requests = selfMapped; // Employee's own submitted requests
+        _myRequests = selfMapped; // Manager's own requests (My Requests tab)
+        _employeeRequests =
+            teamMapped; // Team requests for manager/HR (Requested tab)
         _isLoading = false;
       });
     } catch (e) {
@@ -239,7 +288,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
       default:
         return;
     }
-    Navigator.push(context, Motion.pageRoute(screen)).then((_) => _loadRequests());
+    Navigator.push(
+      context,
+      Motion.pageRoute(screen),
+    ).then((_) => _loadRequests());
   }
 
   void _showFilterSheet() {
@@ -259,18 +311,25 @@ class _RequestsScreenState extends State<RequestsScreen> {
             children: [
               Center(
                 child: Container(
-                  width: 40, height: 4,
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.3),
+                    color: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.color?.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
-              Text('Filter Requests', style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                'Filter Requests',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 16),
               Wrap(
-                spacing: 10, runSpacing: 10,
+                spacing: 10,
+                runSpacing: 10,
                 children: _filterOptions.map((filter) {
                   final isActive = _activeFilter == filter;
                   return GestureDetector(
@@ -280,12 +339,19 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
-                        color: isActive ? AppColors.primary : AppColors.primary.withValues(alpha: 0.08),
+                        color: isActive
+                            ? AppColors.primary
+                            : AppColors.primary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: isActive ? AppColors.primary : AppColors.primary.withValues(alpha: 0.2),
+                          color: isActive
+                              ? AppColors.primary
+                              : AppColors.primary.withValues(alpha: 0.2),
                           width: 1,
                         ),
                       ),
@@ -293,7 +359,8 @@ class _RequestsScreenState extends State<RequestsScreen> {
                         filter,
                         style: TextStyle(
                           color: isActive ? Colors.white : AppColors.primary,
-                          fontWeight: FontWeight.w600, fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
                         ),
                       ),
                     ),
@@ -349,13 +416,22 @@ class _RequestsScreenState extends State<RequestsScreen> {
         lastGroup = group;
         widgets.add(
           Padding(
-            padding: EdgeInsets.only(top: widgets.isEmpty ? 0 : 12, bottom: 8, left: 4),
+            padding: EdgeInsets.only(
+              top: widgets.isEmpty ? 0 : 12,
+              bottom: 8,
+              left: 4,
+            ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.05),
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : Colors.black.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -364,7 +440,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
                       fontWeight: FontWeight.w700,
                       fontSize: 11,
                       letterSpacing: 0.5,
-                      color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+                      color: isDark
+                          ? AppColors.darkSubtext
+                          : AppColors.lightSubtext,
                     ),
                   ),
                 ),
@@ -372,7 +450,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
                 Expanded(
                   child: Divider(
                     height: 1,
-                    color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.06),
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : Colors.black.withValues(alpha: 0.06),
                   ),
                 ),
               ],
@@ -380,7 +460,15 @@ class _RequestsScreenState extends State<RequestsScreen> {
           ),
         );
       }
-      widgets.add(_buildRequestListTile(request, textTheme, isDark, animIndex, showEmployee: showEmployee));
+      widgets.add(
+        _buildRequestListTile(
+          request,
+          textTheme,
+          isDark,
+          animIndex,
+          showEmployee: showEmployee,
+        ),
+      );
       animIndex++;
     }
     return widgets;
@@ -392,14 +480,14 @@ class _RequestsScreenState extends State<RequestsScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final provider = context.watch<AppProvider>();
     final chipIndex = provider.requestsTabIndex;
-    final isManagerOrHr = provider.role == UserRole.manager || provider.role == UserRole.hr;
+    final isManagerOrHr = provider.isManagerOrAbove;
 
     // Tab order differs based on role
-    // Manager/HR: Requested (0) | My Requests (1) | Requests (2)
-    // Employee:   Requested (0) | Requests (1)
+    // Manager/HR: Approvals (0) | Requested (1) | Request (2)
+    // Employee:   Requested (0) | Request (1)
     final tabTitles = isManagerOrHr
-        ? ['Requested', 'My Requests', 'Requests']
-        : ['Requested', 'Requests'];
+        ? ['Approvals', 'Requested', 'Request']
+        : ['Requested', 'Request'];
 
     final safeIndex = chipIndex.clamp(0, tabTitles.length - 1);
 
@@ -412,7 +500,12 @@ class _RequestsScreenState extends State<RequestsScreen> {
             padding: const EdgeInsets.fromLTRB(20, 4, 12, 0),
             child: Row(
               children: [
-                Text(tabTitles[safeIndex], style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                Text(
+                  tabTitles[safeIndex],
+                  style: textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const Spacer(),
                 IconButton(
                   icon: Badge(
@@ -435,16 +528,54 @@ class _RequestsScreenState extends State<RequestsScreen> {
             child: Row(
               children: isManagerOrHr
                   ? [
-                      _buildTab('Requested', Icons.history_rounded, 0, safeIndex, isDark, provider, count: _employeeRequests.length),
+                      _buildTab(
+                        'Approvals',
+                        Icons.fact_check_rounded,
+                        0,
+                        safeIndex,
+                        isDark,
+                        provider,
+                        count: _employeeRequests.length,
+                      ),
                       const SizedBox(width: 10),
-                      _buildTab('My Requests', Icons.person_outline_rounded, 1, safeIndex, isDark, provider, count: _myRequests.length),
+                      _buildTab(
+                        'Requested',
+                        Icons.history_rounded,
+                        1,
+                        safeIndex,
+                        isDark,
+                        provider,
+                        count: _myRequests.length,
+                      ),
                       const SizedBox(width: 10),
-                      _buildTab('Requests', Icons.add_circle_outline_rounded, 2, safeIndex, isDark, provider),
+                      _buildTab(
+                        'Request',
+                        Icons.add_circle_outline_rounded,
+                        2,
+                        safeIndex,
+                        isDark,
+                        provider,
+                      ),
                     ]
                   : [
-                      _buildTab('Requested', Icons.history_rounded, 0, safeIndex, isDark, provider, count: _requests.length),
+                      _buildTab(
+                        'Requested',
+                        Icons.history_rounded,
+                        0,
+                        safeIndex,
+                        isDark,
+                        provider,
+                        count: _requests.length,
+                      ),
                       const SizedBox(width: 10),
-                      _buildTab('Requests', Icons.add_circle_outline_rounded, 1, safeIndex, isDark, provider),
+                      _buildTab(
+                        'Request',
+                        Icons.add_circle_outline_rounded,
+                        1,
+                        safeIndex,
+                        isDark,
+                        provider,
+                      ),
                     ],
             ),
           ),
@@ -464,7 +595,12 @@ class _RequestsScreenState extends State<RequestsScreen> {
                       duration: const Duration(milliseconds: 300),
                       switchInCurve: Curves.easeOut,
                       switchOutCurve: Curves.easeIn,
-                      child: _buildTabContent(safeIndex, isManagerOrHr, textTheme, isDark),
+                      child: _buildTabContent(
+                        safeIndex,
+                        isManagerOrHr,
+                        textTheme,
+                        isDark,
+                      ),
                     ),
                   ),
           ),
@@ -473,7 +609,12 @@ class _RequestsScreenState extends State<RequestsScreen> {
     );
   }
 
-  Widget _buildTabContent(int index, bool isManagerOrHr, TextTheme textTheme, bool isDark) {
+  Widget _buildTabContent(
+    int index,
+    bool isManagerOrHr,
+    TextTheme textTheme,
+    bool isDark,
+  ) {
     if (isManagerOrHr) {
       switch (index) {
         case 0:
@@ -497,7 +638,15 @@ class _RequestsScreenState extends State<RequestsScreen> {
     }
   }
 
-  Widget _buildTab(String label, IconData icon, int index, int activeIndex, bool isDark, AppProvider provider, {int? count}) {
+  Widget _buildTab(
+    String label,
+    IconData icon,
+    int index,
+    int activeIndex,
+    bool isDark,
+    AppProvider provider, {
+    int? count,
+  }) {
     final isActive = activeIndex == index;
     return GestureDetector(
       onTap: () => provider.setRequestsTabIndex(index),
@@ -505,26 +654,52 @@ class _RequestsScreenState extends State<RequestsScreen> {
         duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.primary : (isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE4E8EE)),
+          color: isActive
+              ? AppColors.primary
+              : (isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : const Color(0xFFE4E8EE)),
           borderRadius: BorderRadius.circular(50),
           boxShadow: isActive
-              ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
               : isDark
-                  ? null
-                  : [
-                      BoxShadow(color: const Color(0xFFBEC3CE).withValues(alpha: 0.3), offset: const Offset(2, 2), blurRadius: 4),
-                      const BoxShadow(color: Color(0xFFFDFFFF), offset: Offset(-2, -2), blurRadius: 4),
-                    ],
+              ? null
+              : [
+                  BoxShadow(
+                    color: const Color(0xFFBEC3CE).withValues(alpha: 0.3),
+                    offset: const Offset(2, 2),
+                    blurRadius: 4,
+                  ),
+                  const BoxShadow(
+                    color: Color(0xFFFDFFFF),
+                    offset: Offset(-2, -2),
+                    blurRadius: 4,
+                  ),
+                ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 15, color: isActive ? Colors.white : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+            Icon(
+              icon,
+              size: 15,
+              color: isActive
+                  ? Colors.white
+                  : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+            ),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                color: isActive ? Colors.white : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+                color: isActive
+                    ? Colors.white
+                    : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
@@ -534,7 +709,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
-                  color: isActive ? Colors.white.withValues(alpha: 0.25) : AppColors.primary.withValues(alpha: 0.12),
+                  color: isActive
+                      ? Colors.white.withValues(alpha: 0.25)
+                      : AppColors.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -573,24 +750,52 @@ class _RequestsScreenState extends State<RequestsScreen> {
               final type = filtered[index];
               return Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: NeuCard(
-                  onTap: () => _onRequestTypeTap(type),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 42, height: 42,
-                        decoration: BoxDecoration(
-                          color: (type['color'] as Color).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
+                child:
+                    NeuCard(
+                          onTap: () => _onRequestTypeTap(type),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: (type['color'] as Color).withValues(
+                                    alpha: 0.12,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  type['icon'] as IconData,
+                                  color: type['color'] as Color,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Text(
+                                  type['title'] as String,
+                                  style: textTheme.titleMedium,
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                color: isDark
+                                    ? AppColors.darkSubtext
+                                    : AppColors.lightSubtext,
+                                size: 22,
+                              ),
+                            ],
+                          ),
+                        )
+                        .animate()
+                        .fadeIn(duration: 350.ms, delay: (index * 60).ms)
+                        .slideX(
+                          begin: 0.05,
+                          end: 0,
+                          duration: 350.ms,
+                          delay: (index * 60).ms,
+                          curve: Curves.easeOutCubic,
                         ),
-                        child: Icon(type['icon'] as IconData, color: type['color'] as Color, size: 20),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(child: Text(type['title'] as String, style: textTheme.titleMedium)),
-                      Icon(Icons.chevron_right_rounded, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext, size: 22),
-                    ],
-                  ),
-                ).animate().fadeIn(duration: 350.ms, delay: (index * 60).ms).slideX(begin: 0.05, end: 0, duration: 350.ms, delay: (index * 60).ms, curve: Curves.easeOutCubic),
               );
             },
           ),
@@ -602,7 +807,12 @@ class _RequestsScreenState extends State<RequestsScreen> {
   // ─── "Requested" tab for Employee: shows own submitted requests ─
   Widget _buildRequestedView(TextTheme textTheme, bool isDark) {
     final filtered = _filteredRequests;
-    final grouped = _buildGroupedRequestWidgets(filtered, textTheme, isDark, showEmployee: false);
+    final grouped = _buildGroupedRequestWidgets(
+      filtered,
+      textTheme,
+      isDark,
+      showEmployee: false,
+    );
     return Column(
       key: const ValueKey('requested-list'),
       children: [
@@ -614,9 +824,22 @@ class _RequestsScreenState extends State<RequestsScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.inbox_rounded, size: 56, color: isDark ? AppColors.darkSubtext.withValues(alpha: 0.4) : AppColors.lightSubtext.withValues(alpha: 0.4)),
+                      Icon(
+                        Icons.inbox_rounded,
+                        size: 56,
+                        color: isDark
+                            ? AppColors.darkSubtext.withValues(alpha: 0.4)
+                            : AppColors.lightSubtext.withValues(alpha: 0.4),
+                      ),
                       const SizedBox(height: 12),
-                      Text('No requests yet', style: textTheme.bodyMedium?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+                      Text(
+                        'No requests yet',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: isDark
+                              ? AppColors.darkSubtext
+                              : AppColors.lightSubtext,
+                        ),
+                      ),
                     ],
                   ),
                 )
@@ -632,7 +855,12 @@ class _RequestsScreenState extends State<RequestsScreen> {
   // ─── "Requested" tab for Manager/HR: shows employee requests ────
   Widget _buildEmployeeRequestsView(TextTheme textTheme, bool isDark) {
     final filtered = _filteredEmployeeRequests;
-    final grouped = _buildGroupedRequestWidgets(filtered, textTheme, isDark, showEmployee: true);
+    final grouped = _buildGroupedRequestWidgets(
+      filtered,
+      textTheme,
+      isDark,
+      showEmployee: true,
+    );
     return Column(
       key: const ValueKey('employee-requests-list'),
       children: [
@@ -644,9 +872,22 @@ class _RequestsScreenState extends State<RequestsScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.inbox_rounded, size: 56, color: isDark ? AppColors.darkSubtext.withValues(alpha: 0.4) : AppColors.lightSubtext.withValues(alpha: 0.4)),
+                      Icon(
+                        Icons.inbox_rounded,
+                        size: 56,
+                        color: isDark
+                            ? AppColors.darkSubtext.withValues(alpha: 0.4)
+                            : AppColors.lightSubtext.withValues(alpha: 0.4),
+                      ),
                       const SizedBox(height: 12),
-                      Text('No team requests', style: textTheme.bodyMedium?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+                      Text(
+                        'No team requests',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: isDark
+                              ? AppColors.darkSubtext
+                              : AppColors.lightSubtext,
+                        ),
+                      ),
                     ],
                   ),
                 )
@@ -662,7 +903,12 @@ class _RequestsScreenState extends State<RequestsScreen> {
   // ─── "My Requests" tab for Manager/HR: shows own requests ───────
   Widget _buildMyRequestsView(TextTheme textTheme, bool isDark) {
     final filtered = _filteredMyRequests;
-    final grouped = _buildGroupedRequestWidgets(filtered, textTheme, isDark, showEmployee: false);
+    final grouped = _buildGroupedRequestWidgets(
+      filtered,
+      textTheme,
+      isDark,
+      showEmployee: false,
+    );
     return Column(
       key: const ValueKey('my-requests-list'),
       children: [
@@ -674,9 +920,22 @@ class _RequestsScreenState extends State<RequestsScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.inbox_rounded, size: 56, color: isDark ? AppColors.darkSubtext.withValues(alpha: 0.4) : AppColors.lightSubtext.withValues(alpha: 0.4)),
+                      Icon(
+                        Icons.inbox_rounded,
+                        size: 56,
+                        color: isDark
+                            ? AppColors.darkSubtext.withValues(alpha: 0.4)
+                            : AppColors.lightSubtext.withValues(alpha: 0.4),
+                      ),
                       const SizedBox(height: 12),
-                      Text('No personal requests yet', style: textTheme.bodyMedium?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+                      Text(
+                        'No personal requests yet',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: isDark
+                              ? AppColors.darkSubtext
+                              : AppColors.lightSubtext,
+                        ),
+                      ),
                     ],
                   ),
                 )
@@ -731,70 +990,124 @@ class _RequestsScreenState extends State<RequestsScreen> {
   }
 
   // ─── Shared request list tile ───────────────────────────────────
-  Widget _buildRequestListTile(Map<String, dynamic> request, TextTheme textTheme, bool isDark, int index, {required bool showEmployee}) {
+  Widget _buildRequestListTile(
+    Map<String, dynamic> request,
+    TextTheme textTheme,
+    bool isDark,
+    int index, {
+    required bool showEmployee,
+  }) {
     final type = request['type'] as String? ?? '';
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: NeuCard(
-        onTap: () => Navigator.push(
-          context,
-          Motion.pageRoute(RequestDetailScreen(requestData: request)),
-        ).then((_) => _loadRequests()),
-        child: Row(
-          children: [
-            Hero(
-              tag: 'request_icon_${request['id']}_${request['type']}',
-              child: Container(
-                width: 42, height: 42,
-                decoration: BoxDecoration(
-                  color: (request['color'] as Color).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(request['icon'] as IconData, color: request['color'] as Color, size: 20),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(child: Text(request['title'] as String, style: textTheme.titleMedium, overflow: TextOverflow.ellipsis)),
-                      _buildStatusChip(request['status'] as String),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  Row(
-                    children: [
-                      _buildTypeTag(type),
-                      if (request['appliedDate'] != null) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          (request['appliedDate'] as String).split(',').first,
-                          style: textTheme.bodySmall?.copyWith(fontSize: 10, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+      child:
+          NeuCard(
+                onTap: () => Navigator.push(
+                  context,
+                  Motion.pageRoute(RequestDetailScreen(requestData: request)),
+                ).then((_) => _loadRequests()),
+                child: Row(
+                  children: [
+                    Hero(
+                      tag: 'request_icon_${request['id']}_${request['type']}',
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: (request['color'] as Color).withValues(
+                            alpha: 0.12,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ],
-                    ],
-                  ),
-                  if (showEmployee && request['employeeName'] != null) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.person_outline_rounded, size: 13, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
-                        const SizedBox(width: 4),
-                        Text(request['employeeName'] as String, style: textTheme.bodySmall?.copyWith(fontSize: 12)),
-                      ],
+                        child: Icon(
+                          request['icon'] as IconData,
+                          color: request['color'] as Color,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  request['title'] as String,
+                                  style: textTheme.titleMedium,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              _buildStatusChip(request['status'] as String),
+                            ],
+                          ),
+                          const SizedBox(height: 5),
+                          Row(
+                            children: [
+                              _buildTypeTag(type),
+                              if (request['appliedDate'] != null) ...[
+                                const SizedBox(width: 8),
+                                Text(
+                                  (request['appliedDate'] as String)
+                                      .split(',')
+                                      .first,
+                                  style: textTheme.bodySmall?.copyWith(
+                                    fontSize: 10,
+                                    color: isDark
+                                        ? AppColors.darkSubtext
+                                        : AppColors.lightSubtext,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          if (showEmployee &&
+                              request['employeeName'] != null) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.person_outline_rounded,
+                                  size: 13,
+                                  color: isDark
+                                      ? AppColors.darkSubtext
+                                      : AppColors.lightSubtext,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  request['employeeName'] as String,
+                                  style: textTheme.bodySmall?.copyWith(
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: isDark
+                          ? AppColors.darkSubtext
+                          : AppColors.lightSubtext,
+                      size: 20,
                     ),
                   ],
-                ],
+                ),
+              )
+              .animate()
+              .fadeIn(duration: 350.ms, delay: (index * 60).ms)
+              .slideX(
+                begin: 0.05,
+                end: 0,
+                duration: 350.ms,
+                delay: (index * 60).ms,
+                curve: Curves.easeOutCubic,
               ),
-            ),
-            const SizedBox(width: 8),
-            Icon(Icons.chevron_right_rounded, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext, size: 20),
-          ],
-        ),
-      ).animate().fadeIn(duration: 350.ms, delay: (index * 60).ms).slideX(begin: 0.05, end: 0, duration: 350.ms, delay: (index * 60).ms, curve: Curves.easeOutCubic),
     );
   }
 
@@ -812,11 +1125,22 @@ class _RequestsScreenState extends State<RequestsScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(_activeFilter, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13)),
+                Text(
+                  _activeFilter,
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
                 const SizedBox(width: 6),
                 GestureDetector(
                   onTap: () => setState(() => _activeFilter = 'All'),
-                  child: const Icon(Icons.close_rounded, size: 16, color: AppColors.primary),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
                 ),
               ],
             ),

@@ -7,6 +7,7 @@ import '../../services/api_service.dart';
 import '../../services/live_activity_service.dart';
 import '../../services/notification_service.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../widgets/employee_cc_field.dart';
 import '../../widgets/form_fields.dart';
 
 class ApplyLeaveScreen extends StatefulWidget {
@@ -27,6 +28,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   bool _isSubmitting = false;
   String? _attachmentName;
   bool _attachmentEnabled = false;
+  final List<Map<String, dynamic>> _ccUsers = [];
 
   List<String> _leaveTypes = [];
 
@@ -49,7 +51,10 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
       final types = await ApiService.getLeaveTypes();
       if (!mounted) return;
       setState(() {
-        _leaveTypes = types.map<String>((t) => t['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+        _leaveTypes = types
+            .map<String>((t) => t['name']?.toString() ?? '')
+            .where((s) => s.isNotEmpty)
+            .toList();
         if (_leaveTypes.isNotEmpty) {
           _selectedLeaveType = _leaveTypes.first;
         }
@@ -88,10 +93,11 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
         'start_breakdown': _startBreakdown.toLowerCase().replaceAll(' ', '_'),
         'end_breakdown': _endBreakdown.toLowerCase().replaceAll(' ', '_'),
         'description': _descriptionController.text,
+        'cc': _ccUsers.map((u) => u['user_id']).toList(),
       });
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      NotificationService.instance.showRequestApplied('Leave');
+      // (Single notification only — SuccessOverlay below covers it.)
       // Start leave tracking live activity
       LiveActivityService.instance.startLeaveTracking(
         leaveType: _selectedLeaveType!,
@@ -99,14 +105,20 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
         status: 'submitted',
       );
       // Refresh notifications so badge updates
-      try { await ApiService.getNotifications().then((data) {
-        if (!mounted) return;
-        final provider = context.read<AppProvider>();
-        provider.updateNotifications(
-          List<Map<String, dynamic>>.from((data['notifications'] as List? ?? []).map((n) => Map<String, dynamic>.from(n))),
-          (data['unread_count'] ?? 0) as int,
-        );
-      }); } catch (e) {
+      try {
+        await ApiService.getNotifications().then((data) {
+          if (!mounted) return;
+          final provider = context.read<AppProvider>();
+          provider.updateNotifications(
+            List<Map<String, dynamic>>.from(
+              (data['notifications'] as List? ?? []).map(
+                (n) => Map<String, dynamic>.from(n),
+              ),
+            ),
+            (data['unread_count'] ?? 0) as int,
+          );
+        });
+      } catch (e) {
         debugPrint('NOTIF_REFRESH ERROR after leave: $e');
       }
       if (!mounted) return;
@@ -115,7 +127,10 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      showErrorSnackbar(context, 'Failed: ${e.toString().replaceAll('Exception: ', '')}');
+      showErrorSnackbar(
+        context,
+        'Failed: ${e.toString().replaceAll('Exception: ', '')}',
+      );
     }
   }
 
@@ -125,7 +140,11 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: adaptiveAppBar(context: context, title: 'Leave', showBackButton: true),
+      appBar: adaptiveAppBar(
+        context: context,
+        title: 'Leave',
+        showBackButton: true,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Form(
@@ -133,7 +152,12 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Create Leave Request', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                'Create Leave Request',
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               formFieldGap,
 
               const FormLabel('Leave Type'),
@@ -142,7 +166,10 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                 value: _selectedLeaveType,
                 hint: 'Select leave type',
                 items: _leaveTypes,
-                onChanged: (v) => setState(() => _selectedLeaveType = v ?? (_leaveTypes.isNotEmpty ? _leaveTypes.first : null)),
+                onChanged: (v) => setState(
+                  () => _selectedLeaveType =
+                      v ?? (_leaveTypes.isNotEmpty ? _leaveTypes.first : null),
+                ),
               ),
               formFieldGap,
 
@@ -156,7 +183,8 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                   if (picked != null) {
                     setState(() {
                       _startDate = picked;
-                      if (_endDate != null && _endDate!.isBefore(picked)) _endDate = picked;
+                      if (_endDate != null && _endDate!.isBefore(picked))
+                        _endDate = picked;
                     });
                   }
                 },
@@ -169,7 +197,9 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                 value: _startBreakdown,
                 hint: 'Select breakdown',
                 items: _breakdownOptions,
-                onChanged: (v) => setState(() => _startBreakdown = v ?? _breakdownOptions.first),
+                onChanged: (v) => setState(
+                  () => _startBreakdown = v ?? _breakdownOptions.first,
+                ),
               ),
               formFieldGap,
 
@@ -179,7 +209,10 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                 value: formatDate(_endDate),
                 hasValue: _endDate != null,
                 onTap: () async {
-                  final picked = await pickDate(context, initial: _endDate ?? _startDate);
+                  final picked = await pickDate(
+                    context,
+                    initial: _endDate ?? _startDate,
+                  );
                   if (picked != null) setState(() => _endDate = picked);
                 },
               ),
@@ -191,13 +224,29 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                 value: _endBreakdown,
                 hint: 'Select breakdown',
                 items: _breakdownOptions,
-                onChanged: (v) => setState(() => _endBreakdown = v ?? _breakdownOptions.first),
+                onChanged: (v) => setState(
+                  () => _endBreakdown = v ?? _breakdownOptions.first,
+                ),
               ),
               formFieldGap,
 
               const FormLabel('Description'),
               formLabelGap,
-              FormInput(controller: _descriptionController, hint: 'Description', maxLines: 4),
+              FormInput(
+                controller: _descriptionController,
+                hint: 'Description',
+                maxLines: 4,
+              ),
+              formFieldGap,
+
+              EmployeeCcField(
+                selected: _ccUsers,
+                onChanged: (next) => setState(() {
+                  _ccUsers
+                    ..clear()
+                    ..addAll(next);
+                }),
+              ),
               formFieldGap,
 
               FormAttachmentToggle(
@@ -209,7 +258,10 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                 }),
                 onPick: () async {
                   final picker = ImagePicker();
-                  final XFile? file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                  final XFile? file = await picker.pickImage(
+                    source: ImageSource.gallery,
+                    imageQuality: 80,
+                  );
                   if (file != null) {
                     setState(() => _attachmentName = file.name);
                   }

@@ -85,17 +85,6 @@ class _AdminCommandCenterScreenState extends State<AdminCommandCenterScreen> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Command Center'),
-        backgroundColor: theme.scaffoldBackgroundColor,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: _loading ? null : _load,
-          ),
-        ],
-      ),
       body: _loading
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.primary),

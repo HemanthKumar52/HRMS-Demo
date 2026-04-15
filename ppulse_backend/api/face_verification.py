@@ -19,7 +19,7 @@ Pipeline (target: end-to-end < 1 second on CPU):
 
 The model is loaded lazily and kept as a process-level singleton so that
 the first request pays the warmup cost (~1.5s) and subsequent requests are
-~50–150 ms on CPU.
+~50-150 ms on CPU.
 """
 
 from __future__ import annotations
@@ -36,13 +36,22 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 # ── Tunables ────────────────────────────────────────────────────────────────
+# Cosine-similarity thresholds for ArcFace buffalo_l (512-d embeddings).
+#   ~0.40 — typical retrieval / ranking threshold (top-1 hit)
+#   ~0.55 — typical face *verification* threshold (1:1 match)
+#   ~0.65 — high-security verification
+# We use 0.55 because this is a verification flow ("is this person THIS user?"),
+# not a search flow. A live phone capture in average lighting hits 0.6-0.9 for
+# the same person and rarely > 0.4 for unrelated faces, so 0.55 keeps both
+# false-accept and false-reject rates low.
 EMBEDDING_DIM = 512
-MATCH_THRESHOLD = 0.42  # cosine sim above this counts as a match
-STRONG_MATCH_THRESHOLD = 0.55  # high-confidence band
-MIN_FACE_PX = 80  # face bounding box must be ≥ this on the short side
-MIN_LAPLACIAN_VAR = 35.0  # below = too blurry
-MIN_BRIGHTNESS = 25  # 0..255
-MAX_BRIGHTNESS = 235
+MATCH_THRESHOLD = 0.55  # cosine sim above this counts as a verified match
+STRONG_MATCH_THRESHOLD = 0.65  # high-confidence band
+MIN_MATCH_MARGIN = 0.10  # best match must beat second-best by ≥ this much
+MIN_FACE_PX = 60  # face bounding box must be ≥ this on the short side
+MIN_LAPLACIAN_VAR = 20.0  # below = too blurry (lowered — CLAHE rescues soft frames)
+MIN_BRIGHTNESS = 15  # 0..255 (lowered — adaptive gamma rescues dark frames)
+MAX_BRIGHTNESS = 245  # (raised — adaptive gamma rescues bright frames)
 DET_SIZE = (640, 640)  # insightface detector input
 
 # ── Lazy model loader ───────────────────────────────────────────────────────
@@ -82,6 +91,8 @@ def warmup() -> None:
 
 def decode_image(payload) -> np.ndarray | None:
     """Accept base64 string (data-uri or raw), bytes, or file path. Return BGR ndarray."""
+    import os
+
     if payload is None:
         return None
     try:
@@ -92,13 +103,16 @@ def decode_image(payload) -> np.ndarray | None:
         elif isinstance(payload, str):
             s = payload.strip()
             if s.startswith('data:'):
+                # data-URI → strip the "data:image/jpeg;base64," prefix.
                 s = s.split(',', 1)[-1]
-            # Try base64 first; fall back to file path.
-            try:
                 buf = base64.b64decode(s, validate=False)
-            except Exception:
+            elif os.path.isfile(s):
+                # Existing path on disk — handles spaces and any extension.
                 with open(s, 'rb') as f:
                     buf = f.read()
+            else:
+                # Otherwise assume base64 (the request body case from the app).
+                buf = base64.b64decode(s, validate=False)
         else:
             return None
         arr = np.frombuffer(buf, dtype=np.uint8)
@@ -113,7 +127,14 @@ def decode_image(payload) -> np.ndarray | None:
 
 
 def preprocess(img: np.ndarray) -> np.ndarray:
-    """Make the image robust to low light, high light, contrast, saturation."""
+    """Make the image robust to low light, high light, contrast, saturation.
+
+    Pipeline (designed to rescue even very dark / very bright frames):
+      1. Aggressive adaptive gamma — targets mean brightness ≈ 127.
+      2. CLAHE on L-channel of LAB — boosts local contrast.
+      3. Gray-world white balance — neutralizes colour casts.
+      4. Second-pass gamma correction if still out of range.
+    """
     if img is None or img.size == 0:
         return img
 
@@ -123,40 +144,65 @@ def preprocess(img: np.ndarray) -> np.ndarray:
         scale = 1280.0 / max(h, w)
         img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
 
-    # 1. CLAHE on L-channel of LAB → boosts local contrast in shadows/highlights.
+    # 1. Adaptive gamma — compute gamma to push mean toward 127.
+    #    This handles extreme dark (mean < 30) and extreme bright (mean > 220)
+    #    much better than a fixed gamma.
+    img = _adaptive_gamma(img, target_mean=127.0)
+
+    # 2. CLAHE on L-channel of LAB → boosts local contrast in shadows/highlights.
     lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
-    l, a, b = cv2.split(lab)
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    l = clahe.apply(l)
-    lab = cv2.merge((l, a, b))
+    l_ch, a_ch, b_ch = cv2.split(lab)
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+    l_ch = clahe.apply(l_ch)
+    lab = cv2.merge((l_ch, a_ch, b_ch))
     img = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
 
-    # 2. Gray-world white balance — neutralizes blue/yellow casts and oversaturated lights.
+    # 3. Gray-world white balance — neutralizes blue/yellow casts.
     result = img.astype(np.float32)
     avg_b = np.mean(result[:, :, 0])
     avg_g = np.mean(result[:, :, 1])
     avg_r = np.mean(result[:, :, 2])
     avg_gray = (avg_b + avg_g + avg_r) / 3.0
-    if avg_b > 0 and avg_g > 0 and avg_r > 0:
+    if avg_b > 1 and avg_g > 1 and avg_r > 1:
         result[:, :, 0] *= avg_gray / avg_b
         result[:, :, 1] *= avg_gray / avg_g
         result[:, :, 2] *= avg_gray / avg_r
     img = np.clip(result, 0, 255).astype(np.uint8)
 
-    # 3. Auto-gamma if frame is very dark or very bright.
-    mean = float(np.mean(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)))
-    if mean < 70:  # too dark → brighten
-        gamma = 0.6
-    elif mean > 190:  # too bright → darken
-        gamma = 1.4
-    else:
-        gamma = 1.0
-    if gamma != 1.0:
-        inv = 1.0 / gamma
-        table = np.array([((i / 255.0) ** inv) * 255 for i in range(256)]).astype(np.uint8)
-        img = cv2.LUT(img, table)
+    # 4. Second-pass gamma if still extreme (safety net).
+    mean2 = float(np.mean(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)))
+    if mean2 < 60 or mean2 > 200:
+        img = _adaptive_gamma(img, target_mean=127.0)
 
     return img
+
+
+def _adaptive_gamma(img: np.ndarray, target_mean: float = 127.0) -> np.ndarray:
+    """Compute per-image gamma to push mean brightness toward target_mean.
+
+    Standard gamma correction: output = input ^ gamma
+      gamma < 1 → brightens (lifts shadows)
+      gamma > 1 → darkens  (pulls highlights)
+
+    We solve for gamma such that current mean maps to target_mean.
+    """
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    mean = float(np.mean(gray))
+    if mean < 1:
+        mean = 1.0
+    if mean > 254:
+        mean = 254.0
+
+    # Solve: target/255 = (mean/255)^gamma  →  gamma = log(target/255)/log(mean/255)
+    gamma = np.log(target_mean / 255.0) / np.log(mean / 255.0)
+    gamma = float(np.clip(gamma, 0.15, 6.0))  # safety clamp
+
+    if abs(gamma - 1.0) < 0.05:
+        return img  # already close enough
+
+    # Apply gamma directly (NOT 1/gamma — that was the bug).
+    table = np.array([((i / 255.0) ** gamma) * 255 for i in range(256)]).astype(np.uint8)
+    return cv2.LUT(img, table)
 
 
 # ── Quality / single-frame liveness gate ────────────────────────────────────
@@ -197,28 +243,38 @@ def quality_check(img: np.ndarray, face_bbox=None) -> QualityResult:
     return QualityResult(True, 'ok', sharp, brightness, face_px)
 
 
-def screen_replay_score(img: np.ndarray, face_bbox=None) -> float:
-    """
-    Cheap single-frame anti-spoofing: photos of phone/laptop screens tend to have
-    (a) very low colour saturation variance after CLAHE and
-    (b) periodic moiré in the high-frequency band.
-
-    Returns 0..1 — higher = more screen-like. We block at >= 0.85 to keep FPR low,
-    since true liveness with a still image is fundamentally limited.
-    """
+def _crop_face(img: np.ndarray, face_bbox) -> np.ndarray:
+    """Crop the face region from the image, falling back to the whole image."""
     if img is None or img.size == 0:
-        return 0.0
+        return img
     if face_bbox is not None:
         x1, y1, x2, y2 = [max(0, int(v)) for v in face_bbox]
         crop = img[y1:y2, x1:x2]
-        if crop.size == 0:
-            crop = img
-    else:
-        crop = img
+        if crop.size > 0:
+            return crop
+    return img
 
+
+def screen_replay_score(img: np.ndarray, face_bbox=None) -> float:
+    """
+    Single-frame anti-spoofing combining four passive signals:
+
+      1. Saturation variance  — screens/prints have flat colour → low sat_std
+      2. FFT moiré            — screens emit periodic patterns
+      3. LBP texture richness — real skin has fine micro-texture; flat surfaces don't
+      4. Color channel ratio   — screens have wider blue channel spread
+
+    Returns 0..1 — higher = more likely spoof.  Reject at >= 0.70.
+    """
+    if img is None or img.size == 0:
+        return 0.0
+    crop = _crop_face(img, face_bbox)
+
+    # ── 1. Saturation variance ──
     hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
     sat_std = float(np.std(hsv[:, :, 1]))
 
+    # ── 2. FFT moiré ──
     gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
     f = np.fft.fft2(gray)
     fshift = np.fft.fftshift(f)
@@ -230,12 +286,161 @@ def screen_replay_score(img: np.ndarray, face_bbox=None) -> float:
     total_energy = float(np.mean(mag))
     low_ratio = low_freq_energy / total_energy if total_energy > 0 else 0.0
 
+    # ── 3. LBP texture richness ──
+    lbp_score = _lbp_flatness(gray)
+
+    # ── 4. Color channel analysis ──
+    color_score = _color_channel_score(crop)
+
+    # ── Combine (weighted — heavier on spatial signals, lighter on color) ──
     score = 0.0
-    if sat_std < 18:
-        score += 0.5
-    if low_ratio > 1.6:
-        score += 0.5
+    if sat_std < 15:  # tighter threshold for saturation
+        score += 0.30
+    if low_ratio > 1.8:  # tighter FFT threshold
+        score += 0.25
+    score += lbp_score * 0.25  # 0..1 → 0..0.25
+    score += color_score * 0.20  # 0..1 → 0..0.20 (color least reliable)
     return min(score, 1.0)
+
+
+def _lbp_flatness(gray: np.ndarray) -> float:
+    """Compute a simplified LBP and measure texture uniformity.
+
+    Real skin has rich micro-texture → high LBP entropy.
+    Printed/screen faces are smoother → low entropy → returns closer to 1.0.
+    """
+    if gray.size == 0:
+        return 0.0
+    # Resize face crop to fixed size for consistent comparison.
+    g = cv2.resize(gray, (64, 64), interpolation=cv2.INTER_AREA)
+    # Simple 3x3 LBP: compare each pixel with its 8 neighbours.
+    padded = cv2.copyMakeBorder(g, 1, 1, 1, 1, cv2.BORDER_REFLECT)
+    center = padded[1:-1, 1:-1].astype(np.int16)
+    lbp = np.zeros_like(center, dtype=np.uint8)
+    offsets = [(-1, -1), (-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1)]
+    for bit, (dy, dx) in enumerate(offsets):
+        neighbour = padded[1 + dy : 1 + dy + 64, 1 + dx : 1 + dx + 64].astype(np.int16)
+        lbp |= (neighbour >= center).astype(np.uint8) << bit
+    # Histogram entropy (higher = more texture variety = real face).
+    hist, _ = np.histogram(lbp, bins=256, range=(0, 256))
+    hist = hist.astype(np.float64) / hist.sum()
+    hist = hist[hist > 0]
+    entropy = float(-np.sum(hist * np.log2(hist)))
+    # Real faces: entropy ≈ 5.5-7.5.  Flat surfaces: entropy < 4.5.
+    max_entropy = 8.0  # log2(256)
+    normalized = max(0.0, 1.0 - entropy / max_entropy)  # low entropy → high score
+    # Map: < 4.5 → suspicious (score ~0.4+), > 6.0 → safe (score ~0.2)
+    return float(np.clip((normalized - 0.15) / 0.35, 0, 1))
+
+
+def _color_channel_score(img: np.ndarray) -> float:
+    """Screens display a wider blue spread and different R/G/B ratios than
+    real skin under natural light.  Returns 0..1 (higher = more screen-like).
+    """
+    if img is None or img.size == 0:
+        return 0.0
+    b, g, r = cv2.split(img)
+    # Real skin: red dominant, blue low.  Screens: blue spread wider.
+    r_mean, g_mean, b_mean = float(np.mean(r)), float(np.mean(g)), float(np.mean(b))
+    total = r_mean + g_mean + b_mean
+    if total < 1:
+        return 0.0
+    # Skin ratio: R > G > B typically.  If blue is close to red → suspect.
+    blue_ratio = b_mean / total
+    # Natural skin: blue_ratio ≈ 0.20-0.28.  Screen: ≈ 0.30-0.38.
+    if blue_ratio > 0.36:
+        return 1.0
+    if blue_ratio > 0.30:
+        return float((blue_ratio - 0.30) / 0.06)
+    return 0.0
+
+
+# ── Multi-frame liveness ───────────────────────────────────────────────────
+
+LIVENESS_REJECT_THRESHOLD = 0.70  # composite score above this → reject
+
+
+def multi_frame_liveness(frames: list[np.ndarray], bboxes: list) -> tuple[float, str]:
+    """Passive liveness from 2-5 frames captured ~400ms apart.
+
+    Checks:
+      1. Per-frame spoof score (texture + FFT + LBP + color).
+      2. Micro-movement between frames (real faces sway involuntarily).
+      3. Embedding consistency (same person across frames).
+
+    Returns (score 0..1, reason).  Higher = more likely spoof.
+    """
+    if not frames:
+        return 1.0, 'no_frames'
+    if len(frames) == 1:
+        # Fall back to single-frame scoring.
+        s = screen_replay_score(frames[0], bboxes[0] if bboxes else None)
+        return s, 'single_frame'
+
+    # ── 1. Average per-frame spoof scores ──
+    per_frame_scores = []
+    for i, frm in enumerate(frames):
+        bb = bboxes[i] if i < len(bboxes) else None
+        per_frame_scores.append(screen_replay_score(frm, bb))
+    avg_spoof = float(np.mean(per_frame_scores))
+
+    # ── 2. Micro-movement check (bbox center drift) ──
+    movement_score = _micro_movement_score(bboxes)
+
+    # ── 3. Combine: 60% spoof signals, 40% movement ──
+    # If NO micro-movement is detected → likely a photo being held still.
+    composite = avg_spoof * 0.6 + movement_score * 0.4
+    reason = 'live' if composite < LIVENESS_REJECT_THRESHOLD else 'liveness_failed'
+
+    logger.info(
+        'LIVENESS: avg_spoof=%.3f movement=%.3f composite=%.3f → %s',
+        avg_spoof,
+        movement_score,
+        composite,
+        reason,
+    )
+    return float(composite), reason
+
+
+def _micro_movement_score(bboxes: list) -> float:
+    """Score absence of natural micro-movement between frames.
+
+    Real faces: involuntary head sway of 2-15px between frames 400ms apart.
+    Photos held in hand: either perfectly still (<1px) or large jitter (>20px).
+
+    Returns 0..1: 0 = healthy movement detected, 1 = suspiciously static.
+    """
+    valid = [b for b in bboxes if b is not None and len(b) >= 4]
+    if len(valid) < 2:
+        return 0.5  # can't tell → neutral
+
+    centers = []
+    for b in valid:
+        cx = (b[0] + b[2]) / 2.0
+        cy = (b[1] + b[3]) / 2.0
+        centers.append((cx, cy))
+
+    # Compute pairwise displacements between consecutive frames.
+    displacements = []
+    for i in range(1, len(centers)):
+        dx = centers[i][0] - centers[i - 1][0]
+        dy = centers[i][1] - centers[i - 1][1]
+        dist = (dx**2 + dy**2) ** 0.5
+        displacements.append(dist)
+
+    avg_disp = float(np.mean(displacements))
+    # Sweet spot: 1.5-18px = natural micro-movement.
+    # < 1.0px = too still (photo taped/propped).
+    # > 25px = too jerky (phone being waved, but could be real).
+    if avg_disp < 1.0:
+        return 0.9  # suspiciously still
+    if avg_disp < 1.5:
+        return 0.5  # borderline
+    if avg_disp <= 18.0:
+        return 0.0  # natural movement
+    if avg_disp <= 25.0:
+        return 0.2  # slightly jerky but likely real
+    return 0.6  # excessive movement — might be waving a phone
 
 
 # ── Embedding helpers ───────────────────────────────────────────────────────
@@ -297,8 +502,15 @@ def extract_embedding(
     return emb, q, spoof, bbox
 
 
-def verify(image_payload) -> VerifyResult:
-    """End-to-end WFH face verification against the EmployeeFaceData table."""
+def verify(image_payload, extra_frames=None) -> VerifyResult:
+    """End-to-end WFH face verification against the EmployeeFaceData table.
+
+    Args:
+        image_payload: primary frame (base64 / bytes / ndarray).
+        extra_frames:  optional list of additional base64 frames captured
+                       during the preview window.  When provided, multi-frame
+                       passive liveness is run across all frames.
+    """
     t0 = time.perf_counter()
 
     img = decode_image(image_payload)
@@ -306,7 +518,7 @@ def verify(image_payload) -> VerifyResult:
         return VerifyResult(False, None, 0.0, 'invalid_image', (time.perf_counter() - t0) * 1000)
 
     try:
-        emb, quality, spoof, _bbox = extract_embedding(img)
+        emb, quality, spoof, bbox = extract_embedding(img)
     except Exception as e:
         logger.exception('FACE: extract_embedding crashed')
         return VerifyResult(False, None, 0.0, f'extract_error:{e}', (time.perf_counter() - t0) * 1000)
@@ -315,7 +527,34 @@ def verify(image_payload) -> VerifyResult:
         reason = quality.reason if quality else 'no_face'
         return VerifyResult(False, None, 0.0, reason, (time.perf_counter() - t0) * 1000, quality, spoof)
 
-    if spoof >= 0.85:
+    # ── Multi-frame passive liveness ──
+    if extra_frames and len(extra_frames) >= 1:
+        all_frames = [img]
+        all_bboxes = [bbox]
+        for ef in extra_frames:
+            decoded = decode_image(ef)
+            if decoded is None:
+                continue
+            all_frames.append(decoded)
+            # Detect face bbox in each extra frame (lightweight — just detection,
+            # no embedding extraction needed).
+            try:
+                model = _get_model()
+                faces = model.get(preprocess(decoded))
+                if faces:
+                    face = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
+                    all_bboxes.append(tuple(int(v) for v in face.bbox))
+                else:
+                    all_bboxes.append(None)
+            except Exception:
+                all_bboxes.append(None)
+        liveness, reason = multi_frame_liveness(all_frames, all_bboxes)
+        spoof = liveness  # override single-frame score with composite
+    else:
+        # Single-frame fallback (already computed above).
+        pass
+
+    if spoof >= LIVENESS_REJECT_THRESHOLD:
         return VerifyResult(
             False, None, 0.0, 'liveness_failed', (time.perf_counter() - t0) * 1000, quality, spoof
         )
@@ -329,22 +568,50 @@ def verify(image_payload) -> VerifyResult:
             False, None, 0.0, 'no_enrolled_faces', (time.perf_counter() - t0) * 1000, quality, spoof
         )
 
-    best_id = None
-    best_score = -1.0
+    # Score every enrolled employee, then keep the top two so we can enforce
+    # a margin between #1 and #2 (defends against ambiguous matches in small
+    # enrollments where the closest match wins by a hair).
+    scored = []
     for row in rows:
         ref = unpack_embedding(bytes(row['embedding']))
         if ref.shape[0] != emb.shape[0]:
             continue
         score = float(np.dot(emb, ref))  # both L2-normalized → cosine similarity
-        if score > best_score:
-            best_score = score
-            best_id = row['employee_id_id']
+        scored.append((score, row['employee_id_id']))
+    scored.sort(key=lambda x: x[0], reverse=True)
 
+    if not scored:
+        return VerifyResult(
+            False, None, 0.0, 'no_enrolled_faces', (time.perf_counter() - t0) * 1000, quality, spoof
+        )
+
+    best_score, best_id = scored[0]
+    second_score = scored[1][0] if len(scored) > 1 else -1.0
+    margin = best_score - second_score
     elapsed = (time.perf_counter() - t0) * 1000
 
-    if best_score >= MATCH_THRESHOLD:
-        return VerifyResult(True, best_id, best_score, 'match', elapsed, quality, spoof)
-    return VerifyResult(False, None, best_score, 'unknown_user', elapsed, quality, spoof)
+    logger.info(
+        'FACE: best=%s/%.4f second=%.4f margin=%.4f thresh=%.2f q.sharp=%.0f q.bright=%.0f spoof=%.2f elapsed=%.0fms',
+        best_id,
+        best_score,
+        second_score,
+        margin,
+        MATCH_THRESHOLD,
+        quality.sharpness if quality else 0.0,
+        quality.brightness if quality else 0.0,
+        spoof,
+        elapsed,
+    )
+
+    if best_score < MATCH_THRESHOLD:
+        return VerifyResult(False, None, best_score, 'unknown_user', elapsed, quality, spoof)
+
+    # Margin gate — when only ONE enrollment exists margin is meaningless,
+    # so skip it. With ≥2 enrollments require a clear winner.
+    if len(scored) >= 2 and margin < MIN_MATCH_MARGIN:
+        return VerifyResult(False, None, best_score, 'ambiguous_match', elapsed, quality, spoof)
+
+    return VerifyResult(True, best_id, best_score, 'match', elapsed, quality, spoof)
 
 
 def enroll_from_images(employee_id_id: int, image_paths: list) -> tuple[bool, str, int]:
@@ -374,7 +641,7 @@ def enroll_from_images(employee_id_id: int, image_paths: list) -> tuple[bool, st
     avg = l2_normalize(np.mean(np.stack(samples, axis=0), axis=0))
     blob = pack_embedding(avg)
 
-    obj, _created = EmployeeFaceData.objects.update_or_create(
+    _obj, _created = EmployeeFaceData.objects.update_or_create(
         employee_id_id=employee_id_id,
         defaults={
             'embedding': blob,

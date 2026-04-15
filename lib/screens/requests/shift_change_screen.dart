@@ -35,7 +35,10 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
       final shifts = await ApiService.getShifts();
       if (!mounted) return;
       setState(() {
-        _shifts = shifts.map<String>((s) => s['name']?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+        _shifts = shifts
+            .map<String>((s) => s['name']?.toString() ?? '')
+            .where((s) => s.isNotEmpty)
+            .toList();
         if (_shifts.isNotEmpty) {
           _requestingShift = _shifts.first;
         }
@@ -59,19 +62,27 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
     try {
       await ApiService.post('/shifts/request', {
         'requesting_shift': _requestingShift ?? '',
-        'requested_date': (_requestedDate ?? DateTime.now()).toIso8601String().split('T')[0],
+        'requested_date': (_requestedDate ?? DateTime.now())
+            .toIso8601String()
+            .split('T')[0],
         'requested_till': _requestedTill?.toIso8601String().split('T')[0],
         'description': _descriptionController.text,
       });
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      await SuccessOverlay.show(context, message: 'Shift change request submitted');
-      NotificationService.instance.showRequestApplied('Shift Change');
+      await SuccessOverlay.show(
+        context,
+        message: 'Shift change request submitted',
+      );
+      // (Single notification only — SuccessOverlay above covers it.)
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      showErrorSnackbar(context, 'Failed: ${e.toString().replaceAll('Exception: ', '')}');
+      showErrorSnackbar(
+        context,
+        'Failed: ${e.toString().replaceAll('Exception: ', '')}',
+      );
     }
   }
 
@@ -82,7 +93,11 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: adaptiveAppBar(context: context, title: 'Shift Change', showBackButton: true),
+      appBar: adaptiveAppBar(
+        context: context,
+        title: 'Shift Change',
+        showBackButton: true,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Form(
@@ -90,7 +105,12 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Create Shift Request', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                'Create Shift Request',
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               formFieldGap,
 
               const FormLabel('Requesting Shift'),
@@ -99,7 +119,10 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
                 value: _requestingShift,
                 hint: 'Select shift',
                 items: _shifts,
-                onChanged: (v) => setState(() => _requestingShift = v ?? (_shifts.isNotEmpty ? _shifts.first : null)),
+                onChanged: (v) => setState(
+                  () => _requestingShift =
+                      v ?? (_shifts.isNotEmpty ? _shifts.first : null),
+                ),
               ),
               formFieldGap,
 
@@ -109,11 +132,17 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
                 value: formatDate(_requestedDate),
                 hasValue: _requestedDate != null,
                 onTap: () async {
-                  final picked = await pickDate(context, initial: _requestedDate, accentColor: AppColors.secondary);
+                  final picked = await pickDate(
+                    context,
+                    initial: _requestedDate,
+                    accentColor: AppColors.secondary,
+                  );
                   if (picked != null) {
                     setState(() {
                       _requestedDate = picked;
-                      if (_requestedTill != null && _requestedTill!.isBefore(picked)) _requestedTill = picked;
+                      if (_requestedTill != null &&
+                          _requestedTill!.isBefore(picked))
+                        _requestedTill = picked;
                     });
                   }
                 },
@@ -126,7 +155,11 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
                 value: formatDate(_requestedTill),
                 hasValue: _requestedTill != null,
                 onTap: () async {
-                  final picked = await pickDate(context, initial: _requestedTill ?? _requestedDate, accentColor: AppColors.secondary);
+                  final picked = await pickDate(
+                    context,
+                    initial: _requestedTill ?? _requestedDate,
+                    accentColor: AppColors.secondary,
+                  );
                   if (picked != null) setState(() => _requestedTill = picked);
                 },
               ),
@@ -134,14 +167,22 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
 
               const FormLabel('Description'),
               formLabelGap,
-              FormInput(controller: _descriptionController, hint: 'Description', maxLines: 3),
+              FormInput(
+                controller: _descriptionController,
+                hint: 'Description',
+                maxLines: 3,
+              ),
               formFieldGap,
 
               // Permanent Request toggle
               _buildToggle(textTheme, isDark),
               formSectionGap,
 
-              FormActionButtons(isSubmitting: _isSubmitting, onSubmit: _submit, buttonColor: AppColors.secondary),
+              FormActionButtons(
+                isSubmitting: _isSubmitting,
+                onSubmit: _submit,
+                buttonColor: AppColors.secondary,
+              ),
             ],
           ),
         ),
@@ -153,7 +194,10 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
     return Row(
       children: [
         Expanded(
-          child: Text('Permanent Request', style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+          child: Text(
+            'Permanent Request',
+            style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
         ),
         Switch.adaptive(
           value: _permanentRequest,

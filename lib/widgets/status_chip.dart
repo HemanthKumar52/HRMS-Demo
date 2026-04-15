@@ -14,22 +14,22 @@ class StatusChip extends StatelessWidget {
   });
 
   factory StatusChip.accepted() => const StatusChip(
-        label: 'Accepted',
-        color: AppColors.success,
-        icon: Icons.check_circle,
-      );
+    label: 'Approved',
+    color: AppColors.success,
+    icon: Icons.check_circle,
+  );
 
   factory StatusChip.pending() => const StatusChip(
-        label: 'Pending',
-        color: AppColors.warning,
-        icon: Icons.schedule,
-      );
+    label: 'Pending',
+    color: AppColors.warning,
+    icon: Icons.schedule,
+  );
 
   factory StatusChip.rejected() => const StatusChip(
-        label: 'Rejected',
-        color: AppColors.danger,
-        icon: Icons.cancel,
-      );
+    label: 'Rejected',
+    color: AppColors.danger,
+    icon: Icons.cancel,
+  );
 
   @override
   Widget build(BuildContext context) {

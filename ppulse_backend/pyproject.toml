@@ -45,9 +45,21 @@ ignore = [
     "S105",   # hardcoded password string false-positives
     "S106",   # hardcoded password func arg false-positives
     "DJ001",  # null=True on string fields (legacy schema)
+    "DJ008",  # missing __str__ (legacy mirrored models)
     "DJ012",  # Meta class ordering (legacy schema)
+    "RUF001", # ambiguous unicode in strings (en-dash etc)
+    "RUF002", # ambiguous unicode in docstrings
+    "RUF003", # ambiguous unicode in comments
     "RUF012", # mutable class attrs (Django Meta uses these)
+    "RUF015", # prefer next(iter()) over [0] (readability)
+    "RUF059", # unused unpacked variable (Django patterns)
+    "SIM105", # contextlib.suppress vs try-except-pass (style)
     "SIM108", # ternary vs if-else (style preference)
+    "SIM222", # simplify or-chain (false positive on fallback paths)
+    "S110",   # try-except-pass (intentional silencing in prod code)
+    "S112",   # try-except-continue (intentional skip in loops)
+    "S603",   # subprocess call (pg_dump is trusted)
+    "E701",   # multiple statements on one line (compact helpers)
 ]
 
 [tool.ruff.lint.per-file-ignores]

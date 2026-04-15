@@ -20,8 +20,15 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
   bool _isSubmitting = false;
 
   final List<String> _categories = [
-    'Laptop', 'Monitor', 'Keyboard & Mouse', 'Headset',
-    'Mobile Phone', 'ID Card', 'Access Card', 'Furniture', 'Other',
+    'Laptop',
+    'Monitor',
+    'Keyboard & Mouse',
+    'Headset',
+    'Mobile Phone',
+    'ID Card',
+    'Access Card',
+    'Furniture',
+    'Other',
   ];
 
   @override
@@ -47,12 +54,15 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       await SuccessOverlay.show(context, message: 'Asset request submitted');
-      NotificationService.instance.showRequestApplied('Asset');
+      // (Single notification only — SuccessOverlay above covers it.)
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      showErrorSnackbar(context, 'Failed: ${e.toString().replaceAll('Exception: ', '')}');
+      showErrorSnackbar(
+        context,
+        'Failed: ${e.toString().replaceAll('Exception: ', '')}',
+      );
     }
   }
 
@@ -62,7 +72,11 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: adaptiveAppBar(context: context, title: 'Asset Request', showBackButton: true),
+      appBar: adaptiveAppBar(
+        context: context,
+        title: 'Asset Request',
+        showBackButton: true,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Form(
@@ -70,7 +84,12 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Asset Request', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                'Asset Request',
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               formFieldGap,
 
               const FormLabel('Asset Category'),
@@ -79,7 +98,8 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
                 value: _selectedCategory,
                 hint: 'Select category',
                 items: _categories,
-                onChanged: (v) => setState(() => _selectedCategory = v ?? _categories.first),
+                onChanged: (v) =>
+                    setState(() => _selectedCategory = v ?? _categories.first),
               ),
               formFieldGap,
 
@@ -89,11 +109,16 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
                 controller: _descriptionController,
                 hint: 'Description',
                 maxLines: 4,
-                validator: (v) => (v == null || v.isEmpty) ? 'Description is required' : null,
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? 'Description is required' : null,
               ),
               formSectionGap,
 
-              FormActionButtons(isSubmitting: _isSubmitting, onSubmit: _submit, buttonColor: AppColors.neonPurple),
+              FormActionButtons(
+                isSubmitting: _isSubmitting,
+                onSubmit: _submit,
+                buttonColor: AppColors.neonPurple,
+              ),
             ],
           ),
         ),

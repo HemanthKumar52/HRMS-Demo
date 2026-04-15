@@ -19,8 +19,9 @@ class NotificationService {
   Future<void> init() async {
     if (_initialized) return;
 
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
 
     // iOS: request permissions AND enable foreground presentation
     final iosSettings = DarwinInitializationSettings(
@@ -50,7 +51,8 @@ class NotificationService {
     // Android 13+: request notification permission
     final androidPlugin = _plugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     if (androidPlugin != null) {
       await androidPlugin.requestNotificationsPermission();
       // Create notification channel explicitly
@@ -70,7 +72,8 @@ class NotificationService {
     // iOS: request permission explicitly
     final iosPlugin = _plugin
         .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>();
+          IOSFlutterLocalNotificationsPlugin
+        >();
     if (iosPlugin != null) {
       await iosPlugin.requestPermissions(
         alert: true,
@@ -112,11 +115,11 @@ class NotificationService {
       ledColor: Color(0xFF6B3FA0),
       ledOnMs: 1000,
       ledOffMs: 500,
-      ticker: 'PPulse HRMS',
+      ticker: 'PPULSE',
       styleInformation: BigTextStyleInformation(
         '',
         contentTitle: null,
-        summaryText: 'PPulse HRMS',
+        summaryText: 'PPULSE',
       ),
       category: AndroidNotificationCategory.message,
       visibility: NotificationVisibility.public,
@@ -174,32 +177,32 @@ class NotificationService {
   // ── Convenience methods ────────────────────────────────────────────────
 
   Future<void> showPunchIn() => show(
-        title: 'Punched In',
-        body: 'You have successfully punched in. Have a productive day!',
-        payload: 'punch_in',
-      );
+    title: 'Punched In',
+    body: 'You have successfully punched in. Have a productive day!',
+    payload: 'punch_in',
+  );
 
   Future<void> showPunchOut() => show(
-        title: 'Punched Out',
-        body: 'You have successfully punched out. See you tomorrow!',
-        payload: 'punch_out',
-      );
+    title: 'Punched Out',
+    body: 'You have successfully punched out. See you tomorrow!',
+    payload: 'punch_out',
+  );
 
   Future<void> showRequestApplied(String type) => show(
-        title: '$type Submitted',
-        body: 'Your $type request has been submitted successfully.',
-        payload: 'request_submitted',
-      );
+    title: '$type Submitted',
+    body: 'Your $type request has been submitted successfully.',
+    payload: 'request_submitted',
+  );
 
   Future<void> showRequestAssigned(String type) => show(
-        title: 'New $type Assigned',
-        body: 'A new $type request has been assigned to you for approval.',
-        payload: 'request_assigned',
-      );
+    title: 'New $type Assigned',
+    body: 'A new $type request has been assigned to you for approval.',
+    payload: 'request_assigned',
+  );
 
   Future<void> showSalaryCredit({required String month}) => show(
-        title: 'Salary Credited',
-        body: 'Your salary for $month has been credited to your account.',
-        payload: 'salary',
-      );
+    title: 'Salary Credited',
+    body: 'Your salary for $month has been credited to your account.',
+    payload: 'salary',
+  );
 }

@@ -11,7 +11,7 @@ class PPulseFooter extends StatelessWidget {
       padding: const EdgeInsets.only(top: 8, bottom: 12),
       child: Center(
         child: Text(
-          '\u00A9 2026 PPulse',
+          '\u00A9 2026 PPULSE',
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w500,

@@ -54,12 +54,22 @@ class _PPulseAppState extends State<PPulseApp> {
         builder: (context, themeProvider, _) {
           return MaterialApp(
             navigatorKey: navigatorKey,
-            title: 'PPulse HRMS',
+            title: 'PPULSE',
             debugShowCheckedModeBanner: false,
             theme: themeProvider.theme,
             home: const SplashScreen(),
             routes: {
               '/request-detail': (context) => const RequestDetailScreen(),
+            },
+            builder: (context, child) {
+              // Global SafeArea ensures content never overlaps
+              // notch, Dynamic Island, or home indicator on ANY device.
+              return SafeArea(
+                // Keep status bar area for AppBar screens — only
+                // guard the bottom (home indicator / gesture bar).
+                top: false,
+                child: child ?? const SizedBox.shrink(),
+              );
             },
           );
         },

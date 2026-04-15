@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>PPulse HRMS</string>
+	<string>PPULSE</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>hrms_demo</string>
+	<string>PPULSE</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -29,7 +29,9 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>This app needs access to your photo library to attach images to requests and claims.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>This app needs access to your camera to capture receipts and documents.</string>
+	<string>PPULSE uses your camera for secure face verification check-in.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>PPULSE uses Face ID for secure biometric authentication.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>This app uses your location to verify attendance punch in/out for compliance and audit purposes.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

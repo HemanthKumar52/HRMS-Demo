@@ -250,7 +250,12 @@ class PunchInSerializer(serializers.Serializer):
 class FaceVerifyPunchInSerializer(serializers.Serializer):
     """WFH face-verified punch-in. `image` is required (base64 or data-URI)."""
 
-    image = serializers.CharField()  # base64-encoded JPEG/PNG (or data-URI)
+    image = serializers.CharField()  # base64-encoded JPEG/PNG (or data-URI) — primary frame
+    extra_frames = serializers.ListField(  # additional frames for multi-frame liveness
+        child=serializers.CharField(),
+        required=False,
+        default=[],
+    )
     latitude = serializers.FloatField(required=False)
     longitude = serializers.FloatField(required=False)
     location_name = serializers.CharField(required=False, allow_blank=True)

@@ -5,6 +5,7 @@ import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../widgets/employee_cc_field.dart';
 import '../../widgets/form_fields.dart';
 import '../../widgets/neu_card.dart';
 
@@ -23,6 +24,7 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
   DateTime? _date;
   final List<XFile> _images = [];
   bool _isSubmitting = false;
+  final List<Map<String, dynamic>> _ccUsers = [];
   final ImagePicker _picker = ImagePicker();
 
   final List<String> _claimTypes = [
@@ -91,16 +93,23 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
         'amount': 0,
         'date': (_date ?? DateTime.now()).toIso8601String().split('T')[0],
         'description': _descriptionController.text,
+        'cc': _ccUsers.map((u) => u['user_id']).toList(),
       });
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      await SuccessOverlay.show(context, message: 'Claim submitted successfully');
-      NotificationService.instance.showRequestApplied('Claim');
+      await SuccessOverlay.show(
+        context,
+        message: 'Claim submitted successfully',
+      );
+      // (Single notification only — SuccessOverlay above covers it.)
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      showErrorSnackbar(context, 'Failed: ${e.toString().replaceAll('Exception: ', '')}');
+      showErrorSnackbar(
+        context,
+        'Failed: ${e.toString().replaceAll('Exception: ', '')}',
+      );
     }
   }
 
@@ -111,7 +120,11 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: adaptiveAppBar(context: context, title: 'Submit Claim', showBackButton: true),
+      appBar: adaptiveAppBar(
+        context: context,
+        title: 'Submit Claim',
+        showBackButton: true,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Form(
@@ -119,7 +132,12 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Create Reimbursement / Encashment', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                'Create Reimbursement / Encashment',
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               formFieldGap,
 
               const FormLabel('Type'),
@@ -128,7 +146,8 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
                 value: _selectedType,
                 hint: 'Select type',
                 items: _claimTypes,
-                onChanged: (v) => setState(() => _selectedType = v ?? _claimTypes.first),
+                onChanged: (v) =>
+                    setState(() => _selectedType = v ?? _claimTypes.first),
               ),
               formFieldGap,
 
@@ -138,7 +157,11 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
                 value: formatDate(_date),
                 hasValue: _date != null,
                 onTap: () async {
-                  final picked = await pickDate(context, initial: _date, accentColor: AppColors.success);
+                  final picked = await pickDate(
+                    context,
+                    initial: _date,
+                    accentColor: AppColors.success,
+                  );
                   if (picked != null) setState(() => _date = picked);
                 },
               ),
@@ -149,13 +172,18 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
               FormInput(
                 controller: _titleController,
                 hint: 'Title',
-                validator: (v) => (v == null || v.isEmpty) ? 'Title is required' : null,
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? 'Title is required' : null,
               ),
               formFieldGap,
 
               const FormLabel('Description'),
               formLabelGap,
-              FormInput(controller: _descriptionController, hint: 'Enter claim description...', maxLines: 4),
+              FormInput(
+                controller: _descriptionController,
+                hint: 'Enter claim description...',
+                maxLines: 4,
+              ),
               formFieldGap,
 
               const FormLabel('Upload Images'),
@@ -166,10 +194,17 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: NeuCard(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         child: Row(
                           children: [
-                            const Icon(Icons.image_rounded, size: 18, color: AppColors.success),
+                            const Icon(
+                              Icons.image_rounded,
+                              size: 18,
+                              color: AppColors.success,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -180,8 +215,13 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
                             ),
                             const SizedBox(width: 8),
                             GestureDetector(
-                              onTap: () => setState(() => _images.removeAt(entry.key)),
-                              child: const Icon(Icons.close_rounded, size: 16, color: AppColors.danger),
+                              onTap: () =>
+                                  setState(() => _images.removeAt(entry.key)),
+                              child: const Icon(
+                                Icons.close_rounded,
+                                size: 16,
+                                color: AppColors.danger,
+                              ),
                             ),
                           ],
                         ),
@@ -193,19 +233,49 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
               ],
               NeuCard(
                 onTap: _addImage,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.add_photo_alternate_rounded, size: 22, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+                    Icon(
+                      Icons.add_photo_alternate_rounded,
+                      size: 22,
+                      color: isDark
+                          ? AppColors.darkSubtext
+                          : AppColors.lightSubtext,
+                    ),
                     const SizedBox(width: 10),
-                    Text('Add Image', style: textTheme.bodyMedium?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+                    Text(
+                      'Add Image',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: isDark
+                            ? AppColors.darkSubtext
+                            : AppColors.lightSubtext,
+                      ),
+                    ),
                   ],
                 ),
               ),
               formSectionGap,
 
-              FormActionButtons(isSubmitting: _isSubmitting, onSubmit: _submit, buttonColor: AppColors.success),
+              EmployeeCcField(
+                selected: _ccUsers,
+                onChanged: (next) => setState(() {
+                  _ccUsers
+                    ..clear()
+                    ..addAll(next);
+                }),
+              ),
+              formSectionGap,
+
+              FormActionButtons(
+                isSubmitting: _isSubmitting,
+                onSubmit: _submit,
+                buttonColor: AppColors.success,
+              ),
             ],
           ),
         ),

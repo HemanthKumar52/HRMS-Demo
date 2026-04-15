@@ -8,6 +8,32 @@ from .sso_views import (
     SSOStatusView,
 )
 from .views import (
+    AdminAllowedIpDetailView,
+    AdminAllowedIpsView,
+    AdminAuditLogsCsvExportView,
+    AdminAuditLogsView,
+    AdminBackupView,
+    AdminCommandCenterView,
+    AdminConsentLedgerView,
+    AdminEmailTemplatesView,
+    AdminEmployeesCsvExportView,
+    AdminEmployeesCsvImportView,
+    AdminFaceEnrollmentsView,
+    AdminGdprDeleteView,
+    AdminGdprExportView,
+    AdminGeofenceDetailView,
+    AdminGeofencesView,
+    AdminHolidayDetailView,
+    AdminHolidaysView,
+    AdminLiveActivityView,
+    AdminLoginRecordsView,
+    AdminPushCampaignView,
+    AdminRetentionPoliciesView,
+    AdminSystemStatsView,
+    AdminUserActionView,
+    AdminUsersListView,
+    AdminWebhookDetailView,
+    AdminWebhooksView,
     AssetRequestView,
     AttendanceFaceVerifyPunchInView,
     AttendanceMonthlyView,
@@ -28,11 +54,15 @@ from .views import (
     DeviceRegisterView,
     EmployeeDetailView,
     EmployeesListView,
+    EmployeesSearchView,
+    ForgotPasswordView,
     LeaveApplyView,
     LeaveBalanceView,
     LeaveTypesListView,
     LogoutView,
     ManagerStatsView,
+    MeHeartbeatView,
+    MePresenceSettingsView,
     NotificationReadView,
     NotificationsReadAllView,
     NotificationsView,
@@ -40,6 +70,7 @@ from .views import (
     PayslipPDFView,
     PayslipsListView,
     PayslipsView,
+    PresenceListView,
     RefreshTokenView,
     RequestAcceptView,
     RequestCancelView,
@@ -61,6 +92,7 @@ urlpatterns = [
     path('auth/refresh', RefreshTokenView.as_view(), name='token_refresh'),
     path('auth/logout', LogoutView.as_view(), name='logout'),
     path('auth/change-password', ChangePasswordView.as_view(), name='change_password'),
+    path('auth/forgot-password', ForgotPasswordView.as_view(), name='forgot_password'),
     # SSO
     path('auth/microsoft/login', MicrosoftLoginView.as_view(), name='microsoft_login'),
     path('auth/microsoft/callback', MicrosoftCallbackView.as_view(), name='microsoft_callback'),
@@ -109,6 +141,11 @@ urlpatterns = [
     path('notifications/register-device', DeviceRegisterView.as_view(), name='device_register'),
     # Employees
     path('employees', EmployeesListView.as_view(), name='employees_list'),
+    path('employees/search', EmployeesSearchView.as_view(), name='employees_search'),
+    # Activity status (Round 5)
+    path('me/heartbeat', MeHeartbeatView.as_view(), name='me_heartbeat'),
+    path('me/presence-settings', MePresenceSettingsView.as_view(), name='me_presence_settings'),
+    path('presence', PresenceListView.as_view(), name='presence_list'),
     path('employees/<int:pk>', EmployeeDetailView.as_view(), name='employee_detail'),
     # Dashboard
     path('dashboard/summary', DashboardSummaryView.as_view(), name='dashboard_summary'),
@@ -124,4 +161,43 @@ urlpatterns = [
     path('org-chart', OrgChartView.as_view(), name='org_chart'),
     # Settings
     path('settings', SettingsView.as_view(), name='settings'),
+    # Admin (super-admin only)
+    path('admin/command-center', AdminCommandCenterView.as_view(), name='admin_command_center'),
+    path('admin/audit-logs', AdminAuditLogsView.as_view(), name='admin_audit_logs'),
+    path(
+        'admin/audit-logs/export-csv',
+        AdminAuditLogsCsvExportView.as_view(),
+        name='admin_audit_logs_export_csv',
+    ),
+    path('admin/users', AdminUsersListView.as_view(), name='admin_users_list'),
+    path('admin/users/<int:pk>/<str:action>', AdminUserActionView.as_view(), name='admin_user_action'),
+    # Tier 2 — config + data ops
+    path('admin/geofences', AdminGeofencesView.as_view(), name='admin_geofences'),
+    path('admin/geofences/<int:pk>', AdminGeofenceDetailView.as_view(), name='admin_geofence_detail'),
+    path('admin/holidays', AdminHolidaysView.as_view(), name='admin_holidays'),
+    path('admin/holidays/<int:pk>', AdminHolidayDetailView.as_view(), name='admin_holiday_detail'),
+    path('admin/email-templates', AdminEmailTemplatesView.as_view(), name='admin_email_templates'),
+    path(
+        'admin/employees/export-csv', AdminEmployeesCsvExportView.as_view(), name='admin_employees_export_csv'
+    ),
+    path(
+        'admin/employees/import-csv', AdminEmployeesCsvImportView.as_view(), name='admin_employees_import_csv'
+    ),
+    path('admin/backup', AdminBackupView.as_view(), name='admin_backup'),
+    # Tier 3
+    path('admin/system-stats', AdminSystemStatsView.as_view(), name='admin_system_stats'),
+    path('admin/live-activity', AdminLiveActivityView.as_view(), name='admin_live_activity'),
+    path('admin/push-campaign', AdminPushCampaignView.as_view(), name='admin_push_campaign'),
+    path('admin/face-enrollments', AdminFaceEnrollmentsView.as_view(), name='admin_face_enrollments'),
+    path('admin/webhooks', AdminWebhooksView.as_view(), name='admin_webhooks'),
+    path('admin/webhooks/<int:pk>', AdminWebhookDetailView.as_view(), name='admin_webhook_detail'),
+    # Tier 4
+    path('admin/users/<int:pk>/gdpr-export', AdminGdprExportView.as_view(), name='admin_gdpr_export'),
+    path('admin/users/<int:pk>/gdpr-delete', AdminGdprDeleteView.as_view(), name='admin_gdpr_delete'),
+    path('admin/retention-policies', AdminRetentionPoliciesView.as_view(), name='admin_retention'),
+    path('admin/consent-ledger', AdminConsentLedgerView.as_view(), name='admin_consent_ledger'),
+    # Round 4 — login telemetry + IP allowlist
+    path('admin/allowed-ips', AdminAllowedIpsView.as_view(), name='admin_allowed_ips'),
+    path('admin/allowed-ips/<int:pk>', AdminAllowedIpDetailView.as_view(), name='admin_allowed_ip_detail'),
+    path('admin/login-records', AdminLoginRecordsView.as_view(), name='admin_login_records'),
 ]

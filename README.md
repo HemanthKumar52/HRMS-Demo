@@ -1,4 +1,4 @@
-# PPulse HRMS
+# PPULSE HRMS
 
 A cross-platform HRMS mobile application built with **Flutter** and **Django REST Framework**, featuring platform-adaptive UI (iOS Liquid Glass + Material Design), Live Activities, real-time notifications, and role-based dashboards.
 
@@ -127,11 +127,38 @@ To change, edit `lib/services/api_service.dart`.
 
 ## Demo Credentials
 
-| Role | Username | Password |
-|------|----------|----------|
-| Admin/Manager | `admin` | `Admin@123` |
-| Manager | `vikram` | `Manager@123` |
-| Employee | `rahul` | `Employee@123` |
+All passwords follow the pattern **`<username>23`** (e.g. username `admin` → password `admin23`).
+
+### Super Admin
+
+| Username | Password | Role | Department |
+|----------|----------|------|------------|
+| `admin` | `admin23` | **Super Admin** | Engineering |
+
+### Managers
+
+| Username | Password | Role | Department |
+|----------|----------|------|------------|
+| `vikram` | `vikram23` | Manager | Sales |
+| `suresh` | `suresh23` | Manager | Legal |
+
+### Employees
+
+| Username | Password | Role | Department |
+|----------|----------|------|------------|
+| `rahul` | `rahul23` | Employee | Engineering |
+| `priya` | `priya23` | Employee | Human Resources |
+| `amit` | `amit23` | Employee | Finance |
+| `sneha` | `sneha23` | Employee | Marketing |
+| `ananya` | `ananya23` | Employee | Operations |
+| `karthik` | `karthik23` | Employee | Design |
+| `divya` | `divya23` | Employee | Product |
+| `meera` | `meera23` | Employee | Engineering |
+| `raj` | `raj23` | Employee | Human Resources |
+| `neha` | `neha23` | Employee | Finance |
+| `arun` | `arun23` | Employee | Marketing |
+| `kavitha` | `kavitha23` | Employee | Sales |
+| `deepak` | `deepak23` | Employee | Operations |
 
 ## Project Structure
 

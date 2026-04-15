@@ -10,11 +10,12 @@ import '../utils/platform_adaptive.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/dynamic_island.dart';
 import '../theme/app_theme.dart';
-import 'dashboard/dashboard_screen.dart';
-import 'requests/requests_screen.dart';
+// Admin screens are now accessed via AdminPanelScreen from the dashboard.
 import 'attendance/attendance_screen.dart';
+import 'dashboard/dashboard_screen.dart';
 import 'payslip/payslip_screen.dart';
 import 'profile/profile_sheet.dart';
+import 'requests/requests_screen.dart';
 
 class ShellScreen extends StatefulWidget {
   const ShellScreen({super.key});
@@ -37,7 +38,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       context.read<AppProvider>().fetchDashboardData();
     });
     _checkForNewNotifications();
-    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) => _checkForNewNotifications());
+    _pollTimer = Timer.periodic(
+      const Duration(seconds: 10),
+      (_) => _checkForNewNotifications(),
+    );
   }
 
   @override
@@ -60,7 +64,9 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       final data = await ApiService.getNotifications();
       final unread = (data['unread_count'] ?? 0) as int;
       final notifications = List<Map<String, dynamic>>.from(
-        ((data['notifications'] as List?) ?? []).map((n) => Map<String, dynamic>.from(n))
+        ((data['notifications'] as List?) ?? []).map(
+          (n) => Map<String, dynamic>.from(n),
+        ),
       );
 
       // Fire local push for any NEW unread notifications we haven't seen
@@ -97,7 +103,8 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     final provider = context.watch<AppProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Unified screens for all roles
+    // Everyone — including admin — sees the same employee shell.
+    // Admin tools are accessible via the "Admin Panel" card on the dashboard.
     const screens = <Widget>[
       DashboardScreen(),
       RequestsScreen(),
@@ -111,7 +118,12 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     return _buildAndroidShell(context, provider, isDark, screens);
   }
 
-  Widget _buildIOSShell(BuildContext context, AppProvider provider, bool isDark, List<Widget> screens) {
+  Widget _buildIOSShell(
+    BuildContext context,
+    AppProvider provider,
+    bool isDark,
+    List<Widget> screens,
+  ) {
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
       appBar: AppBar(
@@ -173,7 +185,11 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
                       ),
                       child: Text(
                         '${provider.unreadNotifications > 9 ? '9+' : provider.unreadNotifications}',
-                        style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
@@ -232,7 +248,12 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildAndroidShell(BuildContext context, AppProvider provider, bool isDark, List<Widget> screens) {
+  Widget _buildAndroidShell(
+    BuildContext context,
+    AppProvider provider,
+    bool isDark,
+    List<Widget> screens,
+  ) {
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 52,
@@ -251,9 +272,9 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
             Text(
               provider.userName.split(' ').first,
               style: Theme.of(context).appBarTheme.titleTextStyle?.copyWith(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
         ),
@@ -315,7 +336,9 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
             alignment: Alignment.center,
             children: [
               Icon(
-                isApplePlatform ? CupertinoIcons.bell : Icons.notifications_outlined,
+                isApplePlatform
+                    ? CupertinoIcons.bell
+                    : Icons.notifications_outlined,
                 size: 22,
               ),
               if (provider.unreadNotifications > 0)
@@ -324,18 +347,27 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
                   right: 6,
                   child: Container(
                     padding: const EdgeInsets.all(2),
-                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.danger,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: isDark ? const Color(0xFF1A1B2E) : const Color(0xFFE4E8EE),
+                        color: isDark
+                            ? const Color(0xFF1A1B2E)
+                            : const Color(0xFFE4E8EE),
                         width: 1.5,
                       ),
                     ),
                     child: Text(
                       '${provider.unreadNotifications > 9 ? '9+' : provider.unreadNotifications}',
-                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -356,19 +388,35 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: hasAvatar ? null : const LinearGradient(
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [Color(0xFFD4A574), Color(0xFFA0785A)],
-        ),
-        boxShadow: isDark ? null : [
-          BoxShadow(color: const Color(0xFFBEC3CE).withValues(alpha: 0.5), offset: const Offset(3, 3), blurRadius: 6),
-          const BoxShadow(color: Color(0xFFFDFFFF), offset: Offset(-2, -2), blurRadius: 6),
-        ],
+        gradient: hasAvatar
+            ? null
+            : const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFD4A574), Color(0xFFA0785A)],
+              ),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: const Color(0xFFBEC3CE).withValues(alpha: 0.5),
+                  offset: const Offset(3, 3),
+                  blurRadius: 6,
+                ),
+                const BoxShadow(
+                  color: Color(0xFFFDFFFF),
+                  offset: Offset(-2, -2),
+                  blurRadius: 6,
+                ),
+              ],
       ),
       clipBehavior: Clip.antiAlias,
       child: hasAvatar
-          ? Image.network(avatarUrl, fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _avatarInitial(provider, size))
+          ? Image.network(
+              avatarUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _avatarInitial(provider, size),
+            )
           : _avatarInitial(provider, size),
     );
   }
@@ -377,7 +425,11 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     return Center(
       child: Text(
         provider.userName.isNotEmpty ? provider.userName[0] : 'U',
-        style: TextStyle(color: Colors.white, fontSize: size * 0.47, fontWeight: FontWeight.w700),
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: size * 0.47,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -408,8 +460,12 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           children: [
             const SizedBox(height: 12),
             Container(
-              width: 40, height: 4,
-              decoration: BoxDecoration(color: Colors.grey[400], borderRadius: BorderRadius.circular(2)),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[400],
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
             const SizedBox(height: 16),
             Padding(
@@ -420,10 +476,22 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
                   if (provider.unreadNotifications > 0) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(color: AppColors.danger, borderRadius: BorderRadius.circular(10)),
-                      child: Text('${provider.unreadNotifications}',
-                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.danger,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${provider.unreadNotifications}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ],
                   const Spacer(),
@@ -438,7 +506,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
                       ApiService.markAllNotificationsRead().catchError((_) {});
                       Navigator.pop(context);
                     },
-                    child: const Text('Mark all read', style: TextStyle(color: AppColors.primary)),
+                    child: const Text(
+                      'Mark all read',
+                      style: TextStyle(color: AppColors.primary),
+                    ),
                   ),
                 ],
               ),
@@ -446,13 +517,27 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
             Expanded(
               child: notifications.isEmpty
                   ? Center(
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.notifications_off_outlined, size: 48,
-                          color: theme.brightness == Brightness.dark ? Colors.white24 : Colors.grey.shade300),
-                        const SizedBox(height: 12),
-                        Text('No notifications yet', style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.brightness == Brightness.dark ? Colors.white38 : Colors.grey)),
-                      ]),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.notifications_off_outlined,
+                            size: 48,
+                            color: theme.brightness == Brightness.dark
+                                ? Colors.white24
+                                : Colors.grey.shade300,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No notifications yet',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.brightness == Brightness.dark
+                                  ? Colors.white38
+                                  : Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
                     )
                   : RefreshIndicator(
                       onRefresh: () => provider.fetchDashboardData(),
@@ -469,15 +554,23 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
                           IconData icon = Icons.notifications_outlined;
                           Color color = AppColors.primary;
                           if (title.toLowerCase().contains('approved')) {
-                            icon = Icons.check_circle; color = AppColors.success;
+                            icon = Icons.check_circle;
+                            color = AppColors.success;
                           } else if (title.toLowerCase().contains('rejected')) {
-                            icon = Icons.cancel; color = AppColors.danger;
-                          } else if (title.toLowerCase().contains('submitted') || title.toLowerCase().contains('new')) {
-                            icon = Icons.add_circle_outline; color = AppColors.orange;
+                            icon = Icons.cancel;
+                            color = AppColors.danger;
+                          } else if (title.toLowerCase().contains(
+                                'submitted',
+                              ) ||
+                              title.toLowerCase().contains('new')) {
+                            icon = Icons.add_circle_outline;
+                            color = AppColors.orange;
                           } else if (title.toLowerCase().contains('leave')) {
-                            icon = Icons.event_busy; color = AppColors.warning;
+                            icon = Icons.event_busy;
+                            color = AppColors.warning;
                           } else if (title.toLowerCase().contains('claim')) {
-                            icon = Icons.receipt_long; color = AppColors.secondary;
+                            icon = Icons.receipt_long;
+                            color = AppColors.secondary;
                           }
 
                           String timeAgo = '';
@@ -485,11 +578,16 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
                             try {
                               final dt = DateTime.parse(timestamp);
                               final diff = DateTime.now().difference(dt);
-                              if (diff.inMinutes < 1) timeAgo = 'Just now';
-                              else if (diff.inMinutes < 60) timeAgo = '${diff.inMinutes}m ago';
-                              else if (diff.inHours < 24) timeAgo = '${diff.inHours}h ago';
-                              else if (diff.inDays < 7) timeAgo = '${diff.inDays}d ago';
-                              else timeAgo = '${dt.day}/${dt.month}';
+                              if (diff.inMinutes < 1)
+                                timeAgo = 'Just now';
+                              else if (diff.inMinutes < 60)
+                                timeAgo = '${diff.inMinutes}m ago';
+                              else if (diff.inHours < 24)
+                                timeAgo = '${diff.inHours}h ago';
+                              else if (diff.inDays < 7)
+                                timeAgo = '${diff.inDays}d ago';
+                              else
+                                timeAgo = '${dt.day}/${dt.month}';
                             } catch (_) {}
                           }
 
@@ -498,7 +596,9 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
                             onTap: () {
                               // Mark as read
                               if (!isRead && notifId != null) {
-                                final id = notifId is int ? notifId : int.tryParse(notifId.toString()) ?? 0;
+                                final id = notifId is int
+                                    ? notifId
+                                    : int.tryParse(notifId.toString()) ?? 0;
                                 provider.markNotificationRead(id);
                               }
                               // Close bottom sheet and go to Requests tab
@@ -507,8 +607,11 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
                               provider.setRequestsTabIndex(0);
                             },
                             child: _NotifItem(
-                              icon: icon, color: color,
-                              title: title, subtitle: body, time: timeAgo,
+                              icon: icon,
+                              color: color,
+                              title: title,
+                              subtitle: body,
+                              time: timeAgo,
                               isUnread: !isRead,
                             ),
                           );
@@ -548,10 +651,14 @@ class _NotifItem extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isUnread
-            ? (isDark ? Colors.white.withValues(alpha: 0.04) : AppColors.primary.withValues(alpha: 0.04))
+            ? (isDark
+                  ? Colors.white.withValues(alpha: 0.04)
+                  : AppColors.primary.withValues(alpha: 0.04))
             : Colors.transparent,
         borderRadius: BorderRadius.circular(14),
-        border: isUnread ? Border.all(color: AppColors.primary.withValues(alpha: 0.1)) : null,
+        border: isUnread
+            ? Border.all(color: AppColors.primary.withValues(alpha: 0.1))
+            : null,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -571,17 +678,40 @@ class _NotifItem extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(title, style: TextStyle(
-                      fontWeight: isUnread ? FontWeight.w700 : FontWeight.w600, fontSize: 14))),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontWeight: isUnread
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
                     if (isUnread)
-                      Container(width: 8, height: 8,
-                        decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 2),
-                Text(subtitle, style: TextStyle(color: Colors.grey[500], fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
+                Text(
+                  subtitle,
+                  style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 const SizedBox(height: 4),
-                Text(time, style: TextStyle(color: Colors.grey[400], fontSize: 11)),
+                Text(
+                  time,
+                  style: TextStyle(color: Colors.grey[400], fontSize: 11),
+                ),
               ],
             ),
           ),

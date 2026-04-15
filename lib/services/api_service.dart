@@ -91,6 +91,27 @@ class ApiService {
     return _handleResponse(response);
   }
 
+  static Future<dynamic> patch(
+    String endpoint,
+    Map<String, dynamic> data,
+  ) async {
+    var headers = await _getHeaders();
+    var response = await http.patch(
+      Uri.parse('$baseUrl$endpoint'),
+      headers: headers,
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 401 && await _tryRefreshToken()) {
+      headers = await _getHeaders();
+      response = await http.patch(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: headers,
+        body: jsonEncode(data),
+      );
+    }
+    return _handleResponse(response);
+  }
+
   static Future<dynamic> delete(String endpoint) async {
     var headers = await _getHeaders();
     var response = await http.delete(
@@ -286,9 +307,12 @@ class ApiService {
   static Future<Map<String, dynamic>> facePunchIn({
     required String imageBase64,
     Map<String, dynamic>? metadata,
+    List<String>? extraFrames,
   }) async {
     final body = <String, dynamic>{
       'image': imageBase64,
+      if (extraFrames != null && extraFrames.isNotEmpty)
+        'extra_frames': extraFrames,
       ...?metadata,
     };
     return await post('/attendance/face-punch-in', body);
@@ -708,48 +732,6 @@ class ApiService {
     );
     return List<Map<String, dynamic>>.from(r['items'] ?? const []);
   }
-
-  // ── Round 6 — Timesheet ───────────────────────────────────────
-  static Future<List<Map<String, dynamic>>> getTimesheetProjects() async {
-    final r = await get('/timesheet/projects');
-    return List<Map<String, dynamic>>.from(r['items'] ?? const []);
-  }
-
-  static Future<List<Map<String, dynamic>>> getTimesheetTasks({
-    int? projectId,
-  }) async {
-    final r = await get(
-      '/timesheet/tasks${projectId != null ? '?project_id=$projectId' : ''}',
-    );
-    return List<Map<String, dynamic>>.from(r['items'] ?? const []);
-  }
-
-  static Future<Map<String, dynamic>> getTimesheetCurrent() async =>
-      await get('/timesheet/current');
-
-  static Future<Map<String, dynamic>> createTimesheetEntry({
-    required String date,
-    required double hours,
-    String workLocation = 'wfo',
-    int? projectId,
-    int? taskId,
-    String comments = '',
-  }) async {
-    return await post('/timesheet/entries', {
-      'date': date,
-      'hours': hours,
-      'work_location': workLocation,
-      if (projectId != null) 'project_id': projectId,
-      if (taskId != null) 'task_id': taskId,
-      'comments': comments,
-    });
-  }
-
-  static Future<void> deleteTimesheetEntry(int id) async =>
-      await delete('/timesheet/entries?id=$id');
-
-  static Future<Map<String, dynamic>> getTimesheetUnfilled() async =>
-      await get('/timesheet/unfilled');
 
   // ── Round 5 — Activity status / presence ─────────────────────
   static Future<void> heartbeat() async {
