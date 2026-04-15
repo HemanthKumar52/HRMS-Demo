@@ -9,6 +9,7 @@ import '../services/notification_service.dart';
 import '../utils/platform_adaptive.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/dynamic_island.dart';
+import '../widgets/feedback_popup.dart';
 import '../theme/app_theme.dart';
 // Admin screens are now accessed via AdminPanelScreen from the dashboard.
 import 'attendance/attendance_screen.dart';
@@ -53,9 +54,12 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // When app comes back to foreground, refresh attendance status
     if (state == AppLifecycleState.resumed && mounted) {
       context.read<AppProvider>().fetchDashboardData();
+    }
+    // Show feedback popup when user is leaving the app.
+    if (state == AppLifecycleState.inactive && mounted) {
+      FeedbackManager.maybeShowFeedback(context);
     }
   }
 

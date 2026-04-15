@@ -733,6 +733,24 @@ class ApiService {
     return List<Map<String, dynamic>>.from(r['items'] ?? const []);
   }
 
+  // ── App Feedback ──────────────────────────────────────────────
+  static Future<bool> hasFeedback(String version) async {
+    final r = await get('/feedback/check?version=$version');
+    return r['has_feedback'] == true;
+  }
+
+  static Future<void> submitFeedback({
+    required int rating,
+    String comment = '',
+    String version = '1.0.0',
+  }) async {
+    await post('/feedback/submit', {
+      'rating': rating,
+      'comment': comment,
+      'version': version,
+    });
+  }
+
   // ── Round 5 — Activity status / presence ─────────────────────
   static Future<void> heartbeat() async {
     try {

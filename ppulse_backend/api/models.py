@@ -734,6 +734,25 @@ class UserPresence(models.Model):
         return f'presence({self.user_id}, last={self.last_seen_at})'
 
 
+class AppFeedback(models.Model):
+    """Stores per-user app feedback. Once submitted, the user won't be asked
+    again until the next app version update."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='feedbacks')
+    rating = models.IntegerField(default=0)  # 1-5 stars
+    comment = models.TextField(blank=True, default='')
+    app_version = models.CharField(max_length=20, default='1.0.0')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        managed = True
+        db_table = 'api_app_feedback'
+        unique_together = [('user', 'app_version')]
+
+    def __str__(self):
+        return f'feedback(user={self.user_id}, v={self.app_version}, stars={self.rating})'
+
+
 class RequestCc(models.Model):
     """Carbon-copy entries for requests. When an employee submits a leave /
     claim / ticket / work-type / regularization / asset request they can

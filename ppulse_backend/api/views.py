@@ -3104,6 +3104,47 @@ class TimesheetSubmitView(APIView):
         )
 
 
+# ── App Feedback ────────────────────────────────────────────────────────
+
+
+class FeedbackCheckView(APIView):
+    """Check if the current user has already submitted feedback for this app version."""
+
+    def get(self, request):
+        from .models import AppFeedback
+
+        version = request.query_params.get('version', '1.0.0')
+        exists = AppFeedback.objects.filter(user=request.user, app_version=version).exists()
+        return Response({'has_feedback': exists})
+
+
+class FeedbackSubmitView(APIView):
+    """Submit app feedback (rating + comment). One per user per app version."""
+
+    def post(self, request):
+        from .models import AppFeedback
+
+        rating = int(request.data.get('rating', 0))
+        comment = request.data.get('comment', '')
+        version = request.data.get('version', '1.0.0')
+
+        if rating < 1 or rating > 5:
+            return Response({'error': 'Rating must be 1-5'}, status=status.HTTP_400_BAD_REQUEST)
+
+        feedback, created = AppFeedback.objects.update_or_create(
+            user=request.user,
+            app_version=version,
+            defaults={'rating': rating, 'comment': comment},
+        )
+        return Response(
+            {
+                'status': 'created' if created else 'updated',
+                'id': feedback.id,
+            },
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+
 # ── Activity status (Round 5) ───────────────────────────────────────────
 
 
