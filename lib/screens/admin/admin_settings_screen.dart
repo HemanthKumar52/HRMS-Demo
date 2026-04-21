@@ -1,6 +1,8 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import 'admin_biometric_devices_screen.dart';
 import 'admin_geofences_screen.dart';
 import 'admin_round3_screens.dart';
@@ -21,6 +23,7 @@ class AdminSettingsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: ListView(
+        physics: isApplePlatform ? const BouncingScrollPhysics() : null,
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         children: [
           // Configuration
@@ -109,7 +112,7 @@ class AdminSettingsScreen extends StatelessWidget {
   }
 
   void _open(BuildContext context, Widget screen) {
-    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
+    Navigator.of(context).push(adaptivePageRoute(child: screen));
   }
 }
 
@@ -192,7 +195,9 @@ class _SettingsTile extends StatelessWidget {
           ),
           title: Text(title, style: const TextStyle(fontSize: 16)),
           trailing: Icon(
-            Icons.chevron_right,
+            isApplePlatform
+                ? CupertinoIcons.chevron_forward
+                : Icons.chevron_right,
             color: Colors.grey.shade400,
             size: 20,
           ),

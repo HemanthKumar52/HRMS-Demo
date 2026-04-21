@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart' show ImagePicker, ImageSource;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 
 /// Admin → Settings → Bulk Employees. Export CSV (browser download) +
@@ -128,10 +131,10 @@ class _AdminCsvEmployeesScreenState extends State<AdminCsvEmployeesScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Bulk Employees'),
-        backgroundColor: theme.scaffoldBackgroundColor,
-        elevation: 0,
+      appBar: adaptiveAppBar(
+        context: context,
+        title: 'Bulk Employees',
+        showBackButton: true,
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),

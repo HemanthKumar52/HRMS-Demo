@@ -12,7 +12,12 @@ class FormLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(label, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600));
+    return Text(
+      label,
+      style: Theme.of(
+        context,
+      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+    );
   }
 }
 
@@ -43,7 +48,11 @@ class FormDropdown extends StatelessWidget {
     return _buildAndroidDropdown(context, textTheme, isDark);
   }
 
-  Widget _buildIOSDropdown(BuildContext context, TextTheme textTheme, bool isDark) {
+  Widget _buildIOSDropdown(
+    BuildContext context,
+    TextTheme textTheme,
+    bool isDark,
+  ) {
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
@@ -55,7 +64,9 @@ class FormDropdown extends StatelessWidget {
           color: isDark ? AppColors.darkCard : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.withValues(alpha: 0.2),
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.grey.withValues(alpha: 0.2),
           ),
         ),
         child: Row(
@@ -65,10 +76,18 @@ class FormDropdown extends StatelessWidget {
                 value ?? hint,
                 style: value != null
                     ? textTheme.bodyLarge
-                    : textTheme.bodyMedium?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+                    : textTheme.bodyMedium?.copyWith(
+                        color: isDark
+                            ? AppColors.darkSubtext
+                            : AppColors.lightSubtext,
+                      ),
               ),
             ),
-            Icon(CupertinoIcons.chevron_down, size: 16, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+            Icon(
+              CupertinoIcons.chevron_down,
+              size: 16,
+              color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+            ),
           ],
         ),
       ),
@@ -84,7 +103,9 @@ class FormDropdown extends StatelessWidget {
       builder: (ctx) => Container(
         height: 280,
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1C1C1E) : CupertinoColors.systemBackground.resolveFrom(ctx),
+          color: isDark
+              ? const Color(0xFF1C1C1E)
+              : CupertinoColors.systemBackground.resolveFrom(ctx),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
         ),
         child: Column(
@@ -101,7 +122,10 @@ class FormDropdown extends StatelessWidget {
                   ),
                   CupertinoButton(
                     padding: EdgeInsets.zero,
-                    child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w600)),
+                    child: const Text(
+                      'Done',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
                     onPressed: () {
                       onChanged(items[selectedIndex]);
                       Navigator.pop(ctx);
@@ -116,11 +140,25 @@ class FormDropdown extends StatelessWidget {
                 squeeze: 1.2,
                 useMagnifier: true,
                 itemExtent: 36,
-                scrollController: FixedExtentScrollController(initialItem: selectedIndex),
+                scrollController: FixedExtentScrollController(
+                  initialItem: selectedIndex,
+                ),
                 onSelectedItemChanged: (index) => selectedIndex = index,
-                children: items.map((item) => Center(
-                  child: Text(item, style: TextStyle(fontSize: 18, color: isDark ? AppColors.darkText : AppColors.lightText)),
-                )).toList(),
+                children: items
+                    .map(
+                      (item) => Center(
+                        child: Text(
+                          item,
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: isDark
+                                ? AppColors.darkText
+                                : AppColors.lightText,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
               ),
             ),
           ],
@@ -129,19 +167,35 @@ class FormDropdown extends StatelessWidget {
     );
   }
 
-  Widget _buildAndroidDropdown(BuildContext context, TextTheme textTheme, bool isDark) {
+  Widget _buildAndroidDropdown(
+    BuildContext context,
+    TextTheme textTheme,
+    bool isDark,
+  ) {
     return NeuCard(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       child: DropdownButtonFormField<String>(
         initialValue: value,
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: textTheme.bodyMedium?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+          hintStyle: textTheme.bodyMedium?.copyWith(
+            color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+          ),
           filled: false,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 12,
+          ),
         ),
-        items: items.map((item) => DropdownMenuItem(value: item, child: Text(item, style: textTheme.bodyLarge))).toList(),
+        items: items
+            .map(
+              (item) => DropdownMenuItem(
+                value: item,
+                child: Text(item, style: textTheme.bodyLarge),
+              ),
+            )
+            .toList(),
         onChanged: onChanged,
         validator: validator,
         dropdownColor: Theme.of(context).cardColor,
@@ -181,20 +235,38 @@ class FormDateField extends StatelessWidget {
             color: isDark ? AppColors.darkCard : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.withValues(alpha: 0.2),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.grey.withValues(alpha: 0.2),
             ),
           ),
           child: Row(
             children: [
-              Icon(CupertinoIcons.calendar, size: 18, color: hasValue ? AppColors.primary : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+              Icon(
+                CupertinoIcons.calendar,
+                size: 18,
+                color: hasValue
+                    ? AppColors.primary
+                    : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   value,
-                  style: hasValue ? textTheme.bodyLarge : textTheme.bodyMedium?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+                  style: hasValue
+                      ? textTheme.bodyLarge
+                      : textTheme.bodyMedium?.copyWith(
+                          color: isDark
+                              ? AppColors.darkSubtext
+                              : AppColors.lightSubtext,
+                        ),
                 ),
               ),
-              Icon(CupertinoIcons.chevron_right, size: 14, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+              Icon(
+                CupertinoIcons.chevron_right,
+                size: 14,
+                color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+              ),
             ],
           ),
         ),
@@ -206,12 +278,24 @@ class FormDateField extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: [
-          Icon(Icons.calendar_today_rounded, size: 18, color: hasValue ? AppColors.primary : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+          Icon(
+            Icons.calendar_today_rounded,
+            size: 18,
+            color: hasValue
+                ? AppColors.primary
+                : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               value,
-              style: hasValue ? textTheme.bodyLarge : textTheme.bodyMedium?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+              style: hasValue
+                  ? textTheme.bodyLarge
+                  : textTheme.bodyMedium?.copyWith(
+                      color: isDark
+                          ? AppColors.darkSubtext
+                          : AppColors.lightSubtext,
+                    ),
             ),
           ),
         ],
@@ -249,20 +333,38 @@ class FormTimeField extends StatelessWidget {
             color: isDark ? AppColors.darkCard : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.withValues(alpha: 0.2),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.grey.withValues(alpha: 0.2),
             ),
           ),
           child: Row(
             children: [
-              Icon(CupertinoIcons.clock, size: 18, color: hasValue ? AppColors.primary : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+              Icon(
+                CupertinoIcons.clock,
+                size: 18,
+                color: hasValue
+                    ? AppColors.primary
+                    : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   value,
-                  style: hasValue ? textTheme.bodyLarge : textTheme.bodyMedium?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+                  style: hasValue
+                      ? textTheme.bodyLarge
+                      : textTheme.bodyMedium?.copyWith(
+                          color: isDark
+                              ? AppColors.darkSubtext
+                              : AppColors.lightSubtext,
+                        ),
                 ),
               ),
-              Icon(CupertinoIcons.chevron_right, size: 14, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+              Icon(
+                CupertinoIcons.chevron_right,
+                size: 14,
+                color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+              ),
             ],
           ),
         ),
@@ -274,12 +376,24 @@ class FormTimeField extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: [
-          Icon(Icons.access_time_rounded, size: 18, color: hasValue ? AppColors.primary : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+          Icon(
+            Icons.access_time_rounded,
+            size: 18,
+            color: hasValue
+                ? AppColors.primary
+                : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               value,
-              style: hasValue ? textTheme.bodyLarge : textTheme.bodyMedium?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+              style: hasValue
+                  ? textTheme.bodyLarge
+                  : textTheme.bodyMedium?.copyWith(
+                      color: isDark
+                          ? AppColors.darkSubtext
+                          : AppColors.lightSubtext,
+                    ),
             ),
           ),
         ],
@@ -313,14 +427,18 @@ class FormInput extends StatelessWidget {
           color: isDark ? AppColors.darkCard : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.withValues(alpha: 0.2),
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.grey.withValues(alpha: 0.2),
           ),
         ),
         child: CupertinoTextField(
           controller: controller,
           maxLines: maxLines,
           placeholder: hint,
-          placeholderStyle: textTheme.bodyMedium?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+          placeholderStyle: textTheme.bodyMedium?.copyWith(
+            color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+          ),
           style: textTheme.bodyLarge,
           padding: const EdgeInsets.all(14),
           decoration: const BoxDecoration(), // remove default decoration
@@ -335,7 +453,9 @@ class FormInput extends StatelessWidget {
         maxLines: maxLines,
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: textTheme.bodyMedium?.copyWith(color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+          hintStyle: textTheme.bodyMedium?.copyWith(
+            color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+          ),
           filled: false,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(14),
@@ -376,18 +496,28 @@ class FormAttachment extends StatelessWidget {
             color: isDark ? AppColors.darkCard : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.withValues(alpha: 0.2),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.grey.withValues(alpha: 0.2),
             ),
           ),
           child: Row(
             children: [
-              Icon(CupertinoIcons.paperclip, size: 20, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+              Icon(
+                CupertinoIcons.paperclip,
+                size: 20,
+                color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   fileName ?? 'No file chosen',
                   style: textTheme.bodyMedium?.copyWith(
-                    color: fileName != null ? (isDark ? AppColors.darkText : AppColors.lightText) : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+                    color: fileName != null
+                        ? (isDark ? AppColors.darkText : AppColors.lightText)
+                        : (isDark
+                              ? AppColors.darkSubtext
+                              : AppColors.lightSubtext),
                   ),
                 ),
               ),
@@ -396,7 +526,11 @@ class FormAttachment extends StatelessWidget {
                   padding: EdgeInsets.zero,
                   minimumSize: const Size(24, 24),
                   onPressed: onRemove,
-                  child: const Icon(CupertinoIcons.xmark_circle_fill, size: 20, color: AppColors.danger),
+                  child: const Icon(
+                    CupertinoIcons.xmark_circle_fill,
+                    size: 20,
+                    color: AppColors.danger,
+                  ),
                 ),
             ],
           ),
@@ -409,20 +543,30 @@ class FormAttachment extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: [
-          Icon(Icons.attach_file_rounded, size: 20, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+          Icon(
+            Icons.attach_file_rounded,
+            size: 20,
+            color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               fileName ?? 'No file chosen',
               style: textTheme.bodyMedium?.copyWith(
-                color: fileName != null ? (isDark ? AppColors.darkText : AppColors.lightText) : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+                color: fileName != null
+                    ? (isDark ? AppColors.darkText : AppColors.lightText)
+                    : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
               ),
             ),
           ),
           if (fileName != null && onRemove != null)
             GestureDetector(
               onTap: onRemove,
-              child: const Icon(Icons.close_rounded, size: 18, color: AppColors.danger),
+              child: const Icon(
+                Icons.close_rounded,
+                size: 18,
+                color: AppColors.danger,
+              ),
             ),
         ],
       ),
@@ -454,13 +598,19 @@ class FormActionButtons extends StatelessWidget {
               height: 50,
               child: CupertinoButton(
                 padding: EdgeInsets.zero,
-                color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.shade200,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.grey.shade200,
                 borderRadius: BorderRadius.circular(14),
                 onPressed: () => Navigator.pop(context),
-                child: Text('Cancel', style: TextStyle(
-                  color: isDark ? AppColors.darkText : AppColors.lightText,
-                  fontWeight: FontWeight.w600, fontSize: 15,
-                )),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color: isDark ? AppColors.darkText : AppColors.lightText,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
               ),
             ),
           ),
@@ -472,13 +622,22 @@ class FormActionButtons extends StatelessWidget {
                 padding: EdgeInsets.zero,
                 color: buttonColor ?? AppColors.primary,
                 borderRadius: BorderRadius.circular(14),
-                onPressed: isSubmitting ? null : () {
-                  HapticFeedback.mediumImpact();
-                  onSubmit();
-                },
+                onPressed: isSubmitting
+                    ? null
+                    : () {
+                        HapticFeedback.mediumImpact();
+                        onSubmit();
+                      },
                 child: isSubmitting
                     ? const CupertinoActivityIndicator(color: Colors.white)
-                    : const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
+                    : const Text(
+                        'Save',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
               ),
             ),
           ),
@@ -494,11 +653,20 @@ class FormActionButtons extends StatelessWidget {
             child: OutlinedButton(
               onPressed: () => Navigator.pop(context),
               style: OutlinedButton.styleFrom(
-                foregroundColor: isDark ? AppColors.darkText : AppColors.lightText,
-                side: BorderSide(color: isDark ? Colors.white24 : Colors.black26),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                foregroundColor: isDark
+                    ? AppColors.darkText
+                    : AppColors.lightText,
+                side: BorderSide(
+                  color: isDark ? Colors.white24 : Colors.black26,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
-              child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              ),
             ),
           ),
         ),
@@ -511,12 +679,27 @@ class FormActionButtons extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: buttonColor ?? AppColors.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 elevation: 0,
               ),
               child: isSubmitting
-                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
-                  : const Text('Save', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'Save',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
             ),
           ),
         ),
@@ -560,12 +743,18 @@ class FormAttachmentToggle extends StatelessWidget {
             color: isDark ? AppColors.darkCard : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.withValues(alpha: 0.2),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.grey.withValues(alpha: 0.2),
             ),
           ),
           child: Row(
             children: [
-              Icon(Icons.attach_file_rounded, size: 20, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+              Icon(
+                Icons.attach_file_rounded,
+                size: 20,
+                color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -609,7 +798,13 @@ String formatTime(TimeOfDay? time) {
 /// Platform-adaptive date picker
 /// iOS: Cupertino wheel picker in a bottom sheet
 /// Android: Material date picker dialog
-Future<DateTime?> pickDate(BuildContext context, {DateTime? initial, DateTime? firstDate, DateTime? lastDate, Color? accentColor}) {
+Future<DateTime?> pickDate(
+  BuildContext context, {
+  DateTime? initial,
+  DateTime? firstDate,
+  DateTime? lastDate,
+  Color? accentColor,
+}) {
   final now = DateTime.now();
 
   if (isApplePlatform) {
@@ -627,13 +822,23 @@ Future<DateTime?> pickDate(BuildContext context, {DateTime? initial, DateTime? f
     firstDate: firstDate ?? now.subtract(const Duration(days: 90)),
     lastDate: lastDate ?? now.add(const Duration(days: 365)),
     builder: (context, child) => Theme(
-      data: Theme.of(context).copyWith(colorScheme: Theme.of(context).colorScheme.copyWith(primary: accentColor ?? AppColors.primary, onPrimary: Colors.white)),
+      data: Theme.of(context).copyWith(
+        colorScheme: Theme.of(context).colorScheme.copyWith(
+          primary: accentColor ?? AppColors.primary,
+          onPrimary: Colors.white,
+        ),
+      ),
       child: child!,
     ),
   );
 }
 
-Future<DateTime?> _showCupertinoDatePicker(BuildContext context, {required DateTime initial, required DateTime firstDate, required DateTime lastDate}) async {
+Future<DateTime?> _showCupertinoDatePicker(
+  BuildContext context, {
+  required DateTime initial,
+  required DateTime firstDate,
+  required DateTime lastDate,
+}) async {
   DateTime selectedDate = initial;
   final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -642,7 +847,9 @@ Future<DateTime?> _showCupertinoDatePicker(BuildContext context, {required DateT
     builder: (ctx) => Container(
       height: 300,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1C1C1E) : CupertinoColors.systemBackground.resolveFrom(ctx),
+        color: isDark
+            ? const Color(0xFF1C1C1E)
+            : CupertinoColors.systemBackground.resolveFrom(ctx),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: Column(
@@ -651,7 +858,11 @@ Future<DateTime?> _showCupertinoDatePicker(BuildContext context, {required DateT
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.2)),
+                bottom: BorderSide(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.grey.withValues(alpha: 0.2),
+                ),
               ),
             ),
             child: Row(
@@ -659,12 +870,22 @@ Future<DateTime?> _showCupertinoDatePicker(BuildContext context, {required DateT
               children: [
                 CupertinoButton(
                   padding: EdgeInsets.zero,
-                  child: Text('Cancel', style: TextStyle(color: isDark ? AppColors.darkSubtext : CupertinoColors.systemGrey)),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: isDark
+                          ? AppColors.darkSubtext
+                          : CupertinoColors.systemGrey,
+                    ),
+                  ),
                   onPressed: () => Navigator.pop(ctx),
                 ),
                 CupertinoButton(
                   padding: EdgeInsets.zero,
-                  child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text(
+                    'Done',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   onPressed: () {
                     HapticFeedback.selectionClick();
                     Navigator.pop(ctx, selectedDate);
@@ -695,30 +916,49 @@ Future<DateTime?> _showCupertinoDatePicker(BuildContext context, {required DateT
 /// Platform-adaptive time picker
 Future<TimeOfDay?> pickTime(BuildContext context, {TimeOfDay? initial}) {
   if (isApplePlatform) {
-    return _showCupertinoTimePicker(context, initial: initial ?? TimeOfDay.now());
+    return _showCupertinoTimePicker(
+      context,
+      initial: initial ?? TimeOfDay.now(),
+    );
   }
 
   return showTimePicker(
     context: context,
     initialTime: initial ?? TimeOfDay.now(),
     builder: (context, child) => Theme(
-      data: Theme.of(context).copyWith(colorScheme: Theme.of(context).colorScheme.copyWith(primary: AppColors.primary, onPrimary: Colors.white)),
+      data: Theme.of(context).copyWith(
+        colorScheme: Theme.of(context).colorScheme.copyWith(
+          primary: AppColors.primary,
+          onPrimary: Colors.white,
+        ),
+      ),
       child: child!,
     ),
   );
 }
 
-Future<TimeOfDay?> _showCupertinoTimePicker(BuildContext context, {required TimeOfDay initial}) async {
+Future<TimeOfDay?> _showCupertinoTimePicker(
+  BuildContext context, {
+  required TimeOfDay initial,
+}) async {
   final isDark = Theme.of(context).brightness == Brightness.dark;
   final now = DateTime.now();
-  DateTime selectedTime = DateTime(now.year, now.month, now.day, initial.hour, initial.minute);
+  DateTime selectedTime = DateTime(
+    now.year,
+    now.month,
+    now.day,
+    initial.hour,
+    initial.minute,
+  );
 
   final result = await showCupertinoModalPopup<TimeOfDay>(
     context: context,
     builder: (ctx) => Container(
       height: 300,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1C1C1E) : CupertinoColors.systemBackground.resolveFrom(ctx),
+        color: isDark
+            ? const Color(0xFF1C1C1E)
+            : CupertinoColors.systemBackground.resolveFrom(ctx),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: Column(
@@ -727,7 +967,11 @@ Future<TimeOfDay?> _showCupertinoTimePicker(BuildContext context, {required Time
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.2)),
+                bottom: BorderSide(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.grey.withValues(alpha: 0.2),
+                ),
               ),
             ),
             child: Row(
@@ -735,15 +979,31 @@ Future<TimeOfDay?> _showCupertinoTimePicker(BuildContext context, {required Time
               children: [
                 CupertinoButton(
                   padding: EdgeInsets.zero,
-                  child: Text('Cancel', style: TextStyle(color: isDark ? AppColors.darkSubtext : CupertinoColors.systemGrey)),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: isDark
+                          ? AppColors.darkSubtext
+                          : CupertinoColors.systemGrey,
+                    ),
+                  ),
                   onPressed: () => Navigator.pop(ctx),
                 ),
                 CupertinoButton(
                   padding: EdgeInsets.zero,
-                  child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text(
+                    'Done',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   onPressed: () {
                     HapticFeedback.selectionClick();
-                    Navigator.pop(ctx, TimeOfDay(hour: selectedTime.hour, minute: selectedTime.minute));
+                    Navigator.pop(
+                      ctx,
+                      TimeOfDay(
+                        hour: selectedTime.hour,
+                        minute: selectedTime.minute,
+                      ),
+                    );
                   },
                 ),
               ],
@@ -769,7 +1029,12 @@ Future<TimeOfDay?> _showCupertinoTimePicker(BuildContext context, {required Time
 /// Platform-adaptive snackbar/toast
 void showSuccessSnackbar(BuildContext context, String message) {
   if (isApplePlatform) {
-    _showIOSToast(context, message, AppColors.success, CupertinoIcons.checkmark_circle_fill);
+    _showIOSToast(
+      context,
+      message,
+      AppColors.success,
+      CupertinoIcons.checkmark_circle_fill,
+    );
     return;
   }
   ScaffoldMessenger.of(context).showSnackBar(
@@ -784,7 +1049,12 @@ void showSuccessSnackbar(BuildContext context, String message) {
 
 void showErrorSnackbar(BuildContext context, String message) {
   if (isApplePlatform) {
-    _showIOSToast(context, message, AppColors.danger, CupertinoIcons.xmark_circle_fill);
+    _showIOSToast(
+      context,
+      message,
+      AppColors.danger,
+      CupertinoIcons.xmark_circle_fill,
+    );
     return;
   }
   ScaffoldMessenger.of(context).showSnackBar(
@@ -797,7 +1067,12 @@ void showErrorSnackbar(BuildContext context, String message) {
   );
 }
 
-void _showIOSToast(BuildContext context, String message, Color color, IconData icon) {
+void _showIOSToast(
+  BuildContext context,
+  String message,
+  Color color,
+  IconData icon,
+) {
   final overlay = Overlay.of(context);
   final entry = OverlayEntry(
     builder: (ctx) => _IOSToast(message: message, color: color, icon: icon),
@@ -811,13 +1086,18 @@ class _IOSToast extends StatefulWidget {
   final Color color;
   final IconData icon;
 
-  const _IOSToast({required this.message, required this.color, required this.icon});
+  const _IOSToast({
+    required this.message,
+    required this.color,
+    required this.icon,
+  });
 
   @override
   State<_IOSToast> createState() => _IOSToastState();
 }
 
-class _IOSToastState extends State<_IOSToast> with SingleTickerProviderStateMixin {
+class _IOSToastState extends State<_IOSToast>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _opacity;
   late Animation<Offset> _slide;
@@ -825,9 +1105,18 @@ class _IOSToastState extends State<_IOSToast> with SingleTickerProviderStateMixi
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
-    _opacity = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-    _slide = Tween<Offset>(begin: const Offset(0, -0.3), end: Offset.zero).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _opacity = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _slide = Tween<Offset>(
+      begin: const Offset(0, -0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
     Future.delayed(const Duration(milliseconds: 1700), () {
       if (mounted) _controller.reverse();
@@ -855,7 +1144,10 @@ class _IOSToastState extends State<_IOSToast> with SingleTickerProviderStateMixi
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   color: widget.color.withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(14),
@@ -865,7 +1157,15 @@ class _IOSToastState extends State<_IOSToast> with SingleTickerProviderStateMixi
                     Icon(widget.icon, color: Colors.white, size: 20),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(widget.message, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600, decoration: TextDecoration.none)),
+                      child: Text(
+                        widget.message,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.none,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -918,10 +1218,18 @@ Future<bool?> showAdaptiveConfirmDialog({
       title: Text(title),
       content: Text(content),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(cancelText)),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: Text(cancelText),
+        ),
         TextButton(
           onPressed: () => Navigator.pop(ctx, true),
-          child: Text(confirmText, style: TextStyle(color: isDestructive ? AppColors.danger : AppColors.primary)),
+          child: Text(
+            confirmText,
+            style: TextStyle(
+              color: isDestructive ? AppColors.danger : AppColors.primary,
+            ),
+          ),
         ),
       ],
     ),

@@ -1,6 +1,9 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/styled_donut_chart.dart';
 
@@ -11,7 +14,8 @@ class HrClaimsOverview extends StatefulWidget {
   State<HrClaimsOverview> createState() => _HrClaimsOverviewState();
 }
 
-class _HrClaimsOverviewState extends State<HrClaimsOverview> with SingleTickerProviderStateMixin {
+class _HrClaimsOverviewState extends State<HrClaimsOverview>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -37,41 +41,86 @@ class _HrClaimsOverviewState extends State<HrClaimsOverview> with SingleTickerPr
         // Stats Row
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-          child: Row(
-            children: [
-              Expanded(child: _ClaimStatCard(label: 'Pending', value: '23', amount: '₹9,58,000', color: AppColors.warning)),
-              const SizedBox(width: 10),
-              Expanded(child: _ClaimStatCard(label: 'Approved', value: '156', amount: '₹65,42,000', color: AppColors.success)),
-              const SizedBox(width: 10),
-              Expanded(child: _ClaimStatCard(label: 'Disbursed', value: '142', amount: '₹60,78,000', color: AppColors.primary)),
-            ],
-          ).animate().fadeIn(duration: 420.ms).slideY(begin: 0.12, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
+          child:
+              Row(
+                    children: [
+                      Expanded(
+                        child: _ClaimStatCard(
+                          label: 'Pending',
+                          value: '23',
+                          amount: '₹9,58,000',
+                          color: AppColors.warning,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _ClaimStatCard(
+                          label: 'Approved',
+                          value: '156',
+                          amount: '₹65,42,000',
+                          color: AppColors.success,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _ClaimStatCard(
+                          label: 'Disbursed',
+                          value: '142',
+                          amount: '₹60,78,000',
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  )
+                  .animate()
+                  .fadeIn(duration: 420.ms)
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 400.ms,
+                    curve: Curves.easeOutCubic,
+                  ),
         ),
         const SizedBox(height: 16),
 
         // Tab Bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: NeuCard(
-            padding: const EdgeInsets.all(4),
-            child: TabBar(
-              controller: _tabController,
-              indicator: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: Colors.white,
-              unselectedLabelColor: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-              dividerColor: Colors.transparent,
-              tabs: const [
-                Tab(text: 'Pending'),
-                Tab(text: 'Approved'),
-                Tab(text: 'Disbursed'),
-              ],
-            ),
-          ).animate().fadeIn(duration: 420.ms, delay: 80.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 80.ms, curve: Curves.easeOutCubic),
+          child:
+              NeuCard(
+                    padding: const EdgeInsets.all(4),
+                    child: TabBar(
+                      controller: _tabController,
+                      indicator: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: isDark
+                          ? AppColors.darkSubtext
+                          : AppColors.lightSubtext,
+                      labelStyle: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                      dividerColor: Colors.transparent,
+                      tabs: const [
+                        Tab(text: 'Pending'),
+                        Tab(text: 'Approved'),
+                        Tab(text: 'Disbursed'),
+                      ],
+                    ),
+                  )
+                  .animate()
+                  .fadeIn(duration: 420.ms, delay: 80.ms)
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: 80.ms,
+                    curve: Curves.easeOutCubic,
+                  ),
         ),
         const SizedBox(height: 12),
 
@@ -80,7 +129,12 @@ class _HrClaimsOverviewState extends State<HrClaimsOverview> with SingleTickerPr
           child: TabBarView(
             controller: _tabController,
             children: [
-              _buildClaimsList(_pendingClaims, theme, isDark, showActions: true),
+              _buildClaimsList(
+                _pendingClaims,
+                theme,
+                isDark,
+                showActions: true,
+              ),
               _buildClaimsList(_approvedClaims, theme, isDark),
               _buildClaimsList(_disbursedClaims, theme, isDark),
             ],
@@ -90,8 +144,16 @@ class _HrClaimsOverviewState extends State<HrClaimsOverview> with SingleTickerPr
     );
   }
 
-  Widget _buildClaimsList(List<_ClaimItem> claims, ThemeData theme, bool isDark, {bool showActions = false}) {
+  Widget _buildClaimsList(
+    List<_ClaimItem> claims,
+    ThemeData theme,
+    bool isDark, {
+    bool showActions = false,
+  }) {
     return ListView.builder(
+      physics: isApplePlatform
+          ? const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics())
+          : null,
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
       itemCount: claims.length + 1, // +1 for the chart
       itemBuilder: (context, index) {
@@ -99,27 +161,59 @@ class _HrClaimsOverviewState extends State<HrClaimsOverview> with SingleTickerPr
           // Claims by Category Chart
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child: NeuCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Claims by Category', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, fontSize: 15)),
-                  const SizedBox(height: 12),
-                  StyledDonutChart(
-                    size: 160,
-                    strokeWidth: 22,
-                    segments: const [
-                      DonutSegment(label: 'Travel', value: 45, color: AppColors.primary),
-                      DonutSegment(label: 'Medical', value: 25, color: AppColors.success),
-                      DonutSegment(label: 'Equipment', value: 20, color: AppColors.orange),
-                      DonutSegment(label: 'Other', value: 10, color: AppColors.secondary),
-                    ],
-                    centerLabel: 'Claims',
-                  ),
-                ],
-              ),
-            ).animate().fadeIn(duration: 420.ms, delay: 160.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 160.ms, curve: Curves.easeOutCubic),
+            child:
+                NeuCard(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Claims by Category',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          StyledDonutChart(
+                            size: 160,
+                            strokeWidth: 22,
+                            segments: const [
+                              DonutSegment(
+                                label: 'Travel',
+                                value: 45,
+                                color: AppColors.primary,
+                              ),
+                              DonutSegment(
+                                label: 'Medical',
+                                value: 25,
+                                color: AppColors.success,
+                              ),
+                              DonutSegment(
+                                label: 'Equipment',
+                                value: 20,
+                                color: AppColors.orange,
+                              ),
+                              DonutSegment(
+                                label: 'Other',
+                                value: 10,
+                                color: AppColors.secondary,
+                              ),
+                            ],
+                            centerLabel: 'Claims',
+                          ),
+                        ],
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(duration: 420.ms, delay: 160.ms)
+                    .slideY(
+                      begin: 0.12,
+                      end: 0,
+                      duration: 420.ms,
+                      delay: 160.ms,
+                      curve: Curves.easeOutCubic,
+                    ),
           );
         }
 
@@ -128,8 +222,17 @@ class _HrClaimsOverviewState extends State<HrClaimsOverview> with SingleTickerPr
           padding: const EdgeInsets.only(bottom: 10),
           child: _ClaimCard(claim: claim, showActions: showActions)
               .animate()
-              .fadeIn(duration: 420.ms, delay: (240 + (index < 6 ? index : 6) * 60).ms)
-              .slideY(begin: 0.06, end: 0, duration: 420.ms, delay: (240 + (index < 6 ? index : 6) * 60).ms, curve: Curves.easeOutCubic),
+              .fadeIn(
+                duration: 420.ms,
+                delay: (240 + (index < 6 ? index : 6) * 60).ms,
+              )
+              .slideY(
+                begin: 0.06,
+                end: 0,
+                duration: 420.ms,
+                delay: (240 + (index < 6 ? index : 6) * 60).ms,
+                curve: Curves.easeOutCubic,
+              ),
         );
       },
     );
@@ -162,24 +265,121 @@ class _ClaimItem {
 }
 
 const _pendingClaims = [
-  _ClaimItem(employeeName: 'Arjun Patel', initials: 'AP', empId: 'EMP-001', category: 'Travel', description: 'Client visit - Mumbai', amount: '₹34,500', date: 'Mar 8, 2026'),
-  _ClaimItem(employeeName: 'Priya Sharma', initials: 'PS', empId: 'EMP-002', category: 'Medical', description: 'Annual health checkup', amount: '₹21,500', date: 'Mar 7, 2026'),
-  _ClaimItem(employeeName: 'Rahul Verma', initials: 'RV', empId: 'EMP-003', category: 'Equipment', description: 'Laptop repair', amount: '₹13,800', date: 'Mar 6, 2026', hasReceipt: false),
-  _ClaimItem(employeeName: 'Sneha Gupta', initials: 'SG', empId: 'EMP-004', category: 'Travel', description: 'Conference registration', amount: '₹26,800', date: 'Mar 5, 2026'),
-  _ClaimItem(employeeName: 'Neha Singh', initials: 'NS', empId: 'EMP-006', category: 'Other', description: 'Client dinner', amount: '₹9,200', date: 'Mar 4, 2026'),
+  _ClaimItem(
+    employeeName: 'Arjun Patel',
+    initials: 'AP',
+    empId: 'EMP-001',
+    category: 'Travel',
+    description: 'Client visit - Mumbai',
+    amount: '₹34,500',
+    date: 'Mar 8, 2026',
+  ),
+  _ClaimItem(
+    employeeName: 'Priya Sharma',
+    initials: 'PS',
+    empId: 'EMP-002',
+    category: 'Medical',
+    description: 'Annual health checkup',
+    amount: '₹21,500',
+    date: 'Mar 7, 2026',
+  ),
+  _ClaimItem(
+    employeeName: 'Rahul Verma',
+    initials: 'RV',
+    empId: 'EMP-003',
+    category: 'Equipment',
+    description: 'Laptop repair',
+    amount: '₹13,800',
+    date: 'Mar 6, 2026',
+    hasReceipt: false,
+  ),
+  _ClaimItem(
+    employeeName: 'Sneha Gupta',
+    initials: 'SG',
+    empId: 'EMP-004',
+    category: 'Travel',
+    description: 'Conference registration',
+    amount: '₹26,800',
+    date: 'Mar 5, 2026',
+  ),
+  _ClaimItem(
+    employeeName: 'Neha Singh',
+    initials: 'NS',
+    empId: 'EMP-006',
+    category: 'Other',
+    description: 'Client dinner',
+    amount: '₹9,200',
+    date: 'Mar 4, 2026',
+  ),
 ];
 
 const _approvedClaims = [
-  _ClaimItem(employeeName: 'Vikram Singh', initials: 'VS', empId: 'EMP-009', category: 'Travel', description: 'Team outing transport', amount: '₹15,400', date: 'Mar 3, 2026'),
-  _ClaimItem(employeeName: 'Karan Mehta', initials: 'KM', empId: 'EMP-007', category: 'Medical', description: 'Eye checkup', amount: '₹11,500', date: 'Mar 2, 2026'),
-  _ClaimItem(employeeName: 'Amit Kumar', initials: 'AK', empId: 'EMP-005', category: 'Equipment', description: 'Monitor purchase', amount: '₹32,200', date: 'Mar 1, 2026'),
-  _ClaimItem(employeeName: 'Meera Nair', initials: 'MN', empId: 'EMP-012', category: 'Travel', description: 'Airport taxi', amount: '₹6,500', date: 'Feb 28, 2026'),
+  _ClaimItem(
+    employeeName: 'Vikram Singh',
+    initials: 'VS',
+    empId: 'EMP-009',
+    category: 'Travel',
+    description: 'Team outing transport',
+    amount: '₹15,400',
+    date: 'Mar 3, 2026',
+  ),
+  _ClaimItem(
+    employeeName: 'Karan Mehta',
+    initials: 'KM',
+    empId: 'EMP-007',
+    category: 'Medical',
+    description: 'Eye checkup',
+    amount: '₹11,500',
+    date: 'Mar 2, 2026',
+  ),
+  _ClaimItem(
+    employeeName: 'Amit Kumar',
+    initials: 'AK',
+    empId: 'EMP-005',
+    category: 'Equipment',
+    description: 'Monitor purchase',
+    amount: '₹32,200',
+    date: 'Mar 1, 2026',
+  ),
+  _ClaimItem(
+    employeeName: 'Meera Nair',
+    initials: 'MN',
+    empId: 'EMP-012',
+    category: 'Travel',
+    description: 'Airport taxi',
+    amount: '₹6,500',
+    date: 'Feb 28, 2026',
+  ),
 ];
 
 const _disbursedClaims = [
-  _ClaimItem(employeeName: 'Deepak Shah', initials: 'DS', empId: 'EMP-015', category: 'Travel', description: 'Delhi site visit', amount: '₹52,200', date: 'Feb 25, 2026'),
-  _ClaimItem(employeeName: 'Ravi Menon', initials: 'RM', empId: 'EMP-013', category: 'Medical', description: 'Dental treatment', amount: '₹24,500', date: 'Feb 22, 2026'),
-  _ClaimItem(employeeName: 'Anita Desai', initials: 'AD', empId: 'EMP-008', category: 'Other', description: 'Training materials', amount: '₹7,300', date: 'Feb 20, 2026'),
+  _ClaimItem(
+    employeeName: 'Deepak Shah',
+    initials: 'DS',
+    empId: 'EMP-015',
+    category: 'Travel',
+    description: 'Delhi site visit',
+    amount: '₹52,200',
+    date: 'Feb 25, 2026',
+  ),
+  _ClaimItem(
+    employeeName: 'Ravi Menon',
+    initials: 'RM',
+    empId: 'EMP-013',
+    category: 'Medical',
+    description: 'Dental treatment',
+    amount: '₹24,500',
+    date: 'Feb 22, 2026',
+  ),
+  _ClaimItem(
+    employeeName: 'Anita Desai',
+    initials: 'AD',
+    empId: 'EMP-008',
+    category: 'Other',
+    description: 'Training materials',
+    amount: '₹7,300',
+    date: 'Feb 20, 2026',
+  ),
 ];
 
 // ---------------------------------------------------------------------------
@@ -204,11 +404,34 @@ class _ClaimStatCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       child: Column(
         children: [
-          Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: color)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.darkSubtext
+                  : AppColors.lightSubtext,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(amount, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+          Text(
+            amount,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
@@ -252,7 +475,14 @@ class _ClaimCard extends StatelessWidget {
               CircleAvatar(
                 radius: 20,
                 backgroundColor: catColor.withValues(alpha: 0.15),
-                child: Text(claim.initials, style: TextStyle(color: catColor, fontWeight: FontWeight.w700, fontSize: 13)),
+                child: Text(
+                  claim.initials,
+                  style: TextStyle(
+                    color: catColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -261,28 +491,69 @@ class _ClaimCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text(claim.employeeName, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? AppColors.darkText : AppColors.lightText)),
+                        Text(
+                          claim.employeeName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: isDark
+                                ? AppColors.darkText
+                                : AppColors.lightText,
+                          ),
+                        ),
                         const SizedBox(width: 6),
-                        Text(claim.empId, style: TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w500)),
+                        Text(
+                          claim.empId,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 2),
-                    Text(claim.description, style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+                    Text(
+                      claim.description,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark
+                            ? AppColors.darkSubtext
+                            : AppColors.lightSubtext,
+                      ),
+                    ),
                   ],
                 ),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(claim.amount, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: isDark ? AppColors.darkText : AppColors.lightText)),
+                  Text(
+                    claim.amount,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? AppColors.darkText : AppColors.lightText,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: catColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(claim.category, style: TextStyle(color: catColor, fontWeight: FontWeight.w600, fontSize: 10)),
+                    child: Text(
+                      claim.category,
+                      style: TextStyle(
+                        color: catColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 10,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -291,21 +562,42 @@ class _ClaimCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              Icon(Icons.calendar_today, size: 12, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+              Icon(
+                Icons.calendar_today,
+                size: 12,
+                color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+              ),
               const SizedBox(width: 4),
               Flexible(
-                child: Text(claim.date, style: TextStyle(fontSize: 11, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext), overflow: TextOverflow.ellipsis),
+                child: Text(
+                  claim.date,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark
+                        ? AppColors.darkSubtext
+                        : AppColors.lightSubtext,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               const SizedBox(width: 10),
               Icon(
-                claim.hasReceipt ? Icons.receipt_long : Icons.receipt_long_outlined,
+                claim.hasReceipt
+                    ? Icons.receipt_long
+                    : Icons.receipt_long_outlined,
                 size: 12,
                 color: claim.hasReceipt ? AppColors.success : AppColors.danger,
               ),
               const SizedBox(width: 4),
               Text(
                 claim.hasReceipt ? 'Receipt' : 'No receipt',
-                style: TextStyle(fontSize: 11, color: claim.hasReceipt ? AppColors.success : AppColors.danger, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: claim.hasReceipt
+                      ? AppColors.success
+                      : AppColors.danger,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -314,19 +606,47 @@ class _ClaimCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: _ActionBtn(icon: Icons.close, color: AppColors.danger, label: 'Reject', onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('${claim.employeeName}\'s claim rejected'), backgroundColor: AppColors.danger, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                    );
-                  }),
+                  child: _ActionBtn(
+                    icon: Icons.close,
+                    color: AppColors.danger,
+                    label: 'Reject',
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '${claim.employeeName}\'s claim rejected',
+                          ),
+                          backgroundColor: AppColors.danger,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _ActionBtn(icon: Icons.check, color: AppColors.success, label: 'Approve', onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('${claim.employeeName}\'s claim approved'), backgroundColor: AppColors.success, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                    );
-                  }),
+                  child: _ActionBtn(
+                    icon: Icons.check,
+                    color: AppColors.success,
+                    label: 'Approve',
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '${claim.employeeName}\'s claim approved',
+                          ),
+                          backgroundColor: AppColors.success,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
@@ -346,7 +666,12 @@ class _ActionBtn extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
 
-  const _ActionBtn({required this.icon, required this.color, required this.label, this.onTap});
+  const _ActionBtn({
+    required this.icon,
+    required this.color,
+    required this.label,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -364,11 +689,17 @@ class _ActionBtn extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 14),
             const SizedBox(width: 4),
-            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 11)),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w600,
+                fontSize: 11,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
-

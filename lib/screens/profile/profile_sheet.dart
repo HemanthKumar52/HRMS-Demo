@@ -1,6 +1,9 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../providers/app_provider.dart';
 import '../auth/login_screen.dart';
 import 'profile_screen.dart';
@@ -10,12 +13,20 @@ import '../dashboard/org_chart_screen.dart';
 import '../../animations/motion.dart';
 
 void showProfileSheet(BuildContext context) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => const _ProfileSheet(),
-  );
+  HapticFeedback.mediumImpact();
+  if (isApplePlatform) {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (_) => const _ProfileSheet(),
+    );
+  } else {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _ProfileSheet(),
+    );
+  }
 }
 
 class _ProfileSheet extends StatelessWidget {
@@ -289,7 +300,9 @@ class _MenuItem extends StatelessWidget {
                 ),
                 const Spacer(),
                 Icon(
-                  Icons.chevron_right_rounded,
+                  isApplePlatform
+                      ? CupertinoIcons.chevron_forward
+                      : Icons.chevron_right_rounded,
                   color: isDark
                       ? Colors.white.withValues(alpha: 0.3)
                       : Colors.black.withValues(alpha: 0.2),

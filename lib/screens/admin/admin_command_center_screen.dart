@@ -1,11 +1,14 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 import '../manager/approvals_screen.dart';
 
@@ -87,8 +90,10 @@ class _AdminCommandCenterScreenState extends State<AdminCommandCenterScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+          ? Center(
+              child: isApplePlatform
+                  ? const CupertinoActivityIndicator(radius: 14)
+                  : const CircularProgressIndicator(color: AppColors.primary),
             )
           : _error != null
           ? _ErrorState(message: _error!, onRetry: _load)

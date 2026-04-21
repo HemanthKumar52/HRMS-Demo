@@ -1,8 +1,11 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../auth/login_screen.dart';
 
 /// One-time permissions onboarding screen.
@@ -127,30 +130,18 @@ class _PermissionsOnboardingScreenState
     await PermissionsOnboardingScreen.markComplete();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+      adaptivePageRoute(child: const LoginScreen()),
     );
   }
 
   void _showOpenSettings({required String title, required String body}) {
-    showDialog<void>(
+    showAdaptiveAlert(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(body),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Not now'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              openAppSettings();
-            },
-            child: const Text('Open Settings'),
-          ),
-        ],
-      ),
+      title: title,
+      content: body,
+      cancelLabel: 'Not now',
+      confirmLabel: 'Open Settings',
+      onConfirm: () => openAppSettings(),
     );
   }
 
@@ -224,13 +215,17 @@ class _PermissionsOnboardingScreenState
                 child: ElevatedButton.icon(
                   onPressed: _isRequesting || _isProceeding ? null : _grantAll,
                   icon: _isRequesting
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                          child: isApplePlatform
+                              ? const CupertinoActivityIndicator(
+                                  color: Colors.white,
+                                )
+                              : const CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
                         )
                       : const Icon(Icons.check_circle_outline, size: 20),
                   label: Text(

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
@@ -24,32 +25,72 @@ class EmployeeProfileView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: adaptiveAppBar(context: context, title: 'Employee Profile', showBackButton: true),
+      appBar: adaptiveAppBar(
+        context: context,
+        title: 'Employee Profile',
+        showBackButton: true,
+      ),
       body: SingleChildScrollView(
+        physics: isApplePlatform ? const BouncingScrollPhysics() : null,
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Profile Header
             _ProfileHeader(
-              name: name,
-              initials: initials,
-              avatarColor: avatarColor,
-              jobTitle: jobTitle,
-              department: department,
-            ).animate().fadeIn(duration: 420.ms).slideY(begin: 0.12, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
+                  name: name,
+                  initials: initials,
+                  avatarColor: avatarColor,
+                  jobTitle: jobTitle,
+                  department: department,
+                )
+                .animate()
+                .fadeIn(duration: 420.ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 400.ms,
+                  curve: Curves.easeOutCubic,
+                ),
             const SizedBox(height: 20),
 
             // Attendance Summary
-            _AttendanceSummarySection().animate().fadeIn(duration: 420.ms, delay: 80.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 80.ms, curve: Curves.easeOutCubic),
+            _AttendanceSummarySection()
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 80.ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: 80.ms,
+                  curve: Curves.easeOutCubic,
+                ),
             const SizedBox(height: 16),
 
             // Leave History
-            _LeaveHistorySection().animate().fadeIn(duration: 420.ms, delay: 160.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 160.ms, curve: Curves.easeOutCubic),
+            _LeaveHistorySection()
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 160.ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: 160.ms,
+                  curve: Curves.easeOutCubic,
+                ),
             const SizedBox(height: 16),
 
             // Performance Notes
-            _PerformanceNotesSection().animate().fadeIn(duration: 420.ms, delay: 240.ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 240.ms, curve: Curves.easeOutCubic),
+            _PerformanceNotesSection()
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 240.ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: 240.ms,
+                  curve: Curves.easeOutCubic,
+                ),
           ],
         ),
       ),
@@ -185,8 +226,11 @@ class _AttendanceSummarySection extends StatelessWidget {
                   color: AppColors.pastelBlue,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.bar_chart_rounded,
-                    color: AppColors.primary, size: 20),
+                child: const Icon(
+                  Icons.bar_chart_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Text('Attendance Summary', style: theme.textTheme.titleMedium),
@@ -197,22 +241,34 @@ class _AttendanceSummarySection extends StatelessWidget {
             children: [
               const Expanded(
                 child: _StatTile(
-                    label: 'Present', value: '21', color: AppColors.success),
+                  label: 'Present',
+                  value: '21',
+                  color: AppColors.success,
+                ),
               ),
               const SizedBox(width: 10),
               const Expanded(
                 child: _StatTile(
-                    label: 'Absent', value: '2', color: AppColors.danger),
+                  label: 'Absent',
+                  value: '2',
+                  color: AppColors.danger,
+                ),
               ),
               const SizedBox(width: 10),
               const Expanded(
                 child: _StatTile(
-                    label: 'Late', value: '3', color: AppColors.warning),
+                  label: 'Late',
+                  value: '3',
+                  color: AppColors.warning,
+                ),
               ),
               const SizedBox(width: 10),
               const Expanded(
                 child: _StatTile(
-                    label: 'Leave', value: '1', color: AppColors.secondary),
+                  label: 'Leave',
+                  value: '1',
+                  color: AppColors.secondary,
+                ),
               ),
             ],
           ),
@@ -248,8 +304,9 @@ class _AttendanceSummarySection extends StatelessWidget {
                 value: value,
                 minHeight: 8,
                 backgroundColor: AppColors.success.withValues(alpha: 0.12),
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(AppColors.success),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.success,
+                ),
               ),
             ),
           ),
@@ -369,8 +426,11 @@ class _LeaveHistorySection extends StatelessWidget {
                   color: AppColors.pastelPurple,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.event_note,
-                    color: AppColors.secondary, size: 20),
+                child: const Icon(
+                  Icons.event_note,
+                  color: AppColors.secondary,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Text('Leave History', style: theme.textTheme.titleMedium),
@@ -414,9 +474,12 @@ class _LeaveRow extends StatelessWidget {
               const SizedBox(height: 2),
               Text(record.dateRange, style: theme.textTheme.bodySmall),
               const SizedBox(height: 2),
-              Text(record.reason,
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(fontStyle: FontStyle.italic)),
+              Text(
+                record.reason,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
             ],
           ),
         ),
@@ -486,8 +549,11 @@ class _PerformanceNotesSection extends StatelessWidget {
                   color: AppColors.pastelGreen,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.star_border_rounded,
-                    color: AppColors.success, size: 20),
+                child: const Icon(
+                  Icons.star_border_rounded,
+                  color: AppColors.success,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Text('Performance Notes', style: theme.textTheme.titleMedium),
@@ -525,8 +591,7 @@ class _PerformanceNoteRow extends StatelessWidget {
             Expanded(
               child: Text(
                 note.title,
-                style:
-                    theme.textTheme.titleMedium?.copyWith(fontSize: 14),
+                style: theme.textTheme.titleMedium?.copyWith(fontSize: 14),
               ),
             ),
             Text(note.date, style: theme.textTheme.bodySmall),

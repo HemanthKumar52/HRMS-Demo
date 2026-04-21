@@ -4,12 +4,14 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 
 /// WFH face-verification dialog with **inline live camera preview** and
 /// **auto-capture** after a short countdown.
@@ -283,13 +285,15 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
         // Live front-camera feed clipped into the circle.
         final controller = _cameraController;
         if (controller == null || !controller.value.isInitialized) {
-          return const SizedBox(
+          return SizedBox(
             width: 50,
             height: 50,
-            child: CircularProgressIndicator(
-              color: AppColors.primary,
-              strokeWidth: 3.5,
-            ),
+            child: isApplePlatform
+                ? const CupertinoActivityIndicator(radius: 16)
+                : const CircularProgressIndicator(
+                    color: AppColors.primary,
+                    strokeWidth: 3.5,
+                  ),
           );
         }
         return ClipOval(
@@ -308,13 +312,15 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
         );
       case _Stage.capturing:
       case _Stage.verifying:
-        return const SizedBox(
+        return SizedBox(
           width: 50,
           height: 50,
-          child: CircularProgressIndicator(
-            color: AppColors.primary,
-            strokeWidth: 3.5,
-          ),
+          child: isApplePlatform
+              ? const CupertinoActivityIndicator(radius: 16)
+              : const CircularProgressIndicator(
+                  color: AppColors.primary,
+                  strokeWidth: 3.5,
+                ),
         );
       case _Stage.verified:
         return const Icon(

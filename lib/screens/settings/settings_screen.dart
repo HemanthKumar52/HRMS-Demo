@@ -1,10 +1,14 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/adaptive_colors.dart';
 import '../../widgets/neu_card.dart';
+import '../../widgets/adaptive_list.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/app_provider.dart';
 import '../../utils/platform_adaptive.dart';
@@ -57,6 +61,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         showBackButton: true,
       ),
       body: SingleChildScrollView(
+        physics: isApplePlatform ? const BouncingScrollPhysics() : null,
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,10 +271,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ? SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.success,
-                                ),
+                                child: isApplePlatform
+                                    ? const CupertinoActivityIndicator()
+                                    : CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.success,
+                                      ),
                               )
                             : const Icon(
                                 Icons.sync_rounded,
@@ -343,9 +350,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         trailing: const SizedBox.shrink(),
                         onTap: () => Navigator.push(
                           context,
-                          MaterialPageRoute<void>(
-                            builder: (_) => const OrgChartScreen(),
-                          ),
+                          adaptivePageRoute(child: const OrgChartScreen()),
                         ),
                       ),
                       Divider(
@@ -629,6 +634,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showAboutPopup(BuildContext context) {
+    HapticFeedback.lightImpact();
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     showDialog(
@@ -717,17 +723,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text('Close'),
-                ),
+                child: isApplePlatform
+                    ? CupertinoButton.filled(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Close'),
+                      )
+                    : ElevatedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Close'),
+                      ),
               ),
             ],
           ),

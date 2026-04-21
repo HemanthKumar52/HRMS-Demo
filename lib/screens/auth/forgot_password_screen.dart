@@ -1,10 +1,13 @@
 import 'dart:convert';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 
 /// Mobile-side forgot-password screen.
 ///
@@ -107,10 +110,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: const BackButton(color: AppColors.primary),
+      appBar: adaptiveAppBar(
+        context: context,
+        title: '',
+        showBackButton: true,
       ),
       body: SafeArea(
         child: Padding(
@@ -215,13 +218,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             child: ElevatedButton.icon(
               onPressed: _isSubmitting ? null : _submit,
               icon: _isSubmitting
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
+                      child: isApplePlatform
+                          ? const CupertinoActivityIndicator(
+                              color: Colors.white,
+                            )
+                          : const CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                     )
                   : const Icon(Icons.send_rounded, size: 20),
               label: const Text(

@@ -16,7 +16,9 @@ class NotificationController {
       final data = await ApiService.getNotifications();
       final unread = (data['unread_count'] ?? 0) as int;
       final notifications = List<Map<String, dynamic>>.from(
-        ((data['notifications'] as List?) ?? []).map((n) => Map<String, dynamic>.from(n)),
+        ((data['notifications'] as List?) ?? []).map(
+          (n) => Map<String, dynamic>.from(n),
+        ),
       );
 
       // Fire local push for new unread notifications

@@ -6,11 +6,14 @@
 
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -144,8 +147,10 @@ class _AdminAllowedIpsScreenState extends State<AdminAllowedIpsScreen> {
         ],
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+          ? Center(
+              child: isApplePlatform
+                  ? const CupertinoActivityIndicator(radius: 14)
+                  : const CircularProgressIndicator(color: AppColors.primary),
             )
           : _error != null
           ? Center(
@@ -499,8 +504,10 @@ class _AdminLoginRecordsScreenState extends State<AdminLoginRecordsScreen> {
         ],
       ),
       body: _items.isEmpty && _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+          ? Center(
+              child: isApplePlatform
+                  ? const CupertinoActivityIndicator(radius: 14)
+                  : const CircularProgressIndicator(color: AppColors.primary),
             )
           : _error != null
           ? Center(

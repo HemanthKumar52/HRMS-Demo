@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../theme/adaptive_colors.dart';
+import '../utils/platform_adaptive.dart';
+
 /// Shimmer skeleton loading placeholder.
-/// Usage:
-///   SkeletonBox(width: 100, height: 16)
-///   SkeletonCircle(size: 48)
-///   SkeletonCard() — full card placeholder
+/// iOS: simple gray pulsing rectangles (no shimmer sweep).
+/// Android: shimmer sweep effect.
 class SkeletonBox extends StatelessWidget {
   final double? width;
   final double height;
@@ -21,16 +22,28 @@ class SkeletonBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
+    final box = Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: isDark
+        color: isApplePlatform
+            ? AdaptiveColors.systemFill(context)
+            : isDark
             ? Colors.white.withValues(alpha: 0.06)
             : Colors.black.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(radius),
       ),
-    )
+    );
+
+    if (isApplePlatform) {
+      // iOS: subtle pulse animation (no shimmer sweep)
+      return box
+          .animate(onPlay: (c) => c.repeat(reverse: true))
+          .fadeIn(begin: 0.4, duration: 800.ms, curve: Curves.easeInOut);
+    }
+
+    // Android: shimmer sweep
+    return box
         .animate(onPlay: (c) => c.repeat())
         .shimmer(
           duration: 1300.ms,
@@ -49,16 +62,26 @@ class SkeletonCircle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
+    final circle = Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: isDark
+        color: isApplePlatform
+            ? AdaptiveColors.systemFill(context)
+            : isDark
             ? Colors.white.withValues(alpha: 0.06)
             : Colors.black.withValues(alpha: 0.06),
         shape: BoxShape.circle,
       ),
-    )
+    );
+
+    if (isApplePlatform) {
+      return circle
+          .animate(onPlay: (c) => c.repeat(reverse: true))
+          .fadeIn(begin: 0.4, duration: 800.ms, curve: Curves.easeInOut);
+    }
+
+    return circle
         .animate(onPlay: (c) => c.repeat())
         .shimmer(
           duration: 1300.ms,
@@ -78,15 +101,26 @@ class SkeletonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1D2E) : const Color(0xFFE4E8EE),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: isDark
-            ? [BoxShadow(color: Colors.black.withValues(alpha: 0.3), offset: const Offset(4, 4), blurRadius: 8)]
-            : [BoxShadow(color: const Color(0xFFBEC3CE).withValues(alpha: 0.4), offset: const Offset(4, 4), blurRadius: 10)],
+        color: AdaptiveColors.cardBackground(context),
+        borderRadius: BorderRadius.circular(isApplePlatform ? 12 : 20),
+        border: isApplePlatform
+            ? Border.all(
+                color: AdaptiveColors.separator(context),
+                width: 0.5,
+              )
+            : null,
+        boxShadow: isApplePlatform
+            ? null
+            : [
+                BoxShadow(
+                  color: const Color(0xFFBEC3CE).withValues(alpha: 0.4),
+                  offset: const Offset(4, 4),
+                  blurRadius: 10,
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -137,9 +171,10 @@ class SkeletonList extends StatelessWidget {
         itemCount,
         (i) => Padding(
           padding: const EdgeInsets.only(bottom: 12),
-          child: SkeletonCard(lines: 2, showCircle: showCircle)
-              .animate()
-              .fadeIn(duration: 300.ms, delay: (i * 80).ms),
+          child: SkeletonCard(
+            lines: 2,
+            showCircle: showCircle,
+          ).animate().fadeIn(duration: 300.ms, delay: (i * 80).ms),
         ),
       ),
     );

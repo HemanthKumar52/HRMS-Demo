@@ -1,7 +1,10 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../animations/success_overlay.dart';
 import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
+import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
 import '../../widgets/form_fields.dart';
@@ -45,6 +48,7 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    HapticFeedback.mediumImpact();
     setState(() => _isSubmitting = true);
     try {
       await ApiService.post('/assets/request', {
@@ -78,6 +82,11 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
         showBackButton: true,
       ),
       body: SingleChildScrollView(
+        physics: isApplePlatform
+            ? const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              )
+            : null,
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Form(
           key: _formKey,

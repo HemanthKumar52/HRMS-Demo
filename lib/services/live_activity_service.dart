@@ -11,7 +11,8 @@ class LiveActivityService {
   static final LiveActivityService instance = LiveActivityService._();
 
   final LiveActivities _liveActivities = LiveActivities();
-  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notifications =
+      FlutterLocalNotificationsPlugin();
 
   String? _attendanceActivityId;
   String? _leaveActivityId;
@@ -45,34 +46,50 @@ class LiveActivityService {
 
       if (!kIsWeb && Platform.isAndroid) {
         final androidPlugin = _notifications
-            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
         if (androidPlugin != null) {
           await androidPlugin.createNotificationChannel(
             const AndroidNotificationChannel(
-              _attendanceChannelId, 'Attendance Tracker',
+              _attendanceChannelId,
+              'Attendance Tracker',
               description: 'Live attendance tracking',
-              importance: Importance.low, playSound: false, enableVibration: false, showBadge: false,
+              importance: Importance.low,
+              playSound: false,
+              enableVibration: false,
+              showBadge: false,
             ),
           );
           await androidPlugin.createNotificationChannel(
             const AndroidNotificationChannel(
-              _leaveChannelId, 'Leave Tracking',
+              _leaveChannelId,
+              'Leave Tracking',
               description: 'Leave request status updates',
-              importance: Importance.low, playSound: false, enableVibration: false, showBadge: true,
+              importance: Importance.low,
+              playSound: false,
+              enableVibration: false,
+              showBadge: true,
             ),
           );
           await androidPlugin.createNotificationChannel(
             const AndroidNotificationChannel(
-              _shiftChannelId, 'Shift Reminders',
+              _shiftChannelId,
+              'Shift Reminders',
               description: 'Upcoming shift notifications',
-              importance: Importance.defaultImportance, playSound: true, enableVibration: true,
+              importance: Importance.defaultImportance,
+              playSound: true,
+              enableVibration: true,
             ),
           );
           await androidPlugin.createNotificationChannel(
             const AndroidNotificationChannel(
-              _payrollChannelId, 'Payroll Updates',
+              _payrollChannelId,
+              'Payroll Updates',
               description: 'Salary and payroll notifications',
-              importance: Importance.high, playSound: true, enableVibration: true,
+              importance: Importance.high,
+              playSound: true,
+              enableVibration: true,
             ),
           );
         }
@@ -89,7 +106,10 @@ class LiveActivityService {
   // 1. ATTENDANCE TRACKING
   // ═══════════════════════════════════════════════════════
 
-  Future<void> startPunchIn({required String userName, required DateTime punchTime}) async {
+  Future<void> startPunchIn({
+    required String userName,
+    required DateTime punchTime,
+  }) async {
     _punchInTime = punchTime;
     _isAttendanceActive = true;
     if (kIsWeb) return;
@@ -115,16 +135,25 @@ class LiveActivityService {
           id: _attendanceNotifId,
           title: 'Punched In - $userName',
           body: 'Working since ${_formatTime(punchTime)}',
-          notificationDetails: NotificationDetails(android: AndroidNotificationDetails(
-            _attendanceChannelId, 'Attendance Tracker',
-            importance: Importance.low, priority: Priority.low,
-            ongoing: true, autoCancel: false, showWhen: true,
-            when: punchTime.millisecondsSinceEpoch,
-            usesChronometer: true, chronometerCountDown: false,
-            category: AndroidNotificationCategory.progress,
-            showProgress: true, maxProgress: 100, progress: 0,
-            subText: 'Working',
-          )),
+          notificationDetails: NotificationDetails(
+            android: AndroidNotificationDetails(
+              _attendanceChannelId,
+              'Attendance Tracker',
+              importance: Importance.low,
+              priority: Priority.low,
+              ongoing: true,
+              autoCancel: false,
+              showWhen: true,
+              when: punchTime.millisecondsSinceEpoch,
+              usesChronometer: true,
+              chronometerCountDown: false,
+              category: AndroidNotificationCategory.progress,
+              showProgress: true,
+              maxProgress: 100,
+              progress: 0,
+              subText: 'Working',
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -132,7 +161,10 @@ class LiveActivityService {
     }
 
     _attendanceTimer?.cancel();
-    _attendanceTimer = Timer.periodic(const Duration(minutes: 1), (_) => _updateAttendance());
+    _attendanceTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => _updateAttendance(),
+    );
   }
 
   Future<void> stopPunchOut({Duration? totalWorked}) async {
@@ -153,11 +185,17 @@ class LiveActivityService {
             id: _attendanceNotifId,
             title: 'Punched Out',
             body: 'Total worked: ${h}h ${m.toString().padLeft(2, '0')}m',
-            notificationDetails: const NotificationDetails(android: AndroidNotificationDetails(
-              _attendanceChannelId, 'Attendance Tracker',
-              importance: Importance.defaultImportance,
-              ongoing: false, autoCancel: true, playSound: false, enableVibration: false,
-            )),
+            notificationDetails: const NotificationDetails(
+              android: AndroidNotificationDetails(
+                _attendanceChannelId,
+                'Attendance Tracker',
+                importance: Importance.defaultImportance,
+                ongoing: false,
+                autoCancel: true,
+                playSound: false,
+                enableVibration: false,
+              ),
+            ),
           );
         } else {
           await _notifications.cancel(id: _attendanceNotifId);
@@ -179,7 +217,10 @@ class LiveActivityService {
     try {
       if (Platform.isIOS && _attendanceActivityId != null) {
         _liveActivities.updateActivity(_attendanceActivityId!, {
-          'workedHours': h, 'workedMinutes': m, 'progress': progress, 'status': 'working',
+          'workedHours': h,
+          'workedMinutes': m,
+          'progress': progress,
+          'status': 'working',
         });
       } else if (Platform.isAndroid) {
         final pct = (progress * 100).toInt();
@@ -187,15 +228,25 @@ class LiveActivityService {
           id: _attendanceNotifId,
           title: 'Working',
           body: '${h}h ${m.toString().padLeft(2, '0')}m  |  $pct% of 9h target',
-          notificationDetails: NotificationDetails(android: AndroidNotificationDetails(
-            _attendanceChannelId, 'Attendance Tracker',
-            importance: Importance.low, priority: Priority.low,
-            ongoing: true, autoCancel: false, showWhen: true,
-            when: _punchInTime!.millisecondsSinceEpoch,
-            usesChronometer: true, showProgress: true, maxProgress: 100, progress: pct,
-            subText: '${h}h ${m.toString().padLeft(2, '0')}m / 9h',
-            playSound: false, enableVibration: false,
-          )),
+          notificationDetails: NotificationDetails(
+            android: AndroidNotificationDetails(
+              _attendanceChannelId,
+              'Attendance Tracker',
+              importance: Importance.low,
+              priority: Priority.low,
+              ongoing: true,
+              autoCancel: false,
+              showWhen: true,
+              when: _punchInTime!.millisecondsSinceEpoch,
+              usesChronometer: true,
+              showProgress: true,
+              maxProgress: 100,
+              progress: pct,
+              subText: '${h}h ${m.toString().padLeft(2, '0')}m / 9h',
+              playSound: false,
+              enableVibration: false,
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -236,15 +287,20 @@ class LiveActivityService {
           id: _leaveNotifId,
           title: '$statusIcon $leaveType Request - $statusLabel',
           body: '$dateRange',
-          notificationDetails: NotificationDetails(android: AndroidNotificationDetails(
-            _leaveChannelId, 'Leave Tracking',
-            importance: Importance.low, priority: Priority.low,
-            ongoing: status == 'submitted',
-            autoCancel: status == 'approved' || status == 'rejected',
-            category: AndroidNotificationCategory.status,
-            subText: statusLabel,
-            playSound: false, enableVibration: false,
-          )),
+          notificationDetails: NotificationDetails(
+            android: AndroidNotificationDetails(
+              _leaveChannelId,
+              'Leave Tracking',
+              importance: Importance.low,
+              priority: Priority.low,
+              ongoing: status == 'submitted',
+              autoCancel: status == 'approved' || status == 'rejected',
+              category: AndroidNotificationCategory.status,
+              subText: statusLabel,
+              playSound: false,
+              enableVibration: false,
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -253,7 +309,10 @@ class LiveActivityService {
   }
 
   /// Update leave request status
-  Future<void> updateLeaveStatus({required String status, String? reviewerName}) async {
+  Future<void> updateLeaveStatus({
+    required String status,
+    String? reviewerName,
+  }) async {
     if (kIsWeb) return;
     final statusLabel = _leaveStatusLabel(status);
     final statusIcon = _leaveStatusIcon(status);
@@ -273,15 +332,22 @@ class LiveActivityService {
         await _notifications.show(
           id: _leaveNotifId,
           title: '$statusIcon Leave Request - $statusLabel',
-          body: reviewerName != null ? 'Reviewed by $reviewerName' : statusLabel,
-          notificationDetails: NotificationDetails(android: AndroidNotificationDetails(
-            _leaveChannelId, 'Leave Tracking',
-            importance: status == 'approved' || status == 'rejected'
-                ? Importance.high : Importance.low,
-            ongoing: false, autoCancel: true,
-            playSound: status == 'approved' || status == 'rejected',
-            enableVibration: status == 'approved' || status == 'rejected',
-          )),
+          body: reviewerName != null
+              ? 'Reviewed by $reviewerName'
+              : statusLabel,
+          notificationDetails: NotificationDetails(
+            android: AndroidNotificationDetails(
+              _leaveChannelId,
+              'Leave Tracking',
+              importance: status == 'approved' || status == 'rejected'
+                  ? Importance.high
+                  : Importance.low,
+              ongoing: false,
+              autoCancel: true,
+              playSound: status == 'approved' || status == 'rejected',
+              enableVibration: status == 'approved' || status == 'rejected',
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -291,19 +357,27 @@ class LiveActivityService {
 
   String _leaveStatusLabel(String status) {
     switch (status) {
-      case 'submitted': return 'Submitted';
-      case 'approved': return 'Approved';
-      case 'rejected': return 'Rejected';
-      default: return 'Pending';
+      case 'submitted':
+        return 'Submitted';
+      case 'approved':
+        return 'Approved';
+      case 'rejected':
+        return 'Rejected';
+      default:
+        return 'Pending';
     }
   }
 
   String _leaveStatusIcon(String status) {
     switch (status) {
-      case 'submitted': return '📋';
-      case 'approved': return '✅';
-      case 'rejected': return '❌';
-      default: return '⏳';
+      case 'submitted':
+        return '📋';
+      case 'approved':
+        return '✅';
+      case 'rejected':
+        return '❌';
+      default:
+        return '⏳';
     }
   }
 
@@ -347,16 +421,21 @@ class LiveActivityService {
           id: _shiftNotifId,
           title: '🕐 Shift Starting in $timeUntilStr',
           body: '$shiftName: $startStr - $endStr',
-          notificationDetails: NotificationDetails(android: AndroidNotificationDetails(
-            _shiftChannelId, 'Shift Reminders',
-            importance: Importance.defaultImportance,
-            priority: Priority.defaultPriority,
-            ongoing: true, autoCancel: false,
-            when: shiftStart.millisecondsSinceEpoch,
-            usesChronometer: true, chronometerCountDown: true,
-            category: AndroidNotificationCategory.reminder,
-            subText: shiftName,
-          )),
+          notificationDetails: NotificationDetails(
+            android: AndroidNotificationDetails(
+              _shiftChannelId,
+              'Shift Reminders',
+              importance: Importance.defaultImportance,
+              priority: Priority.defaultPriority,
+              ongoing: true,
+              autoCancel: false,
+              when: shiftStart.millisecondsSinceEpoch,
+              usesChronometer: true,
+              chronometerCountDown: true,
+              category: AndroidNotificationCategory.reminder,
+              subText: shiftName,
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -414,13 +493,17 @@ class LiveActivityService {
           id: _payrollNotifId,
           title: '💰 Salary Credited',
           body: '$month salary of $amountStr has been credited to your account',
-          notificationDetails: const NotificationDetails(android: AndroidNotificationDetails(
-            _payrollChannelId, 'Payroll Updates',
-            importance: Importance.high,
-            priority: Priority.high,
-            ongoing: false, autoCancel: true,
-            category: AndroidNotificationCategory.message,
-          )),
+          notificationDetails: const NotificationDetails(
+            android: AndroidNotificationDetails(
+              _payrollChannelId,
+              'Payroll Updates',
+              importance: Importance.high,
+              priority: Priority.high,
+              ongoing: false,
+              autoCancel: true,
+              category: AndroidNotificationCategory.message,
+            ),
+          ),
         );
       }
     } catch (e) {

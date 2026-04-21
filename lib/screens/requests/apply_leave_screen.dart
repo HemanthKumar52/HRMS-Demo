@@ -1,4 +1,6 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../animations/success_overlay.dart';
@@ -7,6 +9,7 @@ import '../../services/api_service.dart';
 import '../../services/live_activity_service.dart';
 import '../../services/notification_service.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../theme/adaptive_colors.dart';
 import '../../widgets/employee_cc_field.dart';
 import '../../widgets/form_fields.dart';
 
@@ -84,6 +87,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
       return;
     }
 
+    HapticFeedback.mediumImpact();
     setState(() => _isSubmitting = true);
     try {
       await ApiService.applyLeave({
@@ -146,6 +150,11 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
         showBackButton: true,
       ),
       body: SingleChildScrollView(
+        physics: isApplePlatform
+            ? const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              )
+            : null,
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Form(
           key: _formKey,

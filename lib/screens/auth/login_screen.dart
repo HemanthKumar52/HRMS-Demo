@@ -1,7 +1,9 @@
 import 'dart:math';
 import 'dart:ui';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -12,6 +14,7 @@ import '../../animations/motion.dart';
 import '../../animations/shake_animation.dart';
 import '../../providers/app_provider.dart';
 import '../../services/punch_metadata_service.dart';
+import '../../utils/platform_adaptive.dart';
 import '../shell_screen.dart';
 import 'forgot_password_screen.dart';
 
@@ -713,13 +716,17 @@ class _LoginScreenState extends State<LoginScreen>
                     ? const SizedBox.shrink()
                     : const Icon(Icons.login, size: 20),
                 label: _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 22,
                         height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: Colors.white,
-                        ),
+                        child: isApplePlatform
+                            ? const CupertinoActivityIndicator(
+                                color: Colors.white,
+                              )
+                            : const CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
                       )
                     : const Text(
                         'Log In',
@@ -799,10 +806,9 @@ class _LoginScreenState extends State<LoginScreen>
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () {
+                HapticFeedback.lightImpact();
                 Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const ForgotPasswordScreen(),
-                  ),
+                  adaptivePageRoute(child: const ForgotPasswordScreen()),
                 );
               },
               style: TextButton.styleFrom(
@@ -863,13 +869,15 @@ class _LoginScreenState extends State<LoginScreen>
                 },
               ),
               const SizedBox(height: 28),
-              const SizedBox(
+              SizedBox(
                 width: 24,
                 height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  color: Color(0xFF9B6DFF),
-                ),
+                child: isApplePlatform
+                    ? const CupertinoActivityIndicator(color: Color(0xFF9B6DFF))
+                    : const CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Color(0xFF9B6DFF),
+                      ),
               ),
               const SizedBox(height: 16),
               Text(

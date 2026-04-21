@@ -1,9 +1,12 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/request_action_dialog.dart';
 import '../../widgets/status_chip.dart';
@@ -240,6 +243,7 @@ class _RequestsTabState extends State<_RequestsTab>
     required Map<String, dynamic> req,
     required bool approve,
   }) async {
+    HapticFeedback.mediumImpact();
     final type = (req['type'] as String? ?? 'Request');
     final reason = await RequestActionDialog.show(
       context,
@@ -322,10 +326,12 @@ class _RequestsTabState extends State<_RequestsTab>
   Widget build(BuildContext context) {
     super.build(context);
     if (_loading) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.only(top: 80),
-          child: CircularProgressIndicator(color: AppColors.primary),
+          padding: const EdgeInsets.only(top: 80),
+          child: isApplePlatform
+              ? const CupertinoActivityIndicator(radius: 14)
+              : const CircularProgressIndicator(color: AppColors.primary),
         ),
       );
     }
@@ -343,6 +349,11 @@ class _RequestsTabState extends State<_RequestsTab>
       color: AppColors.primary,
       onRefresh: _load,
       child: ListView.builder(
+        physics: isApplePlatform
+            ? const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              )
+            : null,
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
         itemCount: _items.length,
         itemBuilder: (context, index) {

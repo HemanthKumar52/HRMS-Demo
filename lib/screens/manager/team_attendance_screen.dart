@@ -1,8 +1,10 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 
 /// Manager's team attendance — shows each direct report's check-in time,
@@ -64,23 +66,24 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        elevation: 0,
-        title: const Text(
-          'Team Attendance',
-          style: TextStyle(fontWeight: FontWeight.w800),
-        ),
+      appBar: adaptiveAppBar(
+        context: context,
+        title: 'Team Attendance',
+        showBackButton: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+            icon: Icon(
+              isApplePlatform ? CupertinoIcons.refresh : Icons.refresh_rounded,
+            ),
             onPressed: _loading ? null : _load,
           ),
         ],
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+          ? Center(
+              child: isApplePlatform
+                  ? const CupertinoActivityIndicator(radius: 14)
+                  : const CircularProgressIndicator(color: AppColors.primary),
             )
           : _error != null
           ? Center(
@@ -105,6 +108,11 @@ class _TeamAttendanceScreenState extends State<TeamAttendanceScreen> {
               onRefresh: _load,
               color: AppColors.primary,
               child: ListView(
+                physics: isApplePlatform
+                    ? const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      )
+                    : null,
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                 children: [
                   // Filter chips

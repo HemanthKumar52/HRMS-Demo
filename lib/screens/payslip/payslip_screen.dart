@@ -1,9 +1,13 @@
 import 'dart:io';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../animations/motion.dart';
+import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/styled_donut_chart.dart';
 
@@ -124,6 +128,133 @@ class _PayslipScreenState extends State<PayslipScreen> {
     _loadPayslips();
   }
 
+  Future<void> _downloadPayslipPdf() async {
+    final payslipId = _selectedPayslip['id'];
+    if (payslipId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('No payslip available for this month'),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Downloading PDF...'),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 1),
+      ),
+    );
+    try {
+      final id = payslipId is int
+          ? payslipId
+          : int.tryParse(payslipId.toString()) ?? 0;
+      final response = await ApiService.getPayslipPdf(id);
+      if (!mounted) return;
+      if (response.statusCode == 200 && response.bodyBytes.length > 500) {
+        final dir = await getApplicationDocumentsDirectory();
+        final fileName =
+            'payslip_${_months[_selectedMonthIndex]}_$_selectedYear.pdf';
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(response.bodyBytes);
+        await NotificationService.instance.show(
+          title: 'Payslip Downloaded',
+          body: '$fileName saved successfully',
+          payload: 'payslip_download',
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(child: Text('Downloaded: $fileName')),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } else {
+        throw Exception('PDF not available');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Download failed: ${e.toString().replaceAll('Exception: ', '')}',
+          ),
+          backgroundColor: AppColors.danger,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _showCupertinoMonthPicker() {
+    DateTime tempDate = DateTime(_selectedYear, _selectedMonthIndex + 1);
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => Container(
+        height: 280,
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        child: Column(
+          children: [
+            SizedBox(
+              height: 44,
+              child: NavigationToolbar(
+                leading: CupertinoButton(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: const Text('Cancel'),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                trailing: CupertinoButton(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: const Text('Done'),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    setState(() {
+                      _selectedMonthIndex = tempDate.month - 1;
+                      _selectedYear = tempDate.year;
+                    });
+                    _loadPayslips();
+                  },
+                ),
+              ),
+            ),
+            Expanded(
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.monthYear,
+                initialDateTime: tempDate,
+                minimumDate: _sixMonthsAgo,
+                maximumDate: DateTime.now().add(const Duration(days: 32)),
+                onDateTimeChanged: (date) {
+                  tempDate = date;
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   double get _grossSalary =>
       (_selectedPayslip['gross_pay'] as num?)?.toDouble() ?? 0;
   double get _totalDeductions =>
@@ -226,7 +357,11 @@ class _PayslipScreenState extends State<PayslipScreen> {
               onRefresh: _loadPayslips,
               color: AppColors.primary,
               child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
+                physics: isApplePlatform
+                    ? const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      )
+                    : const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 8,
@@ -279,34 +414,76 @@ class _PayslipScreenState extends State<PayslipScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              IconButton(
-                                icon: Icon(
-                                  Icons.chevron_left_rounded,
-                                  color: _canGoBack
-                                      ? null
-                                      : Colors.grey.shade300,
-                                ),
-                                onPressed: _canGoBack
-                                    ? _goToPreviousMonth
+                              isApplePlatform
+                                  ? CupertinoButton(
+                                      padding: EdgeInsets.zero,
+                                      onPressed: _canGoBack
+                                          ? () {
+                                              HapticFeedback.selectionClick();
+                                              _goToPreviousMonth();
+                                            }
+                                          : null,
+                                      child: Icon(
+                                        CupertinoIcons.chevron_left,
+                                        size: 20,
+                                        color: _canGoBack
+                                            ? null
+                                            : Colors.grey.shade300,
+                                      ),
+                                    )
+                                  : IconButton(
+                                      icon: Icon(
+                                        Icons.chevron_left_rounded,
+                                        color: _canGoBack
+                                            ? null
+                                            : Colors.grey.shade300,
+                                      ),
+                                      onPressed: _canGoBack
+                                          ? _goToPreviousMonth
+                                          : null,
+                                    ),
+                              GestureDetector(
+                                onTap: isApplePlatform
+                                    ? () {
+                                        HapticFeedback.selectionClick();
+                                        _showCupertinoMonthPicker();
+                                      }
                                     : null,
-                              ),
-                              Text(
-                                '${_months[_selectedMonthIndex]} $_selectedYear',
-                                style: tt.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
+                                child: Text(
+                                  '${_months[_selectedMonthIndex]} $_selectedYear',
+                                  style: tt.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.chevron_right_rounded,
-                                  color: _canGoForward
-                                      ? null
-                                      : Colors.grey.shade300,
-                                ),
-                                onPressed: _canGoForward
-                                    ? _goToNextMonth
-                                    : null,
-                              ),
+                              isApplePlatform
+                                  ? CupertinoButton(
+                                      padding: EdgeInsets.zero,
+                                      onPressed: _canGoForward
+                                          ? () {
+                                              HapticFeedback.selectionClick();
+                                              _goToNextMonth();
+                                            }
+                                          : null,
+                                      child: Icon(
+                                        CupertinoIcons.chevron_right,
+                                        size: 20,
+                                        color: _canGoForward
+                                            ? null
+                                            : Colors.grey.shade300,
+                                      ),
+                                    )
+                                  : IconButton(
+                                      icon: Icon(
+                                        Icons.chevron_right_rounded,
+                                        color: _canGoForward
+                                            ? null
+                                            : Colors.grey.shade300,
+                                      ),
+                                      onPressed: _canGoForward
+                                          ? _goToNextMonth
+                                          : null,
+                                    ),
                             ],
                           ),
                         )
@@ -327,7 +504,9 @@ class _PayslipScreenState extends State<PayslipScreen> {
                         child: Column(
                           children: [
                             Icon(
-                              Icons.receipt_long_rounded,
+                              isApplePlatform
+                                  ? CupertinoIcons.doc_text
+                                  : Icons.receipt_long_rounded,
                               size: 64,
                               color: Colors.grey.shade400,
                             ),
@@ -842,192 +1021,158 @@ class _PayslipScreenState extends State<PayslipScreen> {
                               Expanded(
                                 child: SizedBox(
                                   height: 52,
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        Motion.pageRoute(
-                                          PayslipViewerScreen(
-                                            month: _months[_selectedMonthIndex],
-                                            year: _selectedYear,
-                                            payslipId:
-                                                _selectedPayslip['id'] is int
-                                                ? _selectedPayslip['id']
-                                                : int.tryParse(
-                                                    _selectedPayslip['id']
-                                                            ?.toString() ??
-                                                        '',
-                                                  ),
+                                  child: isApplePlatform
+                                      ? CupertinoButton.filled(
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                          ),
+                                          onPressed: () {
+                                            HapticFeedback.lightImpact();
+                                            Navigator.push(
+                                              context,
+                                              Motion.pageRoute(
+                                                PayslipViewerScreen(
+                                                  month:
+                                                      _months[_selectedMonthIndex],
+                                                  year: _selectedYear,
+                                                  payslipId:
+                                                      _selectedPayslip['id']
+                                                          is int
+                                                      ? _selectedPayslip['id']
+                                                      : int.tryParse(
+                                                          _selectedPayslip['id']
+                                                                  ?.toString() ??
+                                                              '',
+                                                        ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: const [
+                                              Icon(
+                                                CupertinoIcons.eye,
+                                                size: 18,
+                                              ),
+                                              SizedBox(width: 6),
+                                              Text(
+                                                'View Payslip',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 15,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      : ElevatedButton.icon(
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              Motion.pageRoute(
+                                                PayslipViewerScreen(
+                                                  month:
+                                                      _months[_selectedMonthIndex],
+                                                  year: _selectedYear,
+                                                  payslipId:
+                                                      _selectedPayslip['id']
+                                                          is int
+                                                      ? _selectedPayslip['id']
+                                                      : int.tryParse(
+                                                          _selectedPayslip['id']
+                                                                  ?.toString() ??
+                                                              '',
+                                                        ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          icon: const Icon(
+                                            Icons.visibility_rounded,
+                                            size: 20,
+                                          ),
+                                          label: const Text('View Payslip'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.primary,
+                                            foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                            ),
+                                            textStyle: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 15,
+                                            ),
+                                            elevation: 0,
                                           ),
                                         ),
-                                      );
-                                    },
-                                    icon: const Icon(
-                                      Icons.visibility_rounded,
-                                      size: 20,
-                                    ),
-                                    label: const Text('View Payslip'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.primary,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      textStyle: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 15,
-                                      ),
-                                      elevation: 0,
-                                    ),
-                                  ),
                                 ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: SizedBox(
                                   height: 52,
-                                  child: OutlinedButton.icon(
-                                    onPressed: () async {
-                                      final payslipId = _selectedPayslip['id'];
-                                      if (payslipId == null) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: const Text(
-                                              'No payslip available for this month',
+                                  child: isApplePlatform
+                                      ? CupertinoButton(
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                          ),
+                                          color: CupertinoColors.systemFill,
+                                          onPressed: () =>
+                                              _downloadPayslipPdf(),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                CupertinoIcons.cloud_download,
+                                                size: 18,
+                                                color: AppColors.primary,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                'Download PDF',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 15,
+                                                  color: AppColors.primary,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      : OutlinedButton.icon(
+                                          onPressed: () =>
+                                              _downloadPayslipPdf(),
+                                          icon: const Icon(
+                                            Icons.download_rounded,
+                                            size: 20,
+                                          ),
+                                          label: const Text('Download PDF'),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: AppColors.primary,
+                                            side: const BorderSide(
+                                              color: AppColors.primary,
+                                              width: 1.5,
                                             ),
-                                            backgroundColor: AppColors.warning,
-                                            behavior: SnackBarBehavior.floating,
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
-                                                  BorderRadius.circular(10),
+                                                  BorderRadius.circular(16),
+                                            ),
+                                            textStyle: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 15,
                                             ),
                                           ),
-                                        );
-                                        return;
-                                      }
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: const Text(
-                                            'Downloading PDF...',
-                                          ),
-                                          backgroundColor: AppColors.primary,
-                                          behavior: SnackBarBehavior.floating,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                          ),
-                                          duration: const Duration(seconds: 1),
                                         ),
-                                      );
-                                      try {
-                                        final id = payslipId is int
-                                            ? payslipId
-                                            : int.tryParse(
-                                                    payslipId.toString(),
-                                                  ) ??
-                                                  0;
-                                        final response =
-                                            await ApiService.getPayslipPdf(id);
-                                        if (!mounted) return;
-                                        if (response.statusCode == 200 &&
-                                            response.bodyBytes.length > 500) {
-                                          final dir =
-                                              await getApplicationDocumentsDirectory();
-                                          final fileName =
-                                              'payslip_${_months[_selectedMonthIndex]}_$_selectedYear.pdf';
-                                          final file = File(
-                                            '${dir.path}/$fileName',
-                                          );
-                                          await file.writeAsBytes(
-                                            response.bodyBytes,
-                                          );
-                                          // Show local push notification
-                                          await NotificationService.instance.show(
-                                            title: 'Payslip Downloaded',
-                                            body:
-                                                '$fileName saved successfully',
-                                            payload: 'payslip_download',
-                                          );
-                                          if (!mounted) return;
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Row(
-                                                children: [
-                                                  const Icon(
-                                                    Icons.check_circle,
-                                                    color: Colors.white,
-                                                    size: 20,
-                                                  ),
-                                                  const SizedBox(width: 10),
-                                                  Expanded(
-                                                    child: Text(
-                                                      'Downloaded: $fileName',
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              backgroundColor:
-                                                  AppColors.success,
-                                              behavior:
-                                                  SnackBarBehavior.floating,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                              ),
-                                              duration: const Duration(
-                                                seconds: 3,
-                                              ),
-                                            ),
-                                          );
-                                        } else {
-                                          throw Exception('PDF not available');
-                                        }
-                                      } catch (e) {
-                                        if (!mounted) return;
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Download failed: ${e.toString().replaceAll('Exception: ', '')}',
-                                            ),
-                                            backgroundColor: AppColors.danger,
-                                            behavior: SnackBarBehavior.floating,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    },
-                                    icon: const Icon(
-                                      Icons.download_rounded,
-                                      size: 20,
-                                    ),
-                                    label: const Text('Download PDF'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppColors.primary,
-                                      side: const BorderSide(
-                                        color: AppColors.primary,
-                                        width: 1.5,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      textStyle: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                  ),
                                 ),
                               ),
                             ],

@@ -1,10 +1,12 @@
 import 'dart:math';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 
 // ── Enterprise Circular Org Chart ───────────────────────────────
 // Handles unlimited hierarchy depth, 100s of employees.
@@ -225,6 +227,7 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
   }
 
   void _showNodeDetail(_OrgNode node) {
+    HapticFeedback.lightImpact();
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     showModalBottomSheet(
@@ -320,31 +323,27 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      appBar: AppBar(
-        backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Organisation Chart',
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-            color: isDark ? AppColors.darkText : AppColors.lightText,
-          ),
-        ),
+      appBar: adaptiveAppBar(
+        context: context,
+        title: 'Organisation Chart',
+        showBackButton: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.fit_screen_rounded),
+            icon: Icon(
+              isApplePlatform
+                  ? CupertinoIcons.arrow_counterclockwise
+                  : Icons.fit_screen_rounded,
+            ),
             tooltip: 'Reset zoom',
             onPressed: _resetZoom,
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+          ? Center(
+              child: isApplePlatform
+                  ? const CupertinoActivityIndicator(radius: 14)
+                  : const CircularProgressIndicator(color: AppColors.primary),
             )
           : _rawRoots.isEmpty
           ? const Center(child: Text('No organisation data'))

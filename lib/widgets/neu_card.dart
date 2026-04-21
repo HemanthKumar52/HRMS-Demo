@@ -1,6 +1,10 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import '../theme/adaptive_colors.dart';
 import '../theme/app_theme.dart';
+import '../utils/platform_adaptive.dart';
 
 class NeuCard extends StatefulWidget {
   final Widget child;
@@ -30,7 +34,6 @@ class _NeuCardState extends State<NeuCard> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    // Fast press down
     _downController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 90),
@@ -39,7 +42,6 @@ class _NeuCardState extends State<NeuCard> with TickerProviderStateMixin {
       CurvedAnimation(parent: _downController, curve: Curves.easeOut),
     );
 
-    // Slower release with overshoot
     _upController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 140),
@@ -58,6 +60,56 @@ class _NeuCardState extends State<NeuCard> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    if (isApplePlatform) return _buildIOSCard(context);
+    return _buildAndroidCard(context);
+  }
+
+  Widget _buildIOSCard(BuildContext context) {
+    final cardChild = AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        color: AdaptiveColors.cardBackground(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AdaptiveColors.separator(context),
+          width: 0.5,
+        ),
+      ),
+      padding: widget.padding,
+      child: widget.child,
+    );
+
+    if (widget.onTap == null) return cardChild;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _downController.forward().then((_) {
+          _upController.forward(from: 0);
+        });
+        widget.onTap?.call();
+      },
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_downController, _upController]),
+        builder: (context, child) {
+          double scale;
+          if (_downController.isAnimating ||
+              _downController.isCompleted && !_upController.isAnimating) {
+            scale = _scaleDown.value;
+          } else if (_upController.isAnimating) {
+            scale = _scaleUp.value;
+          } else {
+            scale = 1.0;
+          }
+          return Transform.scale(scale: scale, child: child);
+        },
+        child: cardChild,
+      ),
+    );
+  }
+
+  Widget _buildAndroidCard(BuildContext context) {
     final cardChild = AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: widget.pressed
@@ -82,7 +134,8 @@ class _NeuCardState extends State<NeuCard> with TickerProviderStateMixin {
         animation: Listenable.merge([_downController, _upController]),
         builder: (context, child) {
           double scale;
-          if (_downController.isAnimating || _downController.isCompleted && !_upController.isAnimating) {
+          if (_downController.isAnimating ||
+              _downController.isCompleted && !_upController.isAnimating) {
             scale = _scaleDown.value;
           } else if (_upController.isAnimating) {
             scale = _scaleUp.value;

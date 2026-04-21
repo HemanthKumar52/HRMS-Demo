@@ -1,8 +1,11 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 
 /// Admin → Settings → Database Backup. Lists existing backups and lets the
@@ -95,14 +98,16 @@ class _AdminBackupScreenState extends State<AdminBackupScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Database Backups'),
-        backgroundColor: theme.scaffoldBackgroundColor,
-        elevation: 0,
+      appBar: adaptiveAppBar(
+        context: context,
+        title: 'Database Backups',
+        showBackButton: true,
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+          ? Center(
+              child: isApplePlatform
+                  ? const CupertinoActivityIndicator(radius: 14)
+                  : const CircularProgressIndicator(color: AppColors.primary),
             )
           : _error != null
           ? Center(

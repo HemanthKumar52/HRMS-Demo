@@ -1,6 +1,9 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 import '../../animations/motion.dart';
 import 'employee_profile_view.dart';
@@ -20,46 +23,82 @@ class _TeamDirectoryScreenState extends State<TeamDirectoryScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final filteredTeams = _allTeams.map((team) {
-      if (_searchQuery.isEmpty) return team;
-      final filtered = team.members
-          .where((m) =>
-              m.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              m.jobTitle.toLowerCase().contains(_searchQuery.toLowerCase()))
-          .toList();
-      return _Team(name: team.name, members: filtered);
-    }).where((team) => team.members.isNotEmpty).toList();
+    final filteredTeams = _allTeams
+        .map((team) {
+          if (_searchQuery.isEmpty) return team;
+          final filtered = team.members
+              .where(
+                (m) =>
+                    m.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                    m.jobTitle.toLowerCase().contains(
+                      _searchQuery.toLowerCase(),
+                    ),
+              )
+              .toList();
+          return _Team(name: team.name, members: filtered);
+        })
+        .where((team) => team.members.isNotEmpty)
+        .toList();
 
     return Column(
       children: [
         // Search Bar
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-          child: NeuCard(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            child: TextField(
-              onChanged: (v) => setState(() => _searchQuery = v),
-              decoration: InputDecoration(
-                hintText: 'Search team members...',
-                hintStyle: TextStyle(
-                  color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
-                  fontSize: 14,
-                ),
-                border: InputBorder.none,
-                icon: Icon(
-                  Icons.search,
-                  color:
-                      isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
-                ),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.close, size: 18),
-                        onPressed: () => setState(() => _searchQuery = ''),
-                      )
-                    : null,
-              ),
-            ),
-          ).animate().fadeIn(duration: 420.ms).slideY(begin: 0.12, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
+          child: isApplePlatform
+              ? CupertinoSearchTextField(
+                      placeholder: 'Search team members...',
+                      onChanged: (v) => setState(() => _searchQuery = v),
+                      onSuffixTap: () => setState(() => _searchQuery = ''),
+                    )
+                    .animate()
+                    .fadeIn(duration: 420.ms)
+                    .slideY(
+                      begin: 0.12,
+                      end: 0,
+                      duration: 400.ms,
+                      curve: Curves.easeOutCubic,
+                    )
+              : NeuCard(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 4,
+                      ),
+                      child: TextField(
+                        onChanged: (v) => setState(() => _searchQuery = v),
+                        decoration: InputDecoration(
+                          hintText: 'Search team members...',
+                          hintStyle: TextStyle(
+                            color: isDark
+                                ? AppColors.darkSubtext
+                                : AppColors.lightSubtext,
+                            fontSize: 14,
+                          ),
+                          border: InputBorder.none,
+                          icon: Icon(
+                            Icons.search,
+                            color: isDark
+                                ? AppColors.darkSubtext
+                                : AppColors.lightSubtext,
+                          ),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.close, size: 18),
+                                  onPressed: () =>
+                                      setState(() => _searchQuery = ''),
+                                )
+                              : null,
+                        ),
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(duration: 420.ms)
+                    .slideY(
+                      begin: 0.12,
+                      end: 0,
+                      duration: 400.ms,
+                      curve: Curves.easeOutCubic,
+                    ),
         ),
         const SizedBox(height: 8),
 
@@ -71,9 +110,18 @@ class _TeamDirectoryScreenState extends State<TeamDirectoryScreen> {
             itemBuilder: (context, index) {
               final team = filteredTeams[index];
               return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: _TeamSection(team: team),
-              ).animate().fadeIn(duration: 420.ms, delay: (index * 100).ms).slideY(begin: 0.12, end: 0, duration: 420.ms, delay: (index * 100).ms, curve: Curves.easeOutCubic);
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: _TeamSection(team: team),
+                  )
+                  .animate()
+                  .fadeIn(duration: 420.ms, delay: (index * 100).ms)
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: (index * 100).ms,
+                    curve: Curves.easeOutCubic,
+                  );
             },
           ),
         ),
@@ -205,8 +253,7 @@ class _TeamSection extends StatelessWidget {
               Text(team.name, style: theme.textTheme.titleMedium),
               const SizedBox(width: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
@@ -283,15 +330,18 @@ class _MemberRow extends StatelessWidget {
 
     return InkWell(
       onTap: () {
+        HapticFeedback.selectionClick();
         Navigator.push(
           context,
-          Motion.pageRoute(EmployeeProfileView(
+          Motion.pageRoute(
+            EmployeeProfileView(
               name: member.name,
               initials: member.initials,
               avatarColor: member.avatarColor,
               jobTitle: member.jobTitle,
               department: _getDepartment(member),
-          )),
+            ),
+          ),
         );
       },
       child: Padding(
@@ -303,8 +353,7 @@ class _MemberRow extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 22,
-                  backgroundColor:
-                      member.avatarColor.withValues(alpha: 0.15),
+                  backgroundColor: member.avatarColor.withValues(alpha: 0.15),
                   child: Text(
                     member.initials,
                     style: TextStyle(
@@ -339,9 +388,10 @@ class _MemberRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(member.name,
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontSize: 14)),
+                  Text(
+                    member.name,
+                    style: theme.textTheme.titleMedium?.copyWith(fontSize: 14),
+                  ),
                   const SizedBox(height: 2),
                   Text(member.jobTitle, style: theme.textTheme.bodySmall),
                 ],
@@ -358,7 +408,13 @@ class _MemberRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.chevron_right, size: 20, color: Colors.grey[400]),
+            Icon(
+              isApplePlatform
+                  ? CupertinoIcons.chevron_forward
+                  : Icons.chevron_right,
+              size: 20,
+              color: Colors.grey[400],
+            ),
           ],
         ),
       ),

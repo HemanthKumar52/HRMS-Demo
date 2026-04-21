@@ -20,8 +20,14 @@ class LiveActivityController {
 
   // ── Attendance ──────────────────────────────────────
 
-  Future<void> startAttendance({required String userName, required DateTime punchTime}) async {
-    await LiveActivityService.instance.startPunchIn(userName: userName, punchTime: punchTime);
+  Future<void> startAttendance({
+    required String userName,
+    required DateTime punchTime,
+  }) async {
+    await LiveActivityService.instance.startPunchIn(
+      userName: userName,
+      punchTime: punchTime,
+    );
     _isAttendanceRunning = true;
   }
 
@@ -44,8 +50,14 @@ class LiveActivityController {
     );
   }
 
-  Future<void> updateLeaveRequestStatus({required String status, String? reviewerName}) async {
-    await LiveActivityService.instance.updateLeaveStatus(status: status, reviewerName: reviewerName);
+  Future<void> updateLeaveRequestStatus({
+    required String status,
+    String? reviewerName,
+  }) async {
+    await LiveActivityService.instance.updateLeaveStatus(
+      status: status,
+      reviewerName: reviewerName,
+    );
   }
 
   // ── Shift Reminder ──────────────────────────────────

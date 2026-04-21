@@ -146,7 +146,9 @@ class LiquidGlassPill extends StatelessWidget {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
           child: Container(
-            padding: padding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding:
+                padding ??
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(40),
               color: isDark

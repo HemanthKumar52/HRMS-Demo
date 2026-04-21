@@ -79,52 +79,52 @@ class _StyledDonutChartState extends State<StyledDonutChart>
       children: [
         Center(
           child: SizedBox(
-          width: widget.size,
-          height: widget.size,
-          child: AnimatedBuilder(
-            animation: _animation,
-            builder: (context, _) {
-              return CustomPaint(
-                painter: _DonutPainter(
-                  segments: widget.segments,
-                  total: total,
-                  progress: _animation.value,
-                  strokeWidth: widget.strokeWidth,
-                  gapDegrees: widget.gapDegrees,
-                  trackColor: isDark
-                      ? Colors.white.withValues(alpha: 0.06)
-                      : Colors.black.withValues(alpha: 0.06),
-                ),
-                child: Center(
-                  child: widget.centerBuilder != null
-                      ? widget.centerBuilder!(total)
-                      : Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              total.toInt().toString(),
-                              style: textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: isDark ? Colors.white : Colors.black87,
-                              ),
-                            ),
-                            if (widget.centerLabel != null)
+            width: widget.size,
+            height: widget.size,
+            child: AnimatedBuilder(
+              animation: _animation,
+              builder: (context, _) {
+                return CustomPaint(
+                  painter: _DonutPainter(
+                    segments: widget.segments,
+                    total: total,
+                    progress: _animation.value,
+                    strokeWidth: widget.strokeWidth,
+                    gapDegrees: widget.gapDegrees,
+                    trackColor: isDark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : Colors.black.withValues(alpha: 0.06),
+                  ),
+                  child: Center(
+                    child: widget.centerBuilder != null
+                        ? widget.centerBuilder!(total)
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
                               Text(
-                                widget.centerLabel!,
-                                style: textTheme.bodySmall?.copyWith(
-                                  color: isDark
-                                      ? Colors.white54
-                                      : Colors.black45,
-                                  fontWeight: FontWeight.w500,
+                                total.toInt().toString(),
+                                style: textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: isDark ? Colors.white : Colors.black87,
                                 ),
                               ),
-                          ],
-                        ),
-                ),
-              );
-            },
+                              if (widget.centerLabel != null)
+                                Text(
+                                  widget.centerLabel!,
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: isDark
+                                        ? Colors.white54
+                                        : Colors.black45,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                            ],
+                          ),
+                  ),
+                );
+              },
+            ),
           ),
-        ),
         ),
         if (widget.showLegend) ...[
           const SizedBox(height: 20),

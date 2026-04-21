@@ -1,8 +1,10 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 
 class AdminUsersScreen extends StatefulWidget {
@@ -80,6 +82,30 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     final userId = ((user['id'] ?? 0) as num).toInt();
 
     HapticFeedback.lightImpact();
+
+    if (isApplePlatform) {
+      showAdaptiveActionSheet(
+        context: context,
+        title: name,
+        actions: [
+          AdaptiveAction(
+            label: isActive ? 'Disable Account' : 'Enable Account',
+            isDestructive: isActive,
+            onPressed: () => _action(userId, isActive ? 'disable' : 'enable'),
+          ),
+          AdaptiveAction(
+            label: 'Force Logout',
+            onPressed: () => _action(userId, 'force-logout'),
+          ),
+          AdaptiveAction(
+            label: 'Send Password Reset',
+            onPressed: () => _action(userId, 'reset-password'),
+          ),
+        ],
+      );
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).cardColor,
@@ -226,10 +252,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             // List
             Expanded(
               child: _loading && _users.isEmpty
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                      ),
+                  ? Center(
+                      child: isApplePlatform
+                          ? const CupertinoActivityIndicator(radius: 14)
+                          : const CircularProgressIndicator(
+                              color: AppColors.primary,
+                            ),
                     )
                   : _error != null
                   ? Center(

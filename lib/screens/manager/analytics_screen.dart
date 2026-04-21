@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -49,7 +50,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       final data = await ApiService.getDashboardAnalytics();
       if (!mounted) return;
       final deptBreakdown = (data['department_breakdown'] as List?) ?? [];
-      final leaveAnalytics = data['leave_analytics'] as Map<String, dynamic>? ?? {};
+      final leaveAnalytics =
+          data['leave_analytics'] as Map<String, dynamic>? ?? {};
 
       setState(() {
         _departments = deptBreakdown
@@ -58,8 +60,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         _totalEmployees = (data['total_employees'] ?? 0) as int;
         _newJoiners = (data['new_joiners'] ?? 0) as int;
         _attritionRate = ((data['attrition_rate'] ?? 0) as num).toDouble();
-        _mostUsedLeaveType = leaveAnalytics['most_used_type']?.toString() ?? 'N/A';
-        _avgLeavesPerEmployee = ((leaveAnalytics['avg_leaves_per_employee'] ?? 0) as num).toDouble();
+        _mostUsedLeaveType =
+            leaveAnalytics['most_used_type']?.toString() ?? 'N/A';
+        _avgLeavesPerEmployee =
+            ((leaveAnalytics['avg_leaves_per_employee'] ?? 0) as num)
+                .toDouble();
         _isLoading = false;
       });
     } catch (e) {
@@ -74,7 +79,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : theme.scaffoldBackgroundColor,
+      backgroundColor: isDark
+          ? AppColors.darkBg
+          : theme.scaffoldBackgroundColor,
       appBar: adaptiveAppBar(
         context: context,
         title: 'Analytics',
@@ -84,7 +91,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         onRefresh: _loadAnalytics,
         color: AppColors.primary,
         child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
+          physics: isApplePlatform
+              ? const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                )
+              : const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,55 +104,128 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               _buildPeriodSelector(isDark)
                   .animate()
                   .fadeIn(duration: 420.ms)
-                  .slideY(begin: 0.12, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 400.ms,
+                    curve: Curves.easeOutCubic,
+                  ),
               const SizedBox(height: 20),
 
               // Headcount Overview
-              Text('Headcount Overview', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))
+              Text(
+                    'Headcount Overview',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
                   .animate()
                   .fadeIn(duration: 420.ms, delay: 80.ms)
-                  .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 80.ms, curve: Curves.easeOutCubic),
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: 80.ms,
+                    curve: Curves.easeOutCubic,
+                  ),
               const SizedBox(height: 12),
               _buildHeadcountChart(isDark)
                   .animate()
                   .fadeIn(duration: 420.ms, delay: 160.ms)
-                  .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 160.ms, curve: Curves.easeOutCubic),
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: 160.ms,
+                    curve: Curves.easeOutCubic,
+                  ),
               const SizedBox(height: 24),
 
               // Attendance Trend
-              Text('Attendance Trend', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))
+              Text(
+                    'Attendance Trend',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
                   .animate()
                   .fadeIn(duration: 420.ms, delay: 240.ms)
-                  .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 240.ms, curve: Curves.easeOutCubic),
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: 240.ms,
+                    curve: Curves.easeOutCubic,
+                  ),
               const SizedBox(height: 12),
               _buildAttendanceTrendChart(isDark)
                   .animate()
                   .fadeIn(duration: 420.ms, delay: 320.ms)
-                  .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 320.ms, curve: Curves.easeOutCubic),
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: 320.ms,
+                    curve: Curves.easeOutCubic,
+                  ),
               const SizedBox(height: 24),
 
               // Department Distribution
-              Text('Department Distribution', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))
+              Text(
+                    'Department Distribution',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
                   .animate()
                   .fadeIn(duration: 420.ms, delay: 400.ms)
-                  .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 400.ms, curve: Curves.easeOutCubic),
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: 400.ms,
+                    curve: Curves.easeOutCubic,
+                  ),
               const SizedBox(height: 12),
               _buildDepartmentPieChart(isDark)
                   .animate()
                   .fadeIn(duration: 420.ms, delay: 480.ms)
-                  .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 480.ms, curve: Curves.easeOutCubic),
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: 480.ms,
+                    curve: Curves.easeOutCubic,
+                  ),
               const SizedBox(height: 24),
 
               // Key Metrics
-              Text('Key Metrics', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))
+              Text(
+                    'Key Metrics',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
                   .animate()
                   .fadeIn(duration: 420.ms, delay: 560.ms)
-                  .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 560.ms, curve: Curves.easeOutCubic),
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: 560.ms,
+                    curve: Curves.easeOutCubic,
+                  ),
               const SizedBox(height: 12),
               _buildKeyMetrics(theme, isDark)
                   .animate()
                   .fadeIn(duration: 420.ms, delay: 640.ms)
-                  .slideY(begin: 0.12, end: 0, duration: 420.ms, delay: 640.ms, curve: Curves.easeOutCubic),
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: 640.ms,
+                    curve: Curves.easeOutCubic,
+                  ),
               const SizedBox(height: 20),
             ],
           ),
@@ -178,8 +262,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       color: isSelected
                           ? Colors.white
                           : isDark
-                              ? AppColors.darkSubtext
-                              : AppColors.lightSubtext,
+                          ? AppColors.darkSubtext
+                          : AppColors.lightSubtext,
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
@@ -210,7 +294,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               getTooltipItem: (group, groupIndex, rod, rodIndex) {
                 return BarTooltipItem(
                   '${rod.toY.toInt()}',
-                  const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                  const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
                 );
               },
             ),
@@ -223,7 +311,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 reservedSize: 30,
                 getTitlesWidget: (value, meta) {
                   const titles = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-                  if (value.toInt() >= titles.length) return const SizedBox.shrink();
+                  if (value.toInt() >= titles.length)
+                    return const SizedBox.shrink();
                   return Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
@@ -231,16 +320,24 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+                        color: isDark
+                            ? AppColors.darkSubtext
+                            : AppColors.lightSubtext,
                       ),
                     ),
                   );
                 },
               ),
             ),
-            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
           ),
           borderData: FlBorderData(show: false),
           gridData: const FlGridData(show: false),
@@ -288,7 +385,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             drawVerticalLine: false,
             horizontalInterval: 5,
             getDrawingHorizontalLine: (value) => FlLine(
-              color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.withValues(alpha: 0.12),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.06)
+                  : Colors.grey.withValues(alpha: 0.12),
               strokeWidth: 1,
             ),
           ),
@@ -301,7 +400,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 getTitlesWidget: (value, meta) {
                   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
                   final idx = value.toInt();
-                  if (idx < 0 || idx >= days.length) return const SizedBox.shrink();
+                  if (idx < 0 || idx >= days.length)
+                    return const SizedBox.shrink();
                   return Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
@@ -309,16 +409,24 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+                        color: isDark
+                            ? AppColors.darkSubtext
+                            : AppColors.lightSubtext,
                       ),
                     ),
                   );
                 },
               ),
             ),
-            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
           ),
           borderData: FlBorderData(show: false),
           minX: 0,
@@ -342,11 +450,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 show: true,
                 getDotPainter: (spot, percent, barData, index) =>
                     FlDotCirclePainter(
-                  radius: 5,
-                  color: AppColors.success,
-                  strokeWidth: 2,
-                  strokeColor: isDark ? AppColors.darkCard : Colors.white,
-                ),
+                      radius: 5,
+                      color: AppColors.success,
+                      strokeWidth: 2,
+                      strokeColor: isDark ? AppColors.darkCard : Colors.white,
+                    ),
               ),
               belowBarData: BarAreaData(
                 show: true,
@@ -375,7 +483,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     return _buildChartCard(
       isDark: isDark,
       child: _isLoading
-          ? const SizedBox(height: 260, child: Center(child: CircularProgressIndicator()))
+          ? SizedBox(
+              height: 260,
+              child: Center(
+                child: isApplePlatform
+                    ? const CupertinoActivityIndicator(radius: 14)
+                    : const CircularProgressIndicator(),
+              ),
+            )
           : StyledDonutChart(
               segments: hasDepts
                   ? _departments.asMap().entries.map((entry) {
@@ -390,18 +505,42 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       );
                     }).toList()
                   : const [
-                      DonutSegment(label: 'Engineering', value: 5, color: AppColors.primary),
-                      DonutSegment(label: 'Design', value: 3, color: AppColors.secondary),
-                      DonutSegment(label: 'Marketing', value: 4, color: AppColors.success),
-                      DonutSegment(label: 'HR', value: 2, color: AppColors.orange),
-                      DonutSegment(label: 'Finance', value: 3, color: AppColors.pink),
+                      DonutSegment(
+                        label: 'Engineering',
+                        value: 5,
+                        color: AppColors.primary,
+                      ),
+                      DonutSegment(
+                        label: 'Design',
+                        value: 3,
+                        color: AppColors.secondary,
+                      ),
+                      DonutSegment(
+                        label: 'Marketing',
+                        value: 4,
+                        color: AppColors.success,
+                      ),
+                      DonutSegment(
+                        label: 'HR',
+                        value: 2,
+                        color: AppColors.orange,
+                      ),
+                      DonutSegment(
+                        label: 'Finance',
+                        value: 3,
+                        color: AppColors.pink,
+                      ),
                     ],
               centerLabel: '$totalEmp\nEmployees',
             ),
     );
   }
 
-  Widget _buildChartCard({required bool isDark, Widget? child, double? height}) {
+  Widget _buildChartCard({
+    required bool isDark,
+    Widget? child,
+    double? height,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -409,7 +548,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.withValues(alpha: 0.1),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.grey.withValues(alpha: 0.1),
         ),
         boxShadow: isDark
             ? []
@@ -430,56 +571,69 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       children: [
         Row(
           children: [
-            Expanded(child: _MetricCard(
-              title: 'Total Employees',
-              value: _isLoading ? '...' : '$_totalEmployees',
-              change: '$_newJoiners new',
-              changeColor: AppColors.success,
-              icon: Icons.people_outline,
-              iconColor: AppColors.primary,
-              isDark: isDark,
-            )),
+            Expanded(
+              child: _MetricCard(
+                title: 'Total Employees',
+                value: _isLoading ? '...' : '$_totalEmployees',
+                change: '$_newJoiners new',
+                changeColor: AppColors.success,
+                icon: Icons.people_outline,
+                iconColor: AppColors.primary,
+                isDark: isDark,
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: _MetricCard(
-              title: 'Attrition Rate',
-              value: _isLoading ? '...' : '${_attritionRate.toStringAsFixed(1)}%',
-              change: _attritionRate <= 3 ? 'Healthy' : 'High',
-              changeColor: _attritionRate <= 3 ? AppColors.success : AppColors.warning,
-              icon: Icons.trending_down,
-              iconColor: AppColors.success,
-              isDark: isDark,
-            )),
+            Expanded(
+              child: _MetricCard(
+                title: 'Attrition Rate',
+                value: _isLoading
+                    ? '...'
+                    : '${_attritionRate.toStringAsFixed(1)}%',
+                change: _attritionRate <= 3 ? 'Healthy' : 'High',
+                changeColor: _attritionRate <= 3
+                    ? AppColors.success
+                    : AppColors.warning,
+                icon: Icons.trending_down,
+                iconColor: AppColors.success,
+                isDark: isDark,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _MetricCard(
-              title: 'Top Leave Type',
-              value: _isLoading ? '...' : _mostUsedLeaveType,
-              change: 'Most used',
-              changeColor: AppColors.orange,
-              icon: Icons.event_busy_outlined,
-              iconColor: AppColors.orange,
-              isDark: isDark,
-            )),
+            Expanded(
+              child: _MetricCard(
+                title: 'Top Leave Type',
+                value: _isLoading ? '...' : _mostUsedLeaveType,
+                change: 'Most used',
+                changeColor: AppColors.orange,
+                icon: Icons.event_busy_outlined,
+                iconColor: AppColors.orange,
+                isDark: isDark,
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: _MetricCard(
-              title: 'Avg. Leaves',
-              value: _isLoading ? '...' : _avgLeavesPerEmployee.toStringAsFixed(1),
-              change: 'Per employee',
-              changeColor: AppColors.secondary,
-              icon: Icons.analytics_outlined,
-              iconColor: AppColors.secondary,
-              isDark: isDark,
-            )),
+            Expanded(
+              child: _MetricCard(
+                title: 'Avg. Leaves',
+                value: _isLoading
+                    ? '...'
+                    : _avgLeavesPerEmployee.toStringAsFixed(1),
+                change: 'Per employee',
+                changeColor: AppColors.secondary,
+                icon: Icons.analytics_outlined,
+                iconColor: AppColors.secondary,
+                isDark: isDark,
+              ),
+            ),
           ],
         ),
       ],
     );
   }
 }
-
 
 class _MetricCard extends StatelessWidget {
   final String title;
@@ -508,7 +662,9 @@ class _MetricCard extends StatelessWidget {
         color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.withValues(alpha: 0.1),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.grey.withValues(alpha: 0.1),
         ),
         boxShadow: isDark
             ? []
@@ -532,11 +688,32 @@ class _MetricCard extends StatelessWidget {
             child: Icon(icon, color: iconColor, size: 20),
           ),
           const SizedBox(height: 12),
-          Text(title, style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext)),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: isDark ? AppColors.darkText : AppColors.lightText), overflow: TextOverflow.ellipsis),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: isDark ? AppColors.darkText : AppColors.lightText,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
           const SizedBox(height: 4),
-          Text(change, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: changeColor)),
+          Text(
+            change,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: changeColor,
+            ),
+          ),
         ],
       ),
     );

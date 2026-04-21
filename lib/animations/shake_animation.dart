@@ -25,7 +25,9 @@ class ShakeAnimation extends StatelessWidget {
     return AnimatedBuilder(
       animation: controller._animController,
       builder: (context, child) {
-        final sinValue = math.sin(controller._animController.value * math.pi * 4);
+        final sinValue = math.sin(
+          controller._animController.value * math.pi * 4,
+        );
         // Dampen oscillation as animation progresses
         final dampen = 1.0 - controller._animController.value;
         return Transform.translate(

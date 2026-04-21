@@ -1,12 +1,15 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'providers/theme_provider.dart';
+
 import 'providers/app_provider.dart';
-import 'screens/splash/splash_screen.dart';
+import 'providers/theme_provider.dart';
 import 'screens/requests/request_detail_screen.dart';
+import 'screens/splash/splash_screen.dart';
 import 'services/live_activity_service.dart';
 import 'services/notification_service.dart';
+import 'utils/platform_adaptive.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -37,7 +40,6 @@ class _PPulseAppState extends State<PPulseApp> {
   @override
   void initState() {
     super.initState();
-    // When any notification is tapped, navigate to Requested tab
     NotificationService.instance.onNotificationTap = () {
       _appProvider.navigateToRequested();
     };
@@ -52,33 +54,44 @@ class _PPulseAppState extends State<PPulseApp> {
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
-          return MaterialApp(
-            navigatorKey: navigatorKey,
-            title: 'PPULSE',
-            debugShowCheckedModeBanner: false,
-            theme: themeProvider.theme,
-            // ── Localization (ready to activate) ──────────────────
-            // Uncomment these 3 lines + import to enable multi-language:
-            // localizationsDelegates: AppLocalizations.localizationsDelegates,
-            // supportedLocales: AppLocalizations.supportedLocales,
-            // locale: const Locale('en'), // or read from SharedPreferences
-            home: const SplashScreen(),
-            routes: {
-              '/request-detail': (context) => const RequestDetailScreen(),
-            },
-            builder: (context, child) {
-              // Global SafeArea ensures content never overlaps
-              // notch, Dynamic Island, or home indicator on ANY device.
-              return SafeArea(
-                // Keep status bar area for AppBar screens — only
-                // guard the bottom (home indicator / gesture bar).
-                top: false,
-                child: child ?? const SizedBox.shrink(),
-              );
-            },
-          );
+          if (isApplePlatform) {
+            return _buildCupertinoApp(themeProvider);
+          }
+          return _buildMaterialApp(themeProvider);
         },
       ),
+    );
+  }
+
+  Widget _buildCupertinoApp(ThemeProvider themeProvider) {
+    return CupertinoApp(
+      navigatorKey: navigatorKey,
+      title: 'PPULSE',
+      debugShowCheckedModeBanner: false,
+      theme: themeProvider.cupertinoTheme,
+      home: const SplashScreen(),
+      routes: {
+        '/request-detail': (context) => const RequestDetailScreen(),
+      },
+    );
+  }
+
+  Widget _buildMaterialApp(ThemeProvider themeProvider) {
+    return MaterialApp(
+      navigatorKey: navigatorKey,
+      title: 'PPULSE',
+      debugShowCheckedModeBanner: false,
+      theme: themeProvider.theme,
+      home: const SplashScreen(),
+      routes: {
+        '/request-detail': (context) => const RequestDetailScreen(),
+      },
+      builder: (context, child) {
+        return SafeArea(
+          top: false,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

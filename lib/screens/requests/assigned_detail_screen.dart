@@ -1,4 +1,6 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
@@ -37,6 +39,7 @@ class _AssignedDetailScreenState extends State<AssignedDetailScreen> {
   }
 
   Future<void> _handleAction({required bool approve}) async {
+    HapticFeedback.mediumImpact();
     final type = (_request['type'] as String? ?? 'Request');
     final reason = await RequestActionDialog.show(
       context,
@@ -85,6 +88,7 @@ class _AssignedDetailScreenState extends State<AssignedDetailScreen> {
         showBackButton: true,
       ),
       body: SingleChildScrollView(
+        physics: isApplePlatform ? const BouncingScrollPhysics() : null,
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,13 +365,17 @@ class _AssignedDetailScreenState extends State<AssignedDetailScreen> {
                             ? null
                             : () => _handleAction(approve: true),
                         icon: _isProcessing
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
+                                child: isApplePlatform
+                                    ? const CupertinoActivityIndicator(
+                                        color: Colors.white,
+                                      )
+                                    : const CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
                               )
                             : const Icon(Icons.check_rounded, size: 18),
                         label: const Text(

@@ -13,7 +13,8 @@ class SuccessOverlay {
       context: context,
       barrierDismissible: false,
       barrierColor: Colors.black.withValues(alpha: 0.4),
-      builder: (ctx) => _SuccessDialog(message: message, displayDuration: displayDuration),
+      builder: (ctx) =>
+          _SuccessDialog(message: message, displayDuration: displayDuration),
     );
   }
 }
@@ -78,42 +79,45 @@ class _SuccessDialogState extends State<_SuccessDialog>
               child: Material(
                 color: Colors.transparent,
                 child: Container(
-                width: 200,
-                padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1A1D2E) : Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 30,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const AnimatedCheckmark(
-                      show: true,
-                      size: 64,
-                      color: Color(0xFF34D399),
-                      duration: Duration(milliseconds: 700),
-                      strokeWidth: 4,
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      widget.message,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : Colors.black87,
+                  width: 200,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 32,
+                    horizontal: 24,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1A1D2E) : Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const AnimatedCheckmark(
+                        show: true,
+                        size: 64,
+                        color: Color(0xFF34D399),
+                        duration: Duration(milliseconds: 700),
+                        strokeWidth: 4,
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        widget.message,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
               ),
             ),
           ),

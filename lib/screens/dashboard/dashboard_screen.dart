@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -6,7 +7,9 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../animations/motion.dart';
 import '../../providers/app_provider.dart';
+import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/neu_card.dart';
 
@@ -44,6 +47,9 @@ class DashboardScreen extends StatelessWidget {
       desktopCols: 6,
     );
     return SingleChildScrollView(
+      physics: isApplePlatform
+          ? const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics())
+          : null,
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
       child: ResponsiveContent(
         child: Column(
@@ -83,7 +89,9 @@ class DashboardScreen extends StatelessWidget {
                   crossAxisSpacing: 12,
                   children: [
                     _QuickAction(
-                      icon: Icons.access_time,
+                      icon: isApplePlatform
+                          ? CupertinoIcons.clock
+                          : Icons.access_time,
                       label: 'Attendance',
                       color: AppColors.primaryDark,
                       onTap: () => Navigator.push(
@@ -92,7 +100,9 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ),
                     _QuickAction(
-                      icon: Icons.event_busy,
+                      icon: isApplePlatform
+                          ? CupertinoIcons.calendar_badge_minus
+                          : Icons.event_busy,
                       label: 'Leave',
                       color: AppColors.primary,
                       onTap: () => Navigator.push(
@@ -101,7 +111,9 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ),
                     _QuickAction(
-                      icon: Icons.confirmation_num,
+                      icon: isApplePlatform
+                          ? CupertinoIcons.ticket
+                          : Icons.confirmation_num,
                       label: 'Tickets',
                       color: AppColors.orange,
                       onTap: () => Navigator.push(
@@ -110,7 +122,9 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ),
                     _QuickAction(
-                      icon: Icons.work,
+                      icon: isApplePlatform
+                          ? CupertinoIcons.briefcase
+                          : Icons.work,
                       label: 'Work Type',
                       color: AppColors.pink,
                       onTap: () => Navigator.push(
@@ -119,7 +133,9 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ),
                     _QuickAction(
-                      icon: Icons.swap_horiz,
+                      icon: isApplePlatform
+                          ? CupertinoIcons.arrow_right_arrow_left
+                          : Icons.swap_horiz,
                       label: 'Shift',
                       color: AppColors.secondary,
                       onTap: () => Navigator.push(
@@ -128,7 +144,9 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ),
                     _QuickAction(
-                      icon: Icons.receipt,
+                      icon: isApplePlatform
+                          ? CupertinoIcons.doc_plaintext
+                          : Icons.receipt,
                       label: 'Claims',
                       color: AppColors.success,
                       onTap: () => Navigator.push(
@@ -1745,6 +1763,24 @@ class _AttendanceTimerCardState extends State<_AttendanceTimerCard> {
                         ),
                       ),
                     ],
+                  ),
+                )
+              else if (isApplePlatform)
+                SizedBox(
+                  width: double.infinity,
+                  child: CupertinoButton.filled(
+                    borderRadius: BorderRadius.circular(14),
+                    onPressed: () {
+                      HapticFeedback.mediumImpact();
+                      widget.provider.setBottomNavIndex(2);
+                    },
+                    child: Text(
+                      isPunchedIn ? 'Punch Out' : 'Punch In',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 )
               else

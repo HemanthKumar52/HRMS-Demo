@@ -1,6 +1,10 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../theme/adaptive_colors.dart';
 import '../theme/app_theme.dart';
+import '../utils/platform_adaptive.dart';
 
 /// Modal dialog for approving or rejecting a request.
 ///
@@ -24,6 +28,14 @@ class RequestActionDialog extends StatefulWidget {
     required bool approve,
     required String requestType,
   }) {
+    if (isApplePlatform) {
+      return showCupertinoDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) =>
+            RequestActionDialog(approve: approve, requestType: requestType),
+      );
+    }
     return showDialog<String>(
       context: context,
       barrierDismissible: false,
@@ -146,52 +158,85 @@ class _RequestActionDialogState extends State<RequestActionDialog> {
             const SizedBox(height: 18),
 
             // Action buttons.
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 46,
-                    child: OutlinedButton(
+            if (isApplePlatform)
+              Row(
+                children: [
+                  Expanded(
+                    child: CupertinoButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(
+                          color: AdaptiveColors.secondaryText(context),
                         ),
                       ),
-                      child: const Text('Cancel'),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: SizedBox(
-                    height: 46,
-                    child: ElevatedButton.icon(
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: CupertinoButton.filled(
                       onPressed: canSubmit
-                          ? () => Navigator.of(
-                              context,
-                            ).pop(_controller.text.trim())
+                          ? () {
+                              HapticFeedback.mediumImpact();
+                              Navigator.of(
+                                context,
+                              ).pop(_controller.text.trim());
+                            }
                           : null,
-                      icon: Icon(icon, size: 18),
-                      label: Text(
-                        actionLabel,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      child: Text(actionLabel),
+                    ),
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 46,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Cancel'),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: color,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: color.withValues(alpha: 0.35),
-                        disabledForegroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SizedBox(
+                      height: 46,
+                      child: ElevatedButton.icon(
+                        onPressed: canSubmit
+                            ? () => Navigator.of(
+                                context,
+                              ).pop(_controller.text.trim())
+                            : null,
+                        icon: Icon(icon, size: 18),
+                        label: Text(
+                          actionLabel,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: color,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: color.withValues(
+                            alpha: 0.35,
+                          ),
+                          disabledForegroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
           ],
         ),
       ),

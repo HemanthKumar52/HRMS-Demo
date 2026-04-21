@@ -1,4 +1,6 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../providers/app_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
+import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/form_fields.dart';
 import '../../widgets/neu_card.dart';
@@ -246,30 +249,17 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
       if (approve) {
         NotificationService.instance.showRequestAssigned(type);
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(approve ? 'Request approved' : 'Request rejected'),
-          backgroundColor: approve ? AppColors.success : AppColors.danger,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      );
+      if (approve) {
+        showSuccessSnackbar(context, 'Request approved');
+      } else {
+        showErrorSnackbar(context, 'Request rejected');
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isProcessing = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Action failed: ${e.toString().replaceAll('Exception: ', '')}',
-          ),
-          backgroundColor: AppColors.danger,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
+      showErrorSnackbar(
+        context,
+        'Action failed: ${e.toString().replaceAll('Exception: ', '')}',
       );
     }
   }
@@ -315,25 +305,38 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
         actions: [
           // Only show edit icon for employee viewing their own pending request
           if (!isManagerViewingEmployee && isPending)
-            IconButton(
-              icon: const Icon(Icons.edit_rounded),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Edit request feature coming soon'),
-                    backgroundColor: AppColors.primary,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+            isApplePlatform
+                ? CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () {
+                      showSuccessSnackbar(
+                        context,
+                        'Edit request feature coming soon',
+                      );
+                    },
+                    child: const Icon(
+                      CupertinoIcons.pencil,
+                      color: AppColors.primary,
+                      size: 22,
                     ),
-                    duration: const Duration(seconds: 1),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.edit_rounded),
+                    onPressed: () {
+                      showSuccessSnackbar(
+                        context,
+                        'Edit request feature coming soon',
+                      );
+                    },
                   ),
-                );
-              },
-            ),
         ],
       ),
       body: SingleChildScrollView(
+        physics: isApplePlatform
+            ? const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              )
+            : null,
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -873,110 +876,221 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
               // Manager/HR viewing employee request: Approve / Reject
               if (isManagerViewingEmployee) ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: 50,
-                        child: OutlinedButton.icon(
-                          onPressed: _isProcessing
-                              ? null
-                              : () => _handleAction(approve: false),
-                          icon: const Icon(Icons.close_rounded, size: 18),
-                          label: const Text(
-                            'Reject',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                            ),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.danger,
-                            side: BorderSide(
-                              color: AppColors.danger.withValues(alpha: 0.5),
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: SizedBox(
-                        height: 50,
-                        child: ElevatedButton.icon(
-                          onPressed: _isProcessing
-                              ? null
-                              : () => _handleAction(approve: true),
-                          icon: _isProcessing
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
+                if (isApplePlatform)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 50,
+                          child: CupertinoButton(
+                            padding: EdgeInsets.zero,
+                            color: AppColors.danger.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(14),
+                            onPressed: _isProcessing
+                                ? null
+                                : () {
+                                    HapticFeedback.mediumImpact();
+                                    _handleAction(approve: false);
+                                  },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Icon(
+                                  CupertinoIcons.xmark,
+                                  size: 16,
+                                  color: AppColors.danger,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Reject',
+                                  style: TextStyle(
+                                    color: AppColors.danger,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
                                   ),
-                                )
-                              : const Icon(Icons.check_rounded, size: 18),
-                          label: const Text(
-                            'Approve',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
+                                ),
+                              ],
                             ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.success,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            elevation: 0,
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: SizedBox(
+                          height: 50,
+                          child: CupertinoButton(
+                            padding: EdgeInsets.zero,
+                            color: AppColors.success,
+                            borderRadius: BorderRadius.circular(14),
+                            onPressed: _isProcessing
+                                ? null
+                                : () {
+                                    HapticFeedback.mediumImpact();
+                                    _handleAction(approve: true);
+                                  },
+                            child: _isProcessing
+                                ? const CupertinoActivityIndicator(
+                                    color: Colors.white,
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: const [
+                                      Icon(
+                                        CupertinoIcons.checkmark_alt,
+                                        size: 16,
+                                        color: Colors.white,
+                                      ),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'Approve',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 50,
+                          child: OutlinedButton.icon(
+                            onPressed: _isProcessing
+                                ? null
+                                : () => _handleAction(approve: false),
+                            icon: const Icon(Icons.close_rounded, size: 18),
+                            label: const Text(
+                              'Reject',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.danger,
+                              side: BorderSide(
+                                color: AppColors.danger.withValues(alpha: 0.5),
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: SizedBox(
+                          height: 50,
+                          child: ElevatedButton.icon(
+                            onPressed: _isProcessing
+                                ? null
+                                : () => _handleAction(approve: true),
+                            icon: _isProcessing
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.check_rounded, size: 18),
+                            label: const Text(
+                              'Approve',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.success,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              elevation: 0,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
               ]
               // Employee viewing own request: Cancel button
               else ...[
                 SizedBox(
                   width: double.infinity,
                   height: 50,
-                  child: OutlinedButton(
-                    onPressed: () async {
-                      final confirmed = await showAdaptiveConfirmDialog(
-                        context: context,
-                        title: 'Cancel Request?',
-                        content:
-                            'Are you sure you want to cancel this request? This action cannot be undone.',
-                        cancelText: 'No, Keep It',
-                        confirmText: 'Yes, Cancel',
-                        isDestructive: true,
-                      );
-                      if (confirmed == true && context.mounted) {
-                        Navigator.pop(context);
-                        showErrorSnackbar(context, 'Request cancelled');
-                      }
-                    },
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.danger),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: const Text(
-                      'Cancel Request',
-                      style: TextStyle(
-                        color: AppColors.danger,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ),
+                  child: isApplePlatform
+                      ? CupertinoButton(
+                          padding: EdgeInsets.zero,
+                          color: AppColors.danger.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(16),
+                          onPressed: () async {
+                            HapticFeedback.mediumImpact();
+                            final confirmed = await showAdaptiveConfirmDialog(
+                              context: context,
+                              title: 'Cancel Request?',
+                              content:
+                                  'Are you sure you want to cancel this request? This action cannot be undone.',
+                              cancelText: 'No, Keep It',
+                              confirmText: 'Yes, Cancel',
+                              isDestructive: true,
+                            );
+                            if (confirmed == true && context.mounted) {
+                              Navigator.pop(context);
+                              showErrorSnackbar(context, 'Request cancelled');
+                            }
+                          },
+                          child: const Text(
+                            'Cancel Request',
+                            style: TextStyle(
+                              color: AppColors.danger,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                          ),
+                        )
+                      : OutlinedButton(
+                          onPressed: () async {
+                            final confirmed = await showAdaptiveConfirmDialog(
+                              context: context,
+                              title: 'Cancel Request?',
+                              content:
+                                  'Are you sure you want to cancel this request? This action cannot be undone.',
+                              cancelText: 'No, Keep It',
+                              confirmText: 'Yes, Cancel',
+                              isDestructive: true,
+                            );
+                            if (confirmed == true && context.mounted) {
+                              Navigator.pop(context);
+                              showErrorSnackbar(context, 'Request cancelled');
+                            }
+                          },
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppColors.danger),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancel Request',
+                            style: TextStyle(
+                              color: AppColors.danger,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
                 ),
               ],
             ],
@@ -1134,16 +1248,7 @@ class _AttachmentPreview extends StatelessWidget {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not open: $_filename'),
-          backgroundColor: AppColors.danger,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
+      showErrorSnackbar(context, 'Could not open: $_filename');
     }
   }
 
@@ -1193,8 +1298,10 @@ class _AttachmentPreview extends StatelessWidget {
           : Colors.grey.shade100,
       borderRadius: BorderRadius.circular(12),
     ),
-    child: const Center(
-      child: CircularProgressIndicator(color: AppColors.primary),
+    child: Center(
+      child: isApplePlatform
+          ? const CupertinoActivityIndicator()
+          : const CircularProgressIndicator(color: AppColors.primary),
     ),
   );
 

@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 
 /// Timeline-style audit log — grouped by date (Today, Yesterday, older).
 /// Tap any entry to see full details on a separate page.
@@ -187,8 +189,12 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
           // Timeline list
           Expanded(
             child: _items.isEmpty && _loading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
+                ? Center(
+                    child: isApplePlatform
+                        ? const CupertinoActivityIndicator(radius: 14)
+                        : const CircularProgressIndicator(
+                            color: AppColors.primary,
+                          ),
                   )
                 : _error != null
                 ? Center(
@@ -274,10 +280,12 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
     // Load more indicator
     if (_items.length < _total) {
       widgets.add(
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
           child: Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
+            child: isApplePlatform
+                ? const CupertinoActivityIndicator(radius: 14)
+                : const CircularProgressIndicator(color: AppColors.primary),
           ),
         ),
       );

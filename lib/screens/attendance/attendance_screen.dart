@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -9,7 +10,9 @@ import 'package:provider/provider.dart';
 import '../../animations/skeleton_loading.dart';
 import '../../providers/app_provider.dart';
 import '../../services/api_service.dart';
+import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 
 import '../../widgets/native_ios_attendance_view.dart';
@@ -235,7 +238,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 onRefresh: _loadAttendanceData,
                 color: AppColors.primary,
                 child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
+                  physics: isApplePlatform
+                      ? const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
+                        )
+                      : const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,
@@ -340,12 +347,21 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.chevron_left_rounded,
-                                      ),
-                                      onPressed: _goToPreviousMonth,
-                                    ),
+                                    isApplePlatform
+                                        ? CupertinoButton(
+                                            padding: EdgeInsets.zero,
+                                            onPressed: _goToPreviousMonth,
+                                            child: const Icon(
+                                              CupertinoIcons.chevron_left,
+                                              size: 20,
+                                            ),
+                                          )
+                                        : IconButton(
+                                            icon: const Icon(
+                                              Icons.chevron_left_rounded,
+                                            ),
+                                            onPressed: _goToPreviousMonth,
+                                          ),
                                     Text(
                                       DateFormat(
                                         'MMMM yyyy',
@@ -354,12 +370,21 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.chevron_right_rounded,
-                                      ),
-                                      onPressed: _goToNextMonth,
-                                    ),
+                                    isApplePlatform
+                                        ? CupertinoButton(
+                                            padding: EdgeInsets.zero,
+                                            onPressed: _goToNextMonth,
+                                            child: const Icon(
+                                              CupertinoIcons.chevron_right,
+                                              size: 20,
+                                            ),
+                                          )
+                                        : IconButton(
+                                            icon: const Icon(
+                                              Icons.chevron_right_rounded,
+                                            ),
+                                            onPressed: _goToNextMonth,
+                                          ),
                                   ],
                                 ),
                                 const SizedBox(height: 8),
@@ -1403,10 +1428,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       );
     }
 
-    final borderColor = isDark
+    final borderColor = isApplePlatform
+        ? AdaptiveColors.separator(context)
+        : isDark
         ? Colors.white.withValues(alpha: 0.1)
         : Colors.grey.withValues(alpha: 0.25);
-    final headerBg = isDark
+    final headerBg = isApplePlatform
+        ? AdaptiveColors.systemFill(context)
+        : isDark
         ? Colors.white.withValues(alpha: 0.06)
         : const Color(0xFFF5F5F5);
     final headerStyle = TextStyle(

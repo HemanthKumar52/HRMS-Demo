@@ -1,5 +1,7 @@
 import 'dart:ui';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -7,7 +9,9 @@ import '../../animations/motion.dart';
 import '../../animations/skeleton_loading.dart';
 import '../../providers/app_provider.dart';
 import '../../services/api_service.dart';
+import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/status_chip.dart';
 import 'apply_leave_screen.dart';
@@ -295,6 +299,37 @@ class _RequestsScreenState extends State<RequestsScreen> {
   }
 
   void _showFilterSheet() {
+    if (isApplePlatform) {
+      HapticFeedback.selectionClick();
+      showCupertinoModalPopup(
+        context: context,
+        builder: (context) => CupertinoActionSheet(
+          title: const Text('Filter Requests'),
+          actions: _filterOptions.map((filter) {
+            return CupertinoActionSheetAction(
+              onPressed: () {
+                setState(() => _activeFilter = filter);
+                Navigator.pop(context);
+              },
+              child: Text(
+                filter,
+                style: TextStyle(
+                  fontWeight: _activeFilter == filter
+                      ? FontWeight.w700
+                      : FontWeight.w400,
+                  color: _activeFilter == filter ? AppColors.primary : null,
+                ),
+              ),
+            );
+          }).toList(),
+          cancelButton: CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ),
+      );
+      return;
+    }
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -507,78 +542,129 @@ class _RequestsScreenState extends State<RequestsScreen> {
                   ),
                 ),
                 const Spacer(),
-                IconButton(
-                  icon: Badge(
-                    isLabelVisible: _activeFilter != 'All',
-                    smallSize: 8,
-                    backgroundColor: AppColors.primary,
-                    child: const Icon(Icons.filter_list_rounded, size: 22),
-                  ),
-                  onPressed: _showFilterSheet,
-                  visualDensity: VisualDensity.compact,
-                ),
+                isApplePlatform
+                    ? CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: _showFilterSheet,
+                        child: Badge(
+                          isLabelVisible: _activeFilter != 'All',
+                          smallSize: 8,
+                          backgroundColor: AppColors.primary,
+                          child: Icon(
+                            CupertinoIcons.line_horizontal_3_decrease,
+                            size: 22,
+                            color: AdaptiveColors.primaryText(context),
+                          ),
+                        ),
+                      )
+                    : IconButton(
+                        icon: Badge(
+                          isLabelVisible: _activeFilter != 'All',
+                          smallSize: 8,
+                          backgroundColor: AppColors.primary,
+                          child: const Icon(
+                            Icons.filter_list_rounded,
+                            size: 22,
+                          ),
+                        ),
+                        onPressed: _showFilterSheet,
+                        visualDensity: VisualDensity.compact,
+                      ),
               ],
             ),
           ),
 
-          // Scrollable tab bar
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
-            child: Row(
-              children: isManagerOrHr
-                  ? [
-                      _buildTab(
-                        'Approvals',
-                        Icons.fact_check_rounded,
-                        0,
-                        safeIndex,
-                        isDark,
-                        provider,
-                        count: _employeeRequests.length,
+          // Scrollable tab bar / iOS segmented control
+          if (isApplePlatform)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+              child: SizedBox(
+                width: double.infinity,
+                child: CupertinoSegmentedControl<int>(
+                  groupValue: safeIndex,
+                  onValueChanged: (val) {
+                    HapticFeedback.selectionClick();
+                    provider.setRequestsTabIndex(val);
+                  },
+                  children: {
+                    for (var i = 0; i < tabTitles.length; i++)
+                      i: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 8,
+                        ),
+                        child: Text(
+                          tabTitles[i],
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: safeIndex == i
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 10),
-                      _buildTab(
-                        'Requested',
-                        Icons.history_rounded,
-                        1,
-                        safeIndex,
-                        isDark,
-                        provider,
-                        count: _myRequests.length,
-                      ),
-                      const SizedBox(width: 10),
-                      _buildTab(
-                        'Request',
-                        Icons.add_circle_outline_rounded,
-                        2,
-                        safeIndex,
-                        isDark,
-                        provider,
-                      ),
-                    ]
-                  : [
-                      _buildTab(
-                        'Requested',
-                        Icons.history_rounded,
-                        0,
-                        safeIndex,
-                        isDark,
-                        provider,
-                        count: _requests.length,
-                      ),
-                      const SizedBox(width: 10),
-                      _buildTab(
-                        'Request',
-                        Icons.add_circle_outline_rounded,
-                        1,
-                        safeIndex,
-                        isDark,
-                        provider,
-                      ),
-                    ],
+                  },
+                ),
+              ),
+            )
+          else
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+              child: Row(
+                children: isManagerOrHr
+                    ? [
+                        _buildTab(
+                          'Approvals',
+                          Icons.fact_check_rounded,
+                          0,
+                          safeIndex,
+                          isDark,
+                          provider,
+                          count: _employeeRequests.length,
+                        ),
+                        const SizedBox(width: 10),
+                        _buildTab(
+                          'Requested',
+                          Icons.history_rounded,
+                          1,
+                          safeIndex,
+                          isDark,
+                          provider,
+                          count: _myRequests.length,
+                        ),
+                        const SizedBox(width: 10),
+                        _buildTab(
+                          'Request',
+                          Icons.add_circle_outline_rounded,
+                          2,
+                          safeIndex,
+                          isDark,
+                          provider,
+                        ),
+                      ]
+                    : [
+                        _buildTab(
+                          'Requested',
+                          Icons.history_rounded,
+                          0,
+                          safeIndex,
+                          isDark,
+                          provider,
+                          count: _requests.length,
+                        ),
+                        const SizedBox(width: 10),
+                        _buildTab(
+                          'Request',
+                          Icons.add_circle_outline_rounded,
+                          1,
+                          safeIndex,
+                          isDark,
+                          provider,
+                        ),
+                      ],
+              ),
             ),
-          ),
 
           // Content based on selected chip (with pull-to-refresh)
           Expanded(
@@ -743,6 +829,11 @@ class _RequestsScreenState extends State<RequestsScreen> {
           _buildFilterIndicator(textTheme, '${filtered.length} types'),
         Expanded(
           child: ListView.builder(
+            physics: isApplePlatform
+                ? const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  )
+                : null,
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
             itemCount: filtered.length + 1,
             itemBuilder: (context, index) {
@@ -778,7 +869,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
                                 ),
                               ),
                               Icon(
-                                Icons.chevron_right_rounded,
+                                isApplePlatform
+                                    ? CupertinoIcons.chevron_right
+                                    : Icons.chevron_right_rounded,
                                 color: isDark
                                     ? AppColors.darkSubtext
                                     : AppColors.lightSubtext,
@@ -825,7 +918,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.inbox_rounded,
+                        isApplePlatform
+                            ? CupertinoIcons.tray
+                            : Icons.inbox_rounded,
                         size: 56,
                         color: isDark
                             ? AppColors.darkSubtext.withValues(alpha: 0.4)
@@ -844,6 +939,11 @@ class _RequestsScreenState extends State<RequestsScreen> {
                   ),
                 )
               : ListView(
+                  physics: isApplePlatform
+                      ? const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
+                        )
+                      : null,
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
                   children: [...grouped, const SizedBox(height: 12)],
                 ),
@@ -873,7 +973,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.inbox_rounded,
+                        isApplePlatform
+                            ? CupertinoIcons.tray
+                            : Icons.inbox_rounded,
                         size: 56,
                         color: isDark
                             ? AppColors.darkSubtext.withValues(alpha: 0.4)
@@ -892,6 +994,11 @@ class _RequestsScreenState extends State<RequestsScreen> {
                   ),
                 )
               : ListView(
+                  physics: isApplePlatform
+                      ? const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
+                        )
+                      : null,
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
                   children: [...grouped, const SizedBox(height: 12)],
                 ),
@@ -921,7 +1028,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.inbox_rounded,
+                        isApplePlatform
+                            ? CupertinoIcons.tray
+                            : Icons.inbox_rounded,
                         size: 56,
                         color: isDark
                             ? AppColors.darkSubtext.withValues(alpha: 0.4)
@@ -940,6 +1049,11 @@ class _RequestsScreenState extends State<RequestsScreen> {
                   ),
                 )
               : ListView(
+                  physics: isApplePlatform
+                      ? const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
+                        )
+                      : null,
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
                   children: [...grouped, const SizedBox(height: 12)],
                 ),
@@ -998,116 +1112,148 @@ class _RequestsScreenState extends State<RequestsScreen> {
     required bool showEmployee,
   }) {
     final type = request['type'] as String? ?? '';
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child:
-          NeuCard(
-                onTap: () => Navigator.push(
-                  context,
-                  Motion.pageRoute(RequestDetailScreen(requestData: request)),
-                ).then((_) => _loadRequests()),
-                child: Row(
-                  children: [
-                    Hero(
-                      tag: 'request_icon_${request['id']}_${request['type']}',
-                      child: Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: (request['color'] as Color).withValues(
-                            alpha: 0.12,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
+    final cardWidget =
+        NeuCard(
+              onTap: () => Navigator.push(
+                context,
+                Motion.pageRoute(RequestDetailScreen(requestData: request)),
+              ).then((_) => _loadRequests()),
+              child: Row(
+                children: [
+                  Hero(
+                    tag: 'request_icon_${request['id']}_${request['type']}',
+                    child: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: (request['color'] as Color).withValues(
+                          alpha: 0.12,
                         ),
-                        child: Icon(
-                          request['icon'] as IconData,
-                          color: request['color'] as Color,
-                          size: 20,
-                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        request['icon'] as IconData,
+                        color: request['color'] as Color,
+                        size: 20,
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  request['title'] as String,
-                                  style: textTheme.titleMedium,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                request['title'] as String,
+                                style: textTheme.titleMedium,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              _buildStatusChip(request['status'] as String),
-                            ],
-                          ),
-                          const SizedBox(height: 5),
-                          Row(
-                            children: [
-                              _buildTypeTag(type),
-                              if (request['appliedDate'] != null) ...[
-                                const SizedBox(width: 8),
-                                Text(
-                                  (request['appliedDate'] as String)
-                                      .split(',')
-                                      .first,
-                                  style: textTheme.bodySmall?.copyWith(
-                                    fontSize: 10,
-                                    color: isDark
-                                        ? AppColors.darkSubtext
-                                        : AppColors.lightSubtext,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          if (showEmployee &&
-                              request['employeeName'] != null) ...[
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.person_outline_rounded,
-                                  size: 13,
+                            ),
+                            _buildStatusChip(request['status'] as String),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        Row(
+                          children: [
+                            _buildTypeTag(type),
+                            if (request['appliedDate'] != null) ...[
+                              const SizedBox(width: 8),
+                              Text(
+                                (request['appliedDate'] as String)
+                                    .split(',')
+                                    .first,
+                                style: textTheme.bodySmall?.copyWith(
+                                  fontSize: 10,
                                   color: isDark
                                       ? AppColors.darkSubtext
                                       : AppColors.lightSubtext,
                                 ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  request['employeeName'] as String,
-                                  style: textTheme.bodySmall?.copyWith(
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ],
+                        ),
+                        if (showEmployee &&
+                            request['employeeName'] != null) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.person_outline_rounded,
+                                size: 13,
+                                color: isDark
+                                    ? AppColors.darkSubtext
+                                    : AppColors.lightSubtext,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                request['employeeName'] as String,
+                                style: textTheme.bodySmall?.copyWith(
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
-                      ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: isDark
-                          ? AppColors.darkSubtext
-                          : AppColors.lightSubtext,
-                      size: 20,
-                    ),
-                  ],
-                ),
-              )
-              .animate()
-              .fadeIn(duration: 350.ms, delay: (index * 60).ms)
-              .slideX(
-                begin: 0.05,
-                end: 0,
-                duration: 350.ms,
-                delay: (index * 60).ms,
-                curve: Curves.easeOutCubic,
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    isApplePlatform
+                        ? CupertinoIcons.chevron_right
+                        : Icons.chevron_right_rounded,
+                    color: isDark
+                        ? AppColors.darkSubtext
+                        : AppColors.lightSubtext,
+                    size: 20,
+                  ),
+                ],
               ),
+            )
+            .animate()
+            .fadeIn(duration: 350.ms, delay: (index * 60).ms)
+            .slideX(
+              begin: 0.05,
+              end: 0,
+              duration: 350.ms,
+              delay: (index * 60).ms,
+              curve: Curves.easeOutCubic,
+            );
+    // Wrap with CupertinoContextMenu on iOS for long-press actions
+    if (isApplePlatform) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: CupertinoContextMenu(
+          actions: [
+            CupertinoContextMenuAction(
+              child: const Text('View Details'),
+              trailingIcon: CupertinoIcons.eye,
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  Motion.pageRoute(RequestDetailScreen(requestData: request)),
+                ).then((_) => _loadRequests());
+              },
+            ),
+            CupertinoContextMenuAction(
+              child: Text('Type: $type'),
+              trailingIcon: CupertinoIcons.tag,
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+          ],
+          child: cardWidget,
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: cardWidget,
     );
   }
 

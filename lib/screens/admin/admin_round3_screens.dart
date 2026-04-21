@@ -12,18 +12,21 @@
 //   • AdminRetentionPoliciesScreen    — per-model max_days policies
 //   • AdminConsentLedgerScreen        — read-only consent history feed
 
+// Round 3 admin sub-screens with iOS Cupertino support.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -85,8 +88,10 @@ class _AdminSystemStatsScreenState extends State<AdminSystemStatsScreen> {
         ],
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+          ? Center(
+              child: isApplePlatform
+                  ? const CupertinoActivityIndicator(radius: 14)
+                  : const CircularProgressIndicator(color: AppColors.primary),
             )
           : _error != null
           ? Center(
@@ -374,8 +379,10 @@ class _AdminLiveActivityScreenState extends State<AdminLiveActivityScreen> {
         ],
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+          ? Center(
+              child: isApplePlatform
+                  ? const CupertinoActivityIndicator(radius: 14)
+                  : const CircularProgressIndicator(color: AppColors.primary),
             )
           : _error != null
           ? Center(
@@ -809,8 +816,10 @@ class _AdminFaceEnrollmentsScreenState
         child: const Icon(Icons.add, color: Colors.white),
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+          ? Center(
+              child: isApplePlatform
+                  ? const CupertinoActivityIndicator(radius: 14)
+                  : const CircularProgressIndicator(color: AppColors.primary),
             )
           : _error != null
           ? Center(
@@ -1060,8 +1069,10 @@ class _AdminWebhooksScreenState extends State<AdminWebhooksScreen> {
         elevation: 0,
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+          ? Center(
+              child: isApplePlatform
+                  ? const CupertinoActivityIndicator(radius: 14)
+                  : const CircularProgressIndicator(color: AppColors.primary),
             )
           : _error != null
           ? Center(
@@ -1580,8 +1591,10 @@ class _AdminRetentionPoliciesScreenState
         elevation: 0,
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+          ? Center(
+              child: isApplePlatform
+                  ? const CupertinoActivityIndicator(radius: 14)
+                  : const CircularProgressIndicator(color: AppColors.primary),
             )
           : _error != null
           ? Center(
@@ -1699,8 +1712,10 @@ class _AdminConsentLedgerScreenState extends State<AdminConsentLedgerScreen> {
         ],
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+          ? Center(
+              child: isApplePlatform
+                  ? const CupertinoActivityIndicator(radius: 14)
+                  : const CircularProgressIndicator(color: AppColors.primary),
             )
           : _error != null
           ? Center(

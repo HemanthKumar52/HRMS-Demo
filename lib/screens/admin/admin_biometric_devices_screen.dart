@@ -1,8 +1,11 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 
 class AdminBiometricDevicesScreen extends StatefulWidget {
@@ -167,14 +170,16 @@ class _AdminBiometricDevicesScreenState
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Biometric Devices'),
-        backgroundColor: theme.scaffoldBackgroundColor,
-        elevation: 0,
+      appBar: adaptiveAppBar(
+        context: context,
+        title: 'Biometric Devices',
+        showBackButton: true,
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+          ? Center(
+              child: isApplePlatform
+                  ? const CupertinoActivityIndicator(radius: 14)
+                  : const CircularProgressIndicator(color: AppColors.primary),
             )
           : _error != null
           ? Center(

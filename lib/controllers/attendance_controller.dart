@@ -26,7 +26,8 @@ class AttendanceController {
       );
     } catch (e) {
       final msg = e.toString();
-      if (msg.contains('ALREADY_PUNCHED_IN') || msg.contains('Already clocked in')) {
+      if (msg.contains('ALREADY_PUNCHED_IN') ||
+          msg.contains('Already clocked in')) {
         provider.setPunchState(true, provider.punchInTime ?? DateTime.now());
         provider.triggerDynamicIsland(
           'Already Clocked In',
@@ -34,7 +35,11 @@ class AttendanceController {
           const Color(0xFF34D399),
         );
       } else {
-        provider.triggerDynamicIsland('Punch In Failed', Icons.error, Colors.red);
+        provider.triggerDynamicIsland(
+          'Punch In Failed',
+          Icons.error,
+          Colors.red,
+        );
       }
     }
   }
@@ -56,11 +61,20 @@ class AttendanceController {
       LiveActivityService.instance.stopPunchOut(totalWorked: workedDuration);
     } catch (e) {
       final msg = e.toString();
-      if (msg.contains('NOT_PUNCHED_IN') || msg.contains('without punching in')) {
+      if (msg.contains('NOT_PUNCHED_IN') ||
+          msg.contains('without punching in')) {
         provider.setPunchState(false, null);
-        provider.triggerDynamicIsland('Not Clocked In Yet', Icons.info, Colors.orange);
+        provider.triggerDynamicIsland(
+          'Not Clocked In Yet',
+          Icons.info,
+          Colors.orange,
+        );
       } else {
-        provider.triggerDynamicIsland('Punch Out Failed', Icons.error, Colors.red);
+        provider.triggerDynamicIsland(
+          'Punch Out Failed',
+          Icons.error,
+          Colors.red,
+        );
       }
     }
   }
@@ -80,7 +94,10 @@ class AttendanceController {
     required int year,
   }) async {
     try {
-      final data = await ApiService.getAttendanceHistory(month: month, year: year);
+      final data = await ApiService.getAttendanceHistory(
+        month: month,
+        year: year,
+      );
       return List<Map<String, dynamic>>.from(data is List ? data : []);
     } catch (e) {
       debugPrint('AttendanceController: Error fetching history - $e');

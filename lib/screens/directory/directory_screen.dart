@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../animations/skeleton_loading.dart';
@@ -111,28 +112,33 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
           // Search bar
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-            child: Container(
-              decoration: NeuDecoration.card(context, radius: 16),
-              child: TextField(
-                onChanged: (v) => setState(() => _searchQuery = v),
-                style: theme.textTheme.bodyLarge,
-                decoration: InputDecoration(
-                  hintText: 'Search by name, email, department...',
-                  hintStyle: theme.textTheme.bodyMedium,
-                  prefixIcon: Icon(
-                    Icons.search_rounded,
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.4)
-                        : Colors.black.withValues(alpha: 0.3),
+            child: isApplePlatform
+                ? CupertinoSearchTextField(
+                    placeholder: 'Search by name, email, department...',
+                    onChanged: (v) => setState(() => _searchQuery = v),
+                  )
+                : Container(
+                    decoration: NeuDecoration.card(context, radius: 16),
+                    child: TextField(
+                      onChanged: (v) => setState(() => _searchQuery = v),
+                      style: theme.textTheme.bodyLarge,
+                      decoration: InputDecoration(
+                        hintText: 'Search by name, email, department...',
+                        hintStyle: theme.textTheme.bodyMedium,
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.4)
+                              : Colors.black.withValues(alpha: 0.3),
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                      ),
+                    ),
                   ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                ),
-              ),
-            ),
           ),
 
           // Info text

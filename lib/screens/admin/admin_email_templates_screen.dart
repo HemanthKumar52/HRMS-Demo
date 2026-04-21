@@ -1,7 +1,10 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 
 /// Admin → Settings → Email Templates. Edit system email copy without
@@ -83,14 +86,16 @@ class _AdminEmailTemplatesScreenState extends State<AdminEmailTemplatesScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Email Templates'),
-        backgroundColor: theme.scaffoldBackgroundColor,
-        elevation: 0,
+      appBar: adaptiveAppBar(
+        context: context,
+        title: 'Email Templates',
+        showBackButton: true,
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+          ? Center(
+              child: isApplePlatform
+                  ? const CupertinoActivityIndicator(radius: 14)
+                  : const CircularProgressIndicator(color: AppColors.primary),
             )
           : _error != null
           ? Center(
