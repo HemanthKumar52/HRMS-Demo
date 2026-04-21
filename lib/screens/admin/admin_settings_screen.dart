@@ -1,95 +1,109 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
-import '../../widgets/neu_card.dart';
+import 'admin_biometric_devices_screen.dart';
 import 'admin_geofences_screen.dart';
 import 'admin_round3_screens.dart';
 import 'admin_round4_screens.dart';
 
-/// Admin "Settings" tab — streamlined for core operational tools.
+/// iOS-style settings screen for admin panel.
 class AdminSettingsScreen extends StatelessWidget {
   const AdminSettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final bgColor = isDark
+        ? Colors.white.withValues(alpha: 0.04)
+        : const Color(0xFFF2F2F7);
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-          children: [
-            Text(
-              'Admin Settings',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+        children: [
+          // Configuration
+          _SectionHeader(label: 'CONFIGURATION'),
+          _SettingsGroup(
+            isDark: isDark,
+            bgColor: bgColor,
+            children: [
+              _SettingsTile(
+                icon: Icons.location_on_outlined,
+                iconColor: AppColors.secondary,
+                title: 'Office Geofences',
+                onTap: () => _open(context, const AdminGeofencesScreen()),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Organization configuration & monitoring',
-              style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey),
-            ),
-            const SizedBox(height: 18),
+              _SettingsTile(
+                icon: Icons.fingerprint,
+                iconColor: AppColors.primary,
+                title: 'Biometric Devices',
+                onTap: () =>
+                    _open(context, const AdminBiometricDevicesScreen()),
+              ),
+            ],
+          ),
 
-            _Section(label: 'Configuration'),
-            _Tile(
-              icon: Icons.location_on_outlined,
-              color: AppColors.secondary,
-              title: 'Office Geofences',
-              subtitle: 'Edit allowed punch-in zones',
-              onTap: () => _open(context, const AdminGeofencesScreen()),
-            ),
+          const SizedBox(height: 24),
 
-            const SizedBox(height: 14),
-            _Section(label: 'Monitoring'),
-            _Tile(
-              icon: Icons.storage_rounded,
-              color: AppColors.primary,
-              title: 'System Stats',
-              subtitle: 'Disk / DB / media usage',
-              onTap: () => _open(context, const AdminSystemStatsScreen()),
-            ),
-            _Tile(
-              icon: Icons.map_outlined,
-              color: AppColors.success,
-              title: 'Live Attendance Feed',
-              subtitle: "Today's punches with location",
-              onTap: () => _open(context, const AdminLiveActivityScreen()),
-            ),
-            _Tile(
-              icon: Icons.campaign_outlined,
-              color: AppColors.warning,
-              title: 'Push Announcements',
-              subtitle: 'Send notification to employees',
-              onTap: () => _open(context, const AdminPushCampaignScreen()),
-            ),
-            _Tile(
-              icon: Icons.face_retouching_natural_rounded,
-              color: AppColors.secondary,
-              title: 'Face Enrollment',
-              subtitle: 'Manage enrolled face embeddings',
-              onTap: () => _open(context, const AdminFaceEnrollmentsScreen()),
-            ),
+          // Monitoring
+          _SectionHeader(label: 'MONITORING'),
+          _SettingsGroup(
+            isDark: isDark,
+            bgColor: bgColor,
+            children: [
+              _SettingsTile(
+                icon: Icons.storage_rounded,
+                iconColor: AppColors.primary,
+                title: 'System Stats',
+                onTap: () => _open(context, const AdminSystemStatsScreen()),
+              ),
+              _SettingsTile(
+                icon: Icons.map_outlined,
+                iconColor: AppColors.success,
+                title: 'Live Attendance Feed',
+                onTap: () => _open(context, const AdminLiveActivityScreen()),
+              ),
+              _SettingsTile(
+                icon: Icons.campaign_outlined,
+                iconColor: AppColors.warning,
+                title: 'Push Announcements',
+                onTap: () => _open(context, const AdminPushCampaignScreen()),
+              ),
+              _SettingsTile(
+                icon: Icons.face_retouching_natural_rounded,
+                iconColor: AppColors.secondary,
+                title: 'Face Enrollment',
+                onTap: () => _open(context, const AdminFaceEnrollmentsScreen()),
+              ),
+            ],
+          ),
 
-            const SizedBox(height: 14),
-            _Section(label: 'Security'),
-            _Tile(
-              icon: Icons.lan_rounded,
-              color: AppColors.danger,
-              title: 'IP Allowlist',
-              subtitle: 'Restrict logins to specific networks',
-              onTap: () => _open(context, const AdminAllowedIpsScreen()),
-            ),
-            _Tile(
-              icon: Icons.history_rounded,
-              color: AppColors.primary,
-              title: 'Login Records',
-              subtitle: 'Login history with device + location',
-              onTap: () => _open(context, const AdminLoginRecordsScreen()),
-            ),
-          ],
-        ),
+          const SizedBox(height: 24),
+
+          // Security
+          _SectionHeader(label: 'SECURITY'),
+          _SettingsGroup(
+            isDark: isDark,
+            bgColor: bgColor,
+            children: [
+              _SettingsTile(
+                icon: Icons.lan_rounded,
+                iconColor: AppColors.danger,
+                title: 'IP Allowlist',
+                onTap: () => _open(context, const AdminAllowedIpsScreen()),
+              ),
+              _SettingsTile(
+                icon: Icons.history_rounded,
+                iconColor: AppColors.primary,
+                title: 'Login Records',
+                onTap: () => _open(context, const AdminLoginRecordsScreen()),
+                isLast: true,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -99,74 +113,99 @@ class AdminSettingsScreen extends StatelessWidget {
   }
 }
 
-class _Section extends StatelessWidget {
+class _SectionHeader extends StatelessWidget {
   final String label;
-  const _Section({required this.label});
+  const _SectionHeader({required this.label});
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(4, 6, 0, 8),
-    child: Text(
-      label,
-      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-        fontWeight: FontWeight.w800,
-        color: Colors.grey,
-        letterSpacing: 0.5,
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 0, 6),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: Colors.grey.shade500,
+          letterSpacing: 0.3,
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
-class _Tile extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _Tile({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
+class _SettingsGroup extends StatelessWidget {
+  final bool isDark;
+  final Color bgColor;
+  final List<Widget> children;
+  const _SettingsGroup({
+    required this.isDark,
+    required this.bgColor,
+    required this.children,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: NeuCard(
-        padding: EdgeInsets.zero,
-        child: ListTile(
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(children: children),
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final VoidCallback onTap;
+  final bool isLast;
+
+  const _SettingsTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.onTap,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        ListTile(
           onTap: onTap,
           contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 4,
+            horizontal: 16,
+            vertical: 2,
           ),
           leading: Container(
-            width: 42,
-            height: 42,
+            width: 30,
+            height: 30,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+              color: iconColor,
+              borderRadius: BorderRadius.circular(7),
             ),
-            child: Icon(icon, color: color, size: 22),
+            child: Icon(icon, color: Colors.white, size: 18),
           ),
-          title: Text(
-            title,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          subtitle: Text(subtitle, style: theme.textTheme.bodySmall),
+          title: Text(title, style: const TextStyle(fontSize: 16)),
           trailing: Icon(
-            Icons.chevron_right_rounded,
+            Icons.chevron_right,
             color: Colors.grey.shade400,
+            size: 20,
           ),
         ),
-      ),
+        if (!isLast)
+          Padding(
+            padding: const EdgeInsets.only(left: 62),
+            child: Divider(
+              height: 1,
+              color: Colors.grey.withValues(alpha: 0.15),
+            ),
+          ),
+      ],
     );
   }
 }

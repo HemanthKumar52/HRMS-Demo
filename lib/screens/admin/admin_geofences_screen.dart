@@ -105,6 +105,18 @@ class _AdminGeofencesScreenState extends State<AdminGeofencesScreen> {
     }
   }
 
+  Future<void> _toggleActive(Map<String, dynamic> row, bool active) async {
+    try {
+      await ApiService.updateAdminGeofence(
+        (row['id'] as num).toInt(),
+        {'is_active': active},
+      );
+      await _load();
+    } catch (e) {
+      _showSnack('Failed: $e', AppColors.danger);
+    }
+  }
+
   void _showSnack(String msg, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -200,6 +212,14 @@ class _AdminGeofencesScreenState extends State<AdminGeofencesScreen> {
                                         : 'WFH',
                                     color: AppColors.primary,
                                   ),
+                                  if ((r['has_biometric'] ?? false)
+                                      as bool) ...[
+                                    const SizedBox(width: 6),
+                                    _Pill(
+                                      text: 'Biometric',
+                                      color: AppColors.warning,
+                                    ),
+                                  ],
                                   const SizedBox(width: 6),
                                   _Pill(
                                     text: ((r['is_active'] ?? true) as bool)
@@ -214,17 +234,27 @@ class _AdminGeofencesScreenState extends State<AdminGeofencesScreen> {
                             ],
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.edit_rounded, size: 20),
-                          onPressed: () => _openEditor(existing: r),
+                        Switch.adaptive(
+                          value: (r['is_active'] ?? true) as bool,
+                          activeColor: AppColors.success,
+                          onChanged: (v) => _toggleActive(r, v),
                         ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.delete_outline_rounded,
-                            size: 20,
-                            color: AppColors.danger,
-                          ),
-                          onPressed: () => _delete(r),
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert_rounded, size: 20),
+                          onSelected: (action) {
+                            if (action == 'edit') _openEditor(existing: r);
+                            if (action == 'delete') _delete(r);
+                          },
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(value: 'edit', child: Text('Edit')),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Text(
+                                'Delete',
+                                style: TextStyle(color: AppColors.danger),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -265,6 +295,8 @@ class _GeofenceEditorState extends State<_GeofenceEditor> {
     text: widget.existing?['radius_meters']?.toString() ?? '50',
   );
   late bool _isOffice = (widget.existing?['is_office'] as bool?) ?? true;
+  late bool _hasBiometric =
+      (widget.existing?['has_biometric'] as bool?) ?? false;
   late bool _isActive = (widget.existing?['is_active'] as bool?) ?? true;
 
   @override
@@ -340,11 +372,22 @@ class _GeofenceEditorState extends State<_GeofenceEditor> {
           ),
           const SizedBox(height: 12),
           SwitchListTile.adaptive(
-            title: const Text('Office zone (blocks mobile punch-in)'),
+            title: const Text('Office zone'),
+            subtitle: const Text('Mark as office location'),
             value: _isOffice,
             onChanged: (v) => setState(() => _isOffice = v),
             contentPadding: EdgeInsets.zero,
           ),
+          if (_isOffice)
+            SwitchListTile.adaptive(
+              title: const Text('Has biometric device'),
+              subtitle: const Text(
+                'Blocks mobile check-in (must use biometric)',
+              ),
+              value: _hasBiometric,
+              onChanged: (v) => setState(() => _hasBiometric = v),
+              contentPadding: EdgeInsets.zero,
+            ),
           SwitchListTile.adaptive(
             title: const Text('Active'),
             value: _isActive,
@@ -384,6 +427,7 @@ class _GeofenceEditorState extends State<_GeofenceEditor> {
                       'longitude': lng,
                       'radius_meters': radius,
                       'is_office': _isOffice,
+                      'has_biometric': _isOffice && _hasBiometric,
                       'is_active': _isActive,
                     });
                   },

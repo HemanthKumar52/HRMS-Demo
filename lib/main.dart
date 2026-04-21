@@ -57,6 +57,11 @@ class _PPulseAppState extends State<PPulseApp> {
             title: 'PPULSE',
             debugShowCheckedModeBanner: false,
             theme: themeProvider.theme,
+            // ── Localization (ready to activate) ──────────────────
+            // Uncomment these 3 lines + import to enable multi-language:
+            // localizationsDelegates: AppLocalizations.localizationsDelegates,
+            // supportedLocales: AppLocalizations.supportedLocales,
+            // locale: const Locale('en'), // or read from SharedPreferences
             home: const SplashScreen(),
             routes: {
               '/request-detail': (context) => const RequestDetailScreen(),

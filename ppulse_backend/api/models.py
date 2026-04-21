@@ -479,6 +479,7 @@ class Payslip(models.Model):
     deduction = models.FloatField(blank=True, null=True)
     status = models.TextField(blank=True, null=True)
     employee_id_id = models.BigIntegerField(blank=True, null=True)
+    pay_head_data = models.JSONField(blank=True, null=True, default=dict)
 
     class Meta:
         managed = True
@@ -562,7 +563,11 @@ class Geofence(models.Model):
     radius_meters = models.IntegerField(default=50)
     is_office = models.BooleanField(
         default=True,
-        help_text='Office geofence — blocks mobile punch-in inside it (must use biometric)',
+        help_text='Office geofence — if has_biometric is True, blocks mobile punch-in inside it',
+    )
+    has_biometric = models.BooleanField(
+        default=False,
+        help_text='Office has a biometric device — mobile check-in blocked when inside this zone',
     )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

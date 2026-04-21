@@ -14,7 +14,9 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:camera/camera.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -707,6 +709,84 @@ class _AdminFaceEnrollmentsScreenState
     }
   }
 
+  Future<void> _addEnrollment() async {
+    // 1. Pick employee by searching
+    final employees = await ApiService.getEmployees();
+    if (!mounted) return;
+    final emp = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _EmployeePickerSheet(
+        employees: List<Map<String, dynamic>>.from(employees),
+      ),
+    );
+    if (emp == null || !mounted) return;
+
+    // 2. Capture photo
+    try {
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) return;
+      final front = cameras.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.front,
+        orElse: () => cameras.first,
+      );
+      final controller = CameraController(
+        front,
+        ResolutionPreset.medium,
+        enableAudio: false,
+      );
+      await controller.initialize();
+
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+      final shot = await controller.takePicture();
+      await controller.dispose();
+
+      final bytes = await File(shot.path).readAsBytes();
+      final b64 = base64Encode(bytes);
+      unawaited(File(shot.path).delete().catchError((_) => File(shot.path)));
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enrolling face...'),
+          backgroundColor: AppColors.primary,
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      await ApiService.enrollFace(
+        employeeId: (emp['id'] as num).toInt(),
+        imageBase64: b64,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Face enrolled for ${emp['name']}'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed: $e'),
+          backgroundColor: AppColors.danger,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -722,6 +802,11 @@ class _AdminFaceEnrollmentsScreenState
             onPressed: _loading ? null : _load,
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addEnrollment,
+        backgroundColor: AppColors.primary,
+        child: const Icon(Icons.add, color: Colors.white),
       ),
       body: _loading
           ? const Center(
@@ -739,70 +824,151 @@ class _AdminFaceEnrollmentsScreenState
               onRefresh: _load,
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-                itemCount: _items.length + (_items.isEmpty ? 1 : 0),
+                itemCount: _items.isEmpty ? 1 : _items.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (_, i) {
                   if (_items.isEmpty) {
                     return const Padding(
                       padding: EdgeInsets.symmetric(vertical: 60),
-                      child: Center(child: Text('No face enrollments yet')),
+                      child: Center(
+                        child: Text('No face enrollments yet. Tap + to add.'),
+                      ),
                     );
                   }
                   final r = _items[i];
-                  return NeuCard(
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: AppColors.secondary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.face_retouching_natural_rounded,
-                            color: AppColors.secondary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${r['employee_name']}',
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              Text(
-                                '${r['num_samples']} sample(s) · dim ${r['embedding_dim']}',
-                                style: theme.textTheme.bodySmall,
-                              ),
-                              if (r['updated_at'] != null)
-                                Text(
-                                  'updated ${DateFormat('dd MMM, hh:mm a').format(DateTime.parse(r['updated_at'].toString()).toLocal())}',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.delete_outline_rounded,
-                            color: AppColors.danger,
-                          ),
-                          onPressed: () => _delete(r),
-                        ),
-                      ],
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 2,
+                    ),
+                    leading: CircleAvatar(
+                      backgroundColor: AppColors.secondary.withValues(
+                        alpha: 0.12,
+                      ),
+                      child: const Icon(
+                        Icons.face_retouching_natural_rounded,
+                        color: AppColors.secondary,
+                        size: 22,
+                      ),
+                    ),
+                    title: Text(
+                      '${r['employee_name']}',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    subtitle: Text(
+                      '${r['num_samples']} sample(s)${r['updated_at'] != null ? ' · ${DateFormat('dd MMM').format(DateTime.parse(r['updated_at'].toString()).toLocal())}' : ''}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.grey,
+                      ),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: AppColors.danger,
+                        size: 20,
+                      ),
+                      onPressed: () => _delete(r),
                     ),
                   );
                 },
               ),
             ),
+    );
+  }
+}
+
+class _EmployeePickerSheet extends StatefulWidget {
+  final List<Map<String, dynamic>> employees;
+  const _EmployeePickerSheet({required this.employees});
+
+  @override
+  State<_EmployeePickerSheet> createState() => _EmployeePickerSheetState();
+}
+
+class _EmployeePickerSheetState extends State<_EmployeePickerSheet> {
+  String _search = '';
+
+  List<Map<String, dynamic>> get _filtered {
+    if (_search.isEmpty) return widget.employees;
+    final q = _search.toLowerCase();
+    return widget.employees.where((e) {
+      final name = (e['name'] ?? '').toString().toLowerCase();
+      final email = (e['email'] ?? '').toString().toLowerCase();
+      return name.contains(q) || email.contains(q);
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.6,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Column(
+        children: [
+          Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade400,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Select Employee',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            onChanged: (v) => setState(() => _search = v),
+            decoration: InputDecoration(
+              hintText: 'Search by name or email...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: Colors.grey.withValues(alpha: 0.08),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _filtered.length,
+              itemBuilder: (_, i) {
+                final e = _filtered[i];
+                return ListTile(
+                  leading: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                    child: Text(
+                      (e['name']?.toString() ?? '?')[0].toUpperCase(),
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  title: Text(
+                    e['name']?.toString() ?? '—',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    e['email']?.toString() ?? '',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  onTap: () => Navigator.pop(context, e),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

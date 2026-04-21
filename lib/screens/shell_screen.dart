@@ -244,8 +244,8 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
             label: 'Attendance',
           ),
           BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.creditcard_fill),
-            label: 'Payroll',
+            icon: Icon(CupertinoIcons.doc_text),
+            label: 'Payslip',
           ),
         ],
       ),

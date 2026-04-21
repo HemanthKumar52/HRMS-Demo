@@ -1,0 +1,103 @@
+{
+  "@@locale": "en",
+
+  "appName": "PPULSE",
+  "appTagline": "HRMS, as it should be...",
+
+  "dashboard": "Dashboard",
+  "requests": "Requests",
+  "attendance": "Attendance",
+  "payslip": "Payslip",
+
+  "punchIn": "Punch In",
+  "punchOut": "Punch Out",
+  "checkedInViaBiometric": "Checked in via Biometric",
+  "useBiometricToCheckOut": "Please use the biometric device to check out",
+
+  "leaveRequest": "Leave Request",
+  "claimRequest": "Claim Request",
+  "shiftRequest": "Shift Request",
+  "workTypeRequest": "Work Type Request",
+  "attendanceRequest": "Attendance Request",
+  "assetRequest": "Asset Request",
+
+  "applyLeave": "Apply Leave",
+  "submitClaim": "Submit Claim",
+  "raiseTicket": "Raise Ticket",
+  "shiftChange": "Shift Change",
+
+  "requested": "Requested",
+  "approved": "Approved",
+  "rejected": "Rejected",
+  "pending": "Pending",
+  "cancelled": "Cancelled",
+
+  "settings": "Settings",
+  "appearance": "Appearance",
+  "themeMode": "Theme Mode",
+  "lightMode": "Light Mode",
+  "darkMode": "Dark Mode",
+  "cleanAndBright": "Clean and bright",
+  "easyOnTheEyes": "Easy on the eyes",
+
+  "notifications": "Notifications",
+  "pushNotifications": "Push Notifications",
+  "pushNotificationsDesc": "Receive alerts for approvals, announcements",
+
+  "data": "Data",
+  "syncData": "Sync Data",
+  "syncDataDesc": "Refresh all data from the server",
+  "syncSuccess": "All data synced successfully",
+  "syncFailed": "Sync failed. Check your connection.",
+
+  "general": "General",
+  "language": "Language",
+  "about": "About",
+
+  "legal": "Legal",
+  "privacyPolicy": "Privacy Policy",
+  "termsOfService": "Terms of Service",
+
+  "myTeam": "My Team",
+  "searchByNameEmailDept": "Search by name, email, department...",
+  "yourReportingTeam": "Your reporting team & key contacts",
+  "noTeamMembersFound": "No team members found",
+
+  "workingHours": "Working Hours",
+  "dailyWorkTime": "Daily Work Time",
+  "monthlyAttendance": "Monthly Attendance",
+  "workedHours": "Worked Hours",
+  "minHours": "Min Hours",
+  "overtime": "Overtime",
+
+  "present": "Present",
+  "absent": "Absent",
+  "leave": "Leave",
+  "holiday": "Holiday",
+
+  "profile": "Profile",
+  "logout": "Logout",
+  "cancel": "Cancel",
+  "save": "Save",
+  "delete": "Delete",
+  "edit": "Edit",
+  "close": "Close",
+  "confirm": "Confirm",
+  "retry": "Retry",
+  "loading": "Loading...",
+  "noDataAvailable": "No data available",
+
+  "adminPanel": "Admin Panel",
+  "overview": "Overview",
+  "users": "Users",
+  "audit": "Audit",
+
+  "officeGeofences": "Office Geofences",
+  "biometricDevices": "Biometric Devices",
+  "ipAllowlist": "IP Allowlist",
+  "loginRecords": "Login Records",
+
+  "version": "Version",
+  "developer": "Developer",
+  "support": "Support"
+}

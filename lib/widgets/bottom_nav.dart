@@ -18,7 +18,7 @@ class FloatingBottomNav extends StatelessWidget {
       _NavItem(Icons.grid_view_rounded, 'Dashboard'),
       _NavItem(Icons.assignment_outlined, 'Requests'),
       _NavItem(Icons.fingerprint_rounded, 'Attendance'),
-      _NavItem(Icons.account_balance_wallet_outlined, 'Payroll'),
+      _NavItem(Icons.description_outlined, 'Payslip'),
     ];
 
     return Positioned(
@@ -162,18 +162,26 @@ class _NavButtonState extends State<_NavButton>
               children: [
                 Icon(
                   widget.item.icon,
-                  color: widget.isActive ? AppColors.primary : Colors.grey,
+                  color: widget.isActive
+                      ? AppColors.primary
+                      : (Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white60
+                            : Colors.grey.shade700),
                   size: 24,
                 ),
                 const SizedBox(height: 4),
                 Text(
                   widget.item.label,
                   style: TextStyle(
-                    color: widget.isActive ? AppColors.primary : Colors.grey,
+                    color: widget.isActive
+                        ? AppColors.primary
+                        : (Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white60
+                              : Colors.grey.shade700),
                     fontSize: 11,
                     fontWeight: widget.isActive
-                        ? FontWeight.w600
-                        : FontWeight.w400,
+                        ? FontWeight.w700
+                        : FontWeight.w500,
                   ),
                 ),
               ],

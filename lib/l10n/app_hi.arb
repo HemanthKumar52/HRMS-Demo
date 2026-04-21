@@ -1,0 +1,103 @@
+{
+  "@@locale": "hi",
+
+  "appName": "PPULSE",
+  "appTagline": "HRMS, जैसा होना चाहिए...",
+
+  "dashboard": "डैशबोर्ड",
+  "requests": "अनुरोध",
+  "attendance": "उपस्थिति",
+  "payslip": "वेतन पर्ची",
+
+  "punchIn": "पंच इन",
+  "punchOut": "पंच आउट",
+  "checkedInViaBiometric": "बायोमेट्रिक से चेक इन",
+  "useBiometricToCheckOut": "कृपया चेक आउट के लिए बायोमेट्रिक डिवाइस का उपयोग करें",
+
+  "leaveRequest": "छुट्टी अनुरोध",
+  "claimRequest": "दावा अनुरोध",
+  "shiftRequest": "शिफ्ट अनुरोध",
+  "workTypeRequest": "कार्य प्रकार अनुरोध",
+  "attendanceRequest": "उपस्थिति अनुरोध",
+  "assetRequest": "संपत्ति अनुरोध",
+
+  "applyLeave": "छुट्टी के लिए आवेदन",
+  "submitClaim": "दावा जमा करें",
+  "raiseTicket": "टिकट उठाएं",
+  "shiftChange": "शिफ्ट बदलें",
+
+  "requested": "अनुरोधित",
+  "approved": "स्वीकृत",
+  "rejected": "अस्वीकृत",
+  "pending": "लंबित",
+  "cancelled": "रद्द",
+
+  "settings": "सेटिंग्स",
+  "appearance": "दिखावट",
+  "themeMode": "थीम मोड",
+  "lightMode": "लाइट मोड",
+  "darkMode": "डार्क मोड",
+  "cleanAndBright": "साफ और चमकदार",
+  "easyOnTheEyes": "आंखों पर आसान",
+
+  "notifications": "सूचनाएं",
+  "pushNotifications": "पुश सूचनाएं",
+  "pushNotificationsDesc": "अनुमोदन, घोषणाओं के लिए अलर्ट प्राप्त करें",
+
+  "data": "डेटा",
+  "syncData": "डेटा सिंक करें",
+  "syncDataDesc": "सर्वर से सभी डेटा रिफ्रेश करें",
+  "syncSuccess": "सभी डेटा सफलतापूर्वक सिंक हो गया",
+  "syncFailed": "सिंक विफल। अपना कनेक्शन जांचें।",
+
+  "general": "सामान्य",
+  "language": "भाषा",
+  "about": "के बारे में",
+
+  "legal": "कानूनी",
+  "privacyPolicy": "गोपनीयता नीति",
+  "termsOfService": "सेवा की शर्तें",
+
+  "myTeam": "मेरी टीम",
+  "searchByNameEmailDept": "नाम, ईमेल, विभाग से खोजें...",
+  "yourReportingTeam": "आपकी रिपोर्टिंग टीम और प्रमुख संपर्क",
+  "noTeamMembersFound": "कोई टीम सदस्य नहीं मिला",
+
+  "workingHours": "कार्य घंटे",
+  "dailyWorkTime": "दैनिक कार्य समय",
+  "monthlyAttendance": "मासिक उपस्थिति",
+  "workedHours": "काम किए गए घंटे",
+  "minHours": "न्यूनतम घंटे",
+  "overtime": "ओवरटाइम",
+
+  "present": "उपस्थित",
+  "absent": "अनुपस्थित",
+  "leave": "छुट्टी",
+  "holiday": "अवकाश",
+
+  "profile": "प्रोफ़ाइल",
+  "logout": "लॉग आउट",
+  "cancel": "रद्द करें",
+  "save": "सहेजें",
+  "delete": "हटाएं",
+  "edit": "संपादित करें",
+  "close": "बंद करें",
+  "confirm": "पुष्टि करें",
+  "retry": "पुनः प्रयास करें",
+  "loading": "लोड हो रहा है...",
+  "noDataAvailable": "कोई डेटा उपलब्ध नहीं",
+
+  "adminPanel": "व्यवस्थापक पैनल",
+  "overview": "अवलोकन",
+  "users": "उपयोगकर्ता",
+  "audit": "ऑडिट",
+
+  "officeGeofences": "कार्यालय जियोफेंस",
+  "biometricDevices": "बायोमेट्रिक डिवाइस",
+  "ipAllowlist": "IP अनुमति सूची",
+  "loginRecords": "लॉगिन रिकॉर्ड",
+
+  "version": "संस्करण",
+  "developer": "डेवलपर",
+  "support": "सहायता"
+}

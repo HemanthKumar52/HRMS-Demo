@@ -1,18 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/neu_card.dart';
 
-/// Admin-only paginated audit log feed.
-///
-/// Lists every security-relevant event recorded by the backend (request
-/// approve / reject, face check-in success / fail / mismatch, etc.) with
-/// actor, target, IP, and a JSON payload preview.
+/// Timeline-style audit log — grouped by date (Today, Yesterday, older).
+/// Tap any entry to see full details on a separate page.
+/// Filter icon at top for action type filtering.
 class AuditLogsScreen extends StatefulWidget {
   const AuditLogsScreen({super.key});
 
@@ -22,30 +20,30 @@ class AuditLogsScreen extends StatefulWidget {
 
 class _AuditLogsScreenState extends State<AuditLogsScreen> {
   static const _pageSize = 50;
-
   bool _loading = true;
   String? _error;
   int _total = 0;
   int _offset = 0;
   String? _actionFilter;
   final List<Map<String, dynamic>> _items = [];
+  Timer? _pollTimer;
 
-  static const _actionFilters = <String>[
+  static const _filters = [
     'All',
     'request_approved',
     'request_rejected',
     'face_punch_in_succeeded',
     'face_punch_in_failed',
     'face_punch_in_mismatch',
+    'timesheet_submitted',
+    'login_success',
+    'login_failed',
   ];
-
-  Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
     _load(reset: true);
-    // Background poll — refresh the first page silently every 30s.
     _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted && _offset == 0) _load(reset: true);
     });
@@ -95,59 +93,88 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
     await _load();
   }
 
-  /// Open the audit-log CSV export URL in the system browser. Honors the
-  /// active chip filter so the download matches what the user is viewing.
-  Future<void> _exportCsv() async {
-    final url = Uri.parse(
-      ApiService.adminAuditLogsExportUrl(action: _actionFilter),
-    );
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _actionFilter == null
-                ? 'Exporting all audit logs…'
-                : 'Exporting "${_actionFilter!}" rows…',
-          ),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not open browser'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+  /// Group items by date label: Today, Yesterday, or formatted date.
+  Map<String, List<Map<String, dynamic>>> get _grouped {
+    final map = <String, List<Map<String, dynamic>>>{};
+    final now = DateTime.now();
+    final today = DateFormat('yyyy-MM-dd').format(now);
+    final yesterday = DateFormat(
+      'yyyy-MM-dd',
+    ).format(now.subtract(const Duration(days: 1)));
+
+    for (final item in _items) {
+      final ts = item['created_at']?.toString() ?? '';
+      final dateStr = ts.length >= 10 ? ts.substring(0, 10) : '';
+      String label;
+      if (dateStr == today) {
+        label = 'Today';
+      } else if (dateStr == yesterday) {
+        label = 'Yesterday';
+      } else {
+        try {
+          label = DateFormat('MMM dd, yyyy').format(DateTime.parse(dateStr));
+        } catch (_) {
+          label = dateStr;
+        }
+      }
+      map.putIfAbsent(label, () => []).add(item);
     }
+    return map;
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final grouped = _grouped;
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: Column(
         children: [
-          // Inline action bar (no AppBar — parent Admin Panel has one).
+          // Top bar: filter + refresh
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
             child: Row(
               children: [
+                Text(
+                  '${_items.length} of $_total entries',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.grey,
+                  ),
+                ),
                 const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.download_rounded),
-                  tooltip: _actionFilter == null
-                      ? 'Export all audit logs as CSV'
-                      : 'Export "${_actionFilter!}" rows as CSV',
-                  onPressed: _exportCsv,
+                PopupMenuButton<String>(
+                  icon: Badge(
+                    isLabelVisible: _actionFilter != null,
+                    backgroundColor: AppColors.primary,
+                    child: const Icon(Icons.filter_list_rounded),
+                  ),
+                  onSelected: (v) {
+                    setState(() => _actionFilter = v == 'All' ? null : v);
+                    _load(reset: true);
+                  },
+                  itemBuilder: (_) => _filters
+                      .map(
+                        (f) => PopupMenuItem(
+                          value: f,
+                          child: Row(
+                            children: [
+                              if ((_actionFilter == null && f == 'All') ||
+                                  _actionFilter == f)
+                                const Icon(
+                                  Icons.check_rounded,
+                                  size: 18,
+                                  color: AppColors.primary,
+                                )
+                              else
+                                const SizedBox(width: 18),
+                              const SizedBox(width: 8),
+                              Text(_humanAction(f)),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
                 ),
                 IconButton(
                   icon: const Icon(Icons.refresh_rounded),
@@ -156,83 +183,53 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
               ],
             ),
           ),
-          // Action filter chips.
-          SizedBox(
-            height: 44,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _actionFilters.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (_, i) {
-                final f = _actionFilters[i];
-                final selected =
-                    (f == 'All' && _actionFilter == null) || f == _actionFilter;
-                return ChoiceChip(
-                  label: Text(_humanAction(f)),
-                  selected: selected,
-                  onSelected: (_) {
-                    setState(() => _actionFilter = f == 'All' ? null : f);
-                    _load(reset: true);
-                  },
-                  selectedColor: AppColors.primary.withValues(alpha: 0.18),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 4),
+
+          // Timeline list
           Expanded(
             child: _items.isEmpty && _loading
                 ? const Center(
                     child: CircularProgressIndicator(color: AppColors.primary),
                   )
                 : _error != null
-                ? _ErrorView(
-                    message: _error!,
-                    onRetry: () => _load(reset: true),
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          color: AppColors.danger,
+                          size: 40,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _error!,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => _load(reset: true),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
                   )
-                : RefreshIndicator(
-                    color: AppColors.primary,
-                    onRefresh: () => _load(reset: true),
-                    child: NotificationListener<ScrollNotification>(
-                      onNotification: (n) {
-                        if (n is ScrollEndNotification &&
-                            n.metrics.pixels >=
-                                n.metrics.maxScrollExtent - 200) {
-                          _loadMore();
-                        }
-                        return false;
-                      },
-                      child: ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                        itemCount: _items.length + 1,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (_, index) {
-                          if (index == _items.length) {
-                            if (_items.length >= _total) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    '${_items.length} of $_total',
-                                    style: theme.textTheme.bodySmall,
-                                  ),
-                                ),
-                              );
-                            }
-                            return const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 16),
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            );
-                          }
-                          return _AuditRow(row: _items[index]);
-                        },
+                : NotificationListener<ScrollNotification>(
+                    onNotification: (n) {
+                      if (n is ScrollEndNotification &&
+                          n.metrics.pixels >= n.metrics.maxScrollExtent - 200) {
+                        _loadMore();
+                      }
+                      return false;
+                    },
+                    child: RefreshIndicator(
+                      color: AppColors.primary,
+                      onRefresh: () => _load(reset: true),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                        itemCount: _buildListItems(grouped).length,
+                        itemBuilder: (ctx, i) => _buildListItems(grouped)[i],
                       ),
                     ),
                   ),
@@ -241,185 +238,489 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
       ),
     );
   }
-}
 
-String _humanAction(String a) {
-  switch (a) {
-    case 'All':
-      return 'All';
-    case 'request_approved':
-      return 'Approved';
-    case 'request_rejected':
-      return 'Rejected';
-    case 'face_punch_in_succeeded':
-      return 'Face OK';
-    case 'face_punch_in_failed':
-      return 'Face Fail';
-    case 'face_punch_in_mismatch':
-      return 'Face Mismatch';
-    default:
-      return a.replaceAll('_', ' ');
+  List<Widget> _buildListItems(
+    Map<String, List<Map<String, dynamic>>> grouped,
+  ) {
+    final widgets = <Widget>[];
+    for (final entry in grouped.entries) {
+      // Date header
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 16, bottom: 8),
+          child: Text(
+            entry.key,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: Colors.grey.shade500,
+            ),
+          ),
+        ),
+      );
+      // Timeline items
+      for (var i = 0; i < entry.value.length; i++) {
+        final item = entry.value[i];
+        final isLast = i == entry.value.length - 1;
+        widgets.add(
+          _TimelineItem(
+            item: item,
+            isLast: isLast,
+            onTap: () => _openDetail(item),
+          ),
+        );
+      }
+    }
+    // Load more indicator
+    if (_items.length < _total) {
+      widgets.add(
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          ),
+        ),
+      );
+    }
+    return widgets;
+  }
+
+  void _openDetail(Map<String, dynamic> item) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => _AuditDetailPage(item: item)),
+    );
+  }
+
+  String _humanAction(String a) {
+    switch (a) {
+      case 'All':
+        return 'All';
+      case 'request_approved':
+        return 'Approved';
+      case 'request_rejected':
+        return 'Rejected';
+      case 'face_punch_in_succeeded':
+        return 'Face OK';
+      case 'face_punch_in_failed':
+        return 'Face Fail';
+      case 'face_punch_in_mismatch':
+        return 'Face Mismatch';
+      case 'timesheet_submitted':
+        return 'Timesheet';
+      case 'login_success':
+        return 'Login OK';
+      case 'login_failed':
+        return 'Login Fail';
+      default:
+        return a.replaceAll('_', ' ');
+    }
   }
 }
 
-Color _actionColor(String a) {
-  switch (a) {
-    case 'request_approved':
-    case 'face_punch_in_succeeded':
-      return AppColors.success;
-    case 'request_rejected':
-    case 'face_punch_in_failed':
-    case 'face_punch_in_mismatch':
-      return AppColors.danger;
-    default:
-      return AppColors.primary;
-  }
-}
+// ── Timeline Item ───────────────────────────────────────────────────────────
 
-IconData _actionIcon(String a) {
-  switch (a) {
-    case 'request_approved':
-      return Icons.check_circle_rounded;
-    case 'request_rejected':
-      return Icons.cancel_rounded;
-    case 'face_punch_in_succeeded':
-      return Icons.verified_user_rounded;
-    case 'face_punch_in_failed':
-      return Icons.no_accounts_rounded;
-    case 'face_punch_in_mismatch':
-      return Icons.warning_amber_rounded;
-    default:
-      return Icons.history_edu_rounded;
-  }
-}
-
-class _AuditRow extends StatelessWidget {
-  final Map<String, dynamic> row;
-  const _AuditRow({required this.row});
+class _TimelineItem extends StatelessWidget {
+  final Map<String, dynamic> item;
+  final bool isLast;
+  final VoidCallback onTap;
+  const _TimelineItem({
+    required this.item,
+    required this.isLast,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final action = (row['action'] ?? '').toString();
+    final action = item['action']?.toString() ?? '';
+    final actor = item['actor_name']?.toString() ?? '—';
+    final target = item['target_name']?.toString() ?? '';
+    final ts = item['created_at']?.toString() ?? '';
+    final time = ts.length >= 16 ? ts.substring(11, 16) : '';
+
     final color = _actionColor(action);
     final icon = _actionIcon(action);
-    final actor = (row['actor_name'] ?? 'system').toString();
-    final actorRole = (row['actor_role'] ?? '').toString();
-    final target = (row['target_name'] ?? '').toString();
-    final ts = row['created_at']?.toString();
-    String when = '';
-    if (ts != null && ts.isNotEmpty) {
-      try {
-        when = DateFormat(
-          'dd MMM, hh:mm a',
-        ).format(DateTime.parse(ts).toLocal());
-      } catch (_) {
-        when = ts;
-      }
-    }
-    final payload = (row['payload'] ?? const {}) as Map;
-    final payloadText = payload.entries
-        .map((e) => '${e.key}: ${e.value}')
-        .join(' · ');
 
-    return NeuCard(
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
+    return GestureDetector(
+      onTap: onTap,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Timeline line + dot
+            SizedBox(
+              width: 32,
+              child: Column(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  if (!isLast)
                     Expanded(
-                      child: Text(
-                        _humanAction(action),
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: color,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      child: Container(
+                        width: 1.5,
+                        color: Colors.grey.withValues(alpha: 0.2),
                       ),
                     ),
-                    Text(when, style: theme.textTheme.bodySmall),
+                ],
+              ),
+            ),
+            // Content
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(icon, size: 14, color: color),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  _humanAction(action),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: color,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Text(
+                                time,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade500,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            actor,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (target.isNotEmpty)
+                            Text(
+                              '→ $target',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: Colors.grey,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: Colors.grey.shade400,
+                    ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '$actor${actorRole.isNotEmpty ? " · $actorRole" : ""}'
-                  '${target.isNotEmpty ? " → $target" : ""}',
-                  style: theme.textTheme.bodyMedium,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _humanAction(String a) {
+    switch (a) {
+      case 'request_approved':
+        return 'Request Approved';
+      case 'request_rejected':
+        return 'Request Rejected';
+      case 'face_punch_in_succeeded':
+        return 'Face Check-in OK';
+      case 'face_punch_in_failed':
+        return 'Face Check-in Failed';
+      case 'face_punch_in_mismatch':
+        return 'Face Mismatch';
+      case 'timesheet_submitted':
+        return 'Timesheet Submitted';
+      case 'login_success':
+        return 'Login';
+      case 'login_failed':
+        return 'Login Failed';
+      default:
+        return a
+            .replaceAll('_', ' ')
+            .split(' ')
+            .map((w) => w.isNotEmpty ? w[0].toUpperCase() + w.substring(1) : '')
+            .join(' ');
+    }
+  }
+
+  Color _actionColor(String a) {
+    if (a.contains('approved') ||
+        a.contains('succeeded') ||
+        a.contains('success'))
+      return AppColors.success;
+    if (a.contains('rejected') ||
+        a.contains('failed') ||
+        a.contains('mismatch'))
+      return AppColors.danger;
+    if (a.contains('submitted')) return AppColors.warning;
+    return AppColors.primary;
+  }
+
+  IconData _actionIcon(String a) {
+    if (a.contains('approved')) return Icons.check_circle_outline;
+    if (a.contains('rejected')) return Icons.cancel_outlined;
+    if (a.contains('face')) return Icons.face;
+    if (a.contains('login')) return Icons.login;
+    if (a.contains('timesheet')) return Icons.assignment;
+    return Icons.history;
+  }
+}
+
+// ── Detail Page ─────────────────────────────────────────────────────────────
+
+class _AuditDetailPage extends StatelessWidget {
+  final Map<String, dynamic> item;
+  const _AuditDetailPage({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final action = item['action']?.toString() ?? '';
+    final actor = item['actor_name']?.toString() ?? '—';
+    final actorRole = item['actor_role']?.toString() ?? '';
+    final target = item['target_name']?.toString() ?? '—';
+    final targetType = item['target_type']?.toString() ?? '';
+    final ip = item['ip_address']?.toString() ?? '';
+    final ua = item['user_agent']?.toString() ?? '';
+    final ts = item['created_at']?.toString() ?? '';
+    final payload = item['payload'];
+
+    String prettyPayload = '';
+    if (payload != null) {
+      try {
+        if (payload is Map || payload is List) {
+          prettyPayload = const JsonEncoder.withIndent('  ').convert(payload);
+        } else {
+          prettyPayload = payload.toString();
+        }
+      } catch (_) {
+        prettyPayload = payload.toString();
+      }
+    }
+
+    String formattedTime = ts;
+    try {
+      final dt = DateTime.parse(ts).toLocal();
+      formattedTime = DateFormat('EEEE, dd MMM yyyy · hh:mm:ss a').format(dt);
+    } catch (_) {}
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        elevation: 0,
+        title: const Text(
+          'Audit Detail',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Action badge
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: _color(action).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                action.replaceAll('_', ' ').toUpperCase(),
+                style: TextStyle(
+                  color: _color(action),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                  letterSpacing: 0.5,
                 ),
-                if (payloadText.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    payloadText,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ],
+              ),
             ),
           ),
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
+              formattedTime,
+              style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          _DetailSection(
+            label: 'Actor',
+            children: [
+              _DetailRow(label: 'Name', value: actor),
+              if (actorRole.isNotEmpty)
+                _DetailRow(label: 'Role', value: actorRole),
+            ],
+          ),
+
+          _DetailSection(
+            label: 'Target',
+            children: [
+              _DetailRow(label: 'Name', value: target),
+              if (targetType.isNotEmpty)
+                _DetailRow(label: 'Type', value: targetType),
+            ],
+          ),
+
+          _DetailSection(
+            label: 'Network',
+            children: [
+              if (ip.isNotEmpty) _DetailRow(label: 'IP Address', value: ip),
+              if (ua.isNotEmpty) _DetailRow(label: 'User Agent', value: ua),
+            ],
+          ),
+
+          if (prettyPayload.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Text(
+                  'Payload',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: prettyPayload));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Payload copied'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                  child: const Icon(
+                    Icons.copy_rounded,
+                    size: 16,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.04)
+                    : const Color(0xFFF5F5F3),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                prettyPayload,
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 11,
+                  color: isDark ? Colors.white70 : Colors.black87,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Color _color(String a) {
+    if (a.contains('approved') ||
+        a.contains('succeeded') ||
+        a.contains('success'))
+      return AppColors.success;
+    if (a.contains('rejected') ||
+        a.contains('failed') ||
+        a.contains('mismatch'))
+      return AppColors.danger;
+    return AppColors.primary;
+  }
+}
+
+class _DetailSection extends StatelessWidget {
+  final String label;
+  final List<Widget> children;
+  const _DetailSection({required this.label, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: Colors.grey.shade500,
+            ),
+          ),
+          const SizedBox(height: 6),
+          ...children,
         ],
       ),
     );
   }
 }
 
-class _ErrorView extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _ErrorView({required this.message, required this.onRetry});
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _DetailRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, color: AppColors.danger, size: 48),
-            const SizedBox(height: 12),
-            Text(
-              'Could not load audit logs',
-              style: Theme.of(context).textTheme.titleMedium,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 13, color: Colors.grey),
             ),
-            const SizedBox(height: 6),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Retry'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -1,0 +1,103 @@
+{
+  "@@locale": "ta",
+
+  "appName": "PPULSE",
+  "appTagline": "HRMS, இருக்க வேண்டிய முறையில்...",
+
+  "dashboard": "டாஷ்போர்டு",
+  "requests": "கோரிக்கைகள்",
+  "attendance": "வருகை",
+  "payslip": "சம்பள சீட்டு",
+
+  "punchIn": "பஞ்ச் இன்",
+  "punchOut": "பஞ்ச் அவுட்",
+  "checkedInViaBiometric": "பயோமெட்ரிக் வழியாக செக் இன்",
+  "useBiometricToCheckOut": "செக் அவுட் செய்ய பயோமெட்ரிக் சாதனத்தைப் பயன்படுத்தவும்",
+
+  "leaveRequest": "விடுப்பு கோரிக்கை",
+  "claimRequest": "உரிமை கோரிக்கை",
+  "shiftRequest": "ஷிப்ட் கோரிக்கை",
+  "workTypeRequest": "பணி வகை கோரிக்கை",
+  "attendanceRequest": "வருகை கோரிக்கை",
+  "assetRequest": "சொத்து கோரிக்கை",
+
+  "applyLeave": "விடுப்பு விண்ணப்பம்",
+  "submitClaim": "உரிமை சமர்ப்பிக்கவும்",
+  "raiseTicket": "டிக்கெட் எழுப்பவும்",
+  "shiftChange": "ஷிப்ட் மாற்றம்",
+
+  "requested": "கோரப்பட்டது",
+  "approved": "அங்கீகரிக்கப்பட்டது",
+  "rejected": "நிராகரிக்கப்பட்டது",
+  "pending": "நிலுவையில்",
+  "cancelled": "ரத்து செய்யப்பட்டது",
+
+  "settings": "அமைப்புகள்",
+  "appearance": "தோற்றம்",
+  "themeMode": "தீம் பயன்முறை",
+  "lightMode": "லைட் பயன்முறை",
+  "darkMode": "டார்க் பயன்முறை",
+  "cleanAndBright": "சுத்தமான மற்றும் பிரகாசமான",
+  "easyOnTheEyes": "கண்களுக்கு எளிதான",
+
+  "notifications": "அறிவிப்புகள்",
+  "pushNotifications": "புஷ் அறிவிப்புகள்",
+  "pushNotificationsDesc": "ஒப்புதல், அறிவிப்புகளுக்கான எச்சரிக்கைகள்",
+
+  "data": "தரவு",
+  "syncData": "தரவை ஒத்திசைக்கவும்",
+  "syncDataDesc": "சர்வரிலிருந்து அனைத்து தரவையும் புதுப்பிக்கவும்",
+  "syncSuccess": "அனைத்து தரவும் வெற்றிகரமாக ஒத்திசைக்கப்பட்டது",
+  "syncFailed": "ஒத்திசைவு தோல்வி. இணைப்பை சரிபார்க்கவும்.",
+
+  "general": "பொது",
+  "language": "மொழி",
+  "about": "பற்றி",
+
+  "legal": "சட்டம்",
+  "privacyPolicy": "தனியுரிமைக் கொள்கை",
+  "termsOfService": "சேவை விதிமுறைகள்",
+
+  "myTeam": "என் குழு",
+  "searchByNameEmailDept": "பெயர், மின்னஞ்சல், துறை மூலம் தேடு...",
+  "yourReportingTeam": "உங்கள் அறிக்கை குழு & முக்கிய தொடர்புகள்",
+  "noTeamMembersFound": "குழு உறுப்பினர்கள் இல்லை",
+
+  "workingHours": "பணி நேரம்",
+  "dailyWorkTime": "தினசரி பணி நேரம்",
+  "monthlyAttendance": "மாதாந்திர வருகை",
+  "workedHours": "பணிபுரிந்த மணி நேரம்",
+  "minHours": "குறைந்தபட்ச மணி",
+  "overtime": "கூடுதல் நேரம்",
+
+  "present": "உள்ளது",
+  "absent": "இல்லை",
+  "leave": "விடுப்பு",
+  "holiday": "விடுமுறை",
+
+  "profile": "சுயவிவரம்",
+  "logout": "வெளியேறு",
+  "cancel": "ரத்து",
+  "save": "சேமி",
+  "delete": "நீக்கு",
+  "edit": "திருத்து",
+  "close": "மூடு",
+  "confirm": "உறுதிப்படுத்து",
+  "retry": "மீண்டும் முயற்சிக்கவும்",
+  "loading": "ஏற்றுகிறது...",
+  "noDataAvailable": "தரவு இல்லை",
+
+  "adminPanel": "நிர்வாகி பேனல்",
+  "overview": "கண்ணோட்டம்",
+  "users": "பயனர்கள்",
+  "audit": "தணிக்கை",
+
+  "officeGeofences": "அலுவலக ஜியோஃபென்ஸ்",
+  "biometricDevices": "பயோமெட்ரிக் சாதனங்கள்",
+  "ipAllowlist": "IP அனுமதி பட்டியல்",
+  "loginRecords": "உள்நுழைவு பதிவுகள்",
+
+  "version": "பதிப்பு",
+  "developer": "டெவலப்பர்",
+  "support": "ஆதரவு"
+}

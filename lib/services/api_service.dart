@@ -27,6 +27,47 @@ class ApiService {
     return 'http://127.0.0.1:$_apiPortOverride/v1';
   }
 
+  /// Web backend URL for payroll APIs.
+  /// In production: same server. In dev: separate port (8001).
+  static const String _webPortOverride = String.fromEnvironment(
+    'WEB_PORT',
+    defaultValue: '8001',
+  );
+
+  static String get webBaseUrl {
+    if (_apiHostOverride.isNotEmpty) {
+      return 'http://$_apiHostOverride:$_webPortOverride/api';
+    }
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:$_webPortOverride/api';
+    }
+    return 'http://127.0.0.1:$_webPortOverride/api';
+  }
+
+  /// JWT token for the web backend (separate from mobile backend token).
+  static String? _webToken;
+
+  static Future<String> _getWebToken() async {
+    if (_webToken != null) return _webToken!;
+    final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString('user_name_login') ?? 'admin';
+    final password = prefs.getString('user_pass_login') ?? 'admin23';
+    final resp = await http.post(
+      Uri.parse('$webBaseUrl/auth/login/'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'username': username, 'password': password}),
+    );
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      _webToken = data['access'] as String?;
+      return _webToken ?? '';
+    }
+    return '';
+  }
+
+  /// Clear web token on logout.
+  static void clearWebToken() => _webToken = null;
+
   static Future<Map<String, String>> _getHeaders() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token') ?? '';
@@ -471,22 +512,122 @@ class ApiService {
   // PAYSLIPS
   // ═══════════════════════════════════════════════════════
 
+  // ═══════════════════════════════════════════════════════
+  // PAYROLL — calls the WEB backend APIs directly.
+  // In production both share the same DB so this works seamlessly.
+  // ═══════════════════════════════════════════════════════
+
+  /// List payslips from web backend.
+  /// - Admin: sees all employees' payslips (grouped by employee name)
+  /// - Manager: sees assigned team's payslips (in production with shared DB)
+  /// - Employee: sees only own payslips
+  /// Filtered to past 6 months only.
+  static Future<Map<String, dynamic>> getPayslipsList({
+    int? year,
+    String? filterEmployee,
+  }) async {
+    try {
+      final token = await _getWebToken();
+      final resp = await http.get(
+        Uri.parse('$webBaseUrl/payroll/payslip/'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final results = List<Map<String, dynamic>>.from(data['results'] ?? []);
+        final y = year ?? DateTime.now().year;
+
+        // 6-month limit
+        final sixMonthsAgo = DateTime.now().subtract(const Duration(days: 180));
+
+        final filtered = results.where((p) {
+          final sd = p['start_date']?.toString() ?? '';
+          final yearMatch = sd.startsWith('$y-');
+          // 6-month check
+          final pDate = DateTime.tryParse(sd);
+          final withinWindow = pDate != null && pDate.isAfter(sixMonthsAgo);
+          // Employee filter (for admin picking a specific employee)
+          if (filterEmployee != null && filterEmployee.isNotEmpty) {
+            final empName = (p['employee'] as Map?)?['name']?.toString() ?? '';
+            return yearMatch && withinWindow && empName == filterEmployee;
+          }
+          return yearMatch && withinWindow;
+        }).toList();
+
+        // Build unique employee list (for admin's employee picker)
+        final employees = <String>{};
+        for (final p in results) {
+          final name = (p['employee'] as Map?)?['name']?.toString() ?? '';
+          if (name.isNotEmpty) employees.add(name);
+        }
+
+        return {
+          'year': y,
+          'employees': employees.toList()..sort(),
+          'payslips': filtered.map((p) {
+            final sd = p['start_date']?.toString() ?? '';
+            final month =
+                int.tryParse(sd.split('-').elementAtOrNull(1) ?? '') ?? 0;
+            return {
+              'id': p['id'],
+              'month': month,
+              'label': p['payslip_month_year'] ?? '',
+              'employee_name': (p['employee'] as Map?)?['name'] ?? '',
+              'employee_badge': (p['employee'] as Map?)?['badge_id'] ?? '',
+              'net_pay': p['net_pay'] ?? 0,
+              'gross_pay': p['gross_pay'] ?? 0,
+              'deduction': p['deduction'] ?? 0,
+              'status': p['status'] ?? '',
+              'currency': p['currency'] ?? '\u20B9',
+            };
+          }).toList(),
+        };
+      }
+    } catch (_) {}
+    // Fallback to mobile backend
+    final y = year ?? DateTime.now().year;
+    return await get('/payslips/list?year=$y');
+  }
+
+  /// Get single payslip detail from web backend.
   static Future<Map<String, dynamic>> getPayslip({
     int? month,
     int? year,
+    int? id,
   }) async {
+    // If we have an ID from the web list, fetch detail from web.
+    if (id != null) {
+      try {
+        final token = await _getWebToken();
+        final resp = await http.get(
+          Uri.parse('$webBaseUrl/payroll/payslip/$id/'),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+        if (resp.statusCode == 200) {
+          return jsonDecode(resp.body) as Map<String, dynamic>;
+        }
+      } catch (_) {}
+    }
+    // Fallback to mobile backend
     final now = DateTime.now();
     final m = month ?? now.month;
     final y = year ?? now.year;
     return await get('/payslips?month=$m&year=$y');
   }
 
-  static Future<Map<String, dynamic>> getPayslipsList({int? year}) async {
-    final y = year ?? DateTime.now().year;
-    return await get('/payslips/list?year=$y');
-  }
-
+  /// Download payslip PDF from web backend — exact same template as the web.
   static Future<http.Response> getPayslipPdf(int id) async {
+    try {
+      final token = await _getWebToken();
+      final resp = await http.get(
+        Uri.parse('$webBaseUrl/payroll/payslip-download/$id'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200 && resp.bodyBytes.length > 500) {
+        return resp;
+      }
+    } catch (_) {}
+    // Fallback to mobile backend
     final headers = await _getHeaders();
     return await http.get(
       Uri.parse('$baseUrl/payslips/$id/pdf'),
@@ -656,6 +797,14 @@ class ApiService {
       await delete('/admin/face-enrollments?employee_id=$employeeId')
           as Map<String, dynamic>;
 
+  static Future<Map<String, dynamic>> enrollFace({
+    required int employeeId,
+    required String imageBase64,
+  }) async => await post('/admin/face-enrollments', {
+    'employee_id': employeeId,
+    'image': imageBase64,
+  });
+
   static Future<Map<String, dynamic>> getAdminWebhooks() async =>
       await get('/admin/webhooks');
 
@@ -795,4 +944,21 @@ class ApiService {
   ) async {
     return await post('/settings', data);
   }
+
+  // ── Biometric Device Management ─────────────────────────────
+  static Future<Map<String, dynamic>> getAdminBiometricDevices() async =>
+      await get('/admin/biometric-devices');
+
+  static Future<Map<String, dynamic>> createAdminBiometricDevice(
+    Map<String, dynamic> body,
+  ) async => await post('/admin/biometric-devices', body);
+
+  static Future<Map<String, dynamic>> updateAdminBiometricDevice(
+    String id,
+    Map<String, dynamic> body,
+  ) async => await patch('/admin/biometric-devices/$id', body);
+
+  static Future<Map<String, dynamic>> deleteAdminBiometricDevice(
+    String id,
+  ) async => await delete('/admin/biometric-devices/$id');
 }

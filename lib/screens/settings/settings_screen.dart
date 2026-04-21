@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/app_provider.dart';
 import '../../utils/platform_adaptive.dart';
+import '../dashboard/org_chart_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -17,6 +20,29 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _isSyncing = false;
+  String _appVersion = '1.0.0';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final info = await PackageInfo.fromPlatform();
+    if (!mounted) return;
+    setState(() {
+      _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
+      _appVersion = '${info.version}+${info.buildNumber}';
+    });
+  }
+
+  Future<void> _setNotificationsEnabled(bool v) async {
+    setState(() => _notificationsEnabled = v);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notifications_enabled', v);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -154,8 +180,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       Switch.adaptive(
                         value: _notificationsEnabled,
-                        onChanged: (v) =>
-                            setState(() => _notificationsEnabled = v),
+                        onChanged: _setNotificationsEnabled,
                         activeColor: AppColors.primary,
                       ),
                     ],
@@ -313,18 +338,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Column(
                     children: [
                       _SettingsRow(
-                        icon: Icons.language_rounded,
-                        label: 'Language',
-                        trailing: Text(
-                          'English',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w500,
+                        icon: Icons.account_tree_rounded,
+                        label: 'Organisation Chart',
+                        trailing: const SizedBox.shrink(),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (_) => const OrgChartScreen(),
                           ),
                         ),
-                        onTap: () {
-                          // TODO: Language selector
-                        },
                       ),
                       Divider(
                         height: 24,
@@ -332,22 +354,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ? Colors.white.withValues(alpha: 0.06)
                             : Colors.black.withValues(alpha: 0.08),
                       ),
+                      // Language selector — commented out for now, ready to activate later.
+                      // Translations are in lib/l10n/ for 9 languages.
+                      // _SettingsRow(
+                      //   icon: Icons.language_rounded,
+                      //   label: 'Language',
+                      //   trailing: Text(
+                      //     _currentLanguageName(),
+                      //     style: theme.textTheme.bodyMedium?.copyWith(
+                      //       color: AppColors.primary,
+                      //       fontWeight: FontWeight.w500,
+                      //     ),
+                      //   ),
+                      //   onTap: () => _showLanguagePicker(context),
+                      // ),
+                      // Divider(
+                      //   height: 24,
+                      //   color: isDark
+                      //       ? Colors.white.withValues(alpha: 0.06)
+                      //       : Colors.black.withValues(alpha: 0.08),
+                      // ),
                       _SettingsRow(
                         icon: Icons.info_outline_rounded,
                         label: 'About',
                         trailing: Text(
-                          'v1.0.0',
+                          'v$_appVersion',
                           style: theme.textTheme.bodySmall,
                         ),
-                        onTap: () {
-                          showAboutDialog(
-                            context: context,
-                            applicationName: 'PPULSE',
-                            applicationVersion: '1.0.0',
-                            applicationLegalese:
-                                '\u00a9 2026 PPULSE Technologies',
-                          );
-                        },
+                        onTap: () => _showAboutPopup(context),
                       ),
                     ],
                   ),
@@ -427,6 +461,298 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ── Language support ────────────────────────────────────────
+  // Infrastructure is ready. To activate, uncomment the locale
+  // switching in MaterialApp and replace hardcoded strings with
+  // AppLocalizations.of(context)!.key calls.
+  static const _supportedLanguages = <String, String>{
+    'en': 'English',
+    'hi': 'हिन्दी (Hindi)',
+    'ta': 'தமிழ் (Tamil)',
+    'te': 'తెలుగు (Telugu)',
+    'kn': 'ಕನ್ನಡ (Kannada)',
+    'ml': 'മലയാളം (Malayalam)',
+    'ar': 'العربية (Arabic)',
+    'es': 'Español (Spanish)',
+    'fr': 'Français (French)',
+  };
+
+  String _currentLanguageName() {
+    // For now always English — when locale switching is enabled,
+    // read from SharedPreferences('app_locale').
+    return 'English';
+  }
+
+  void _showLanguagePicker(BuildContext context) {
+    final theme = Theme.of(context);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.4,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (_, scrollCtrl) => Column(
+          children: [
+            // Handle + header (fixed)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Column(
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade400,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Select Language',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Language support is configured and ready to activate.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.grey,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
+            // Scrollable language list
+            Expanded(
+              child: ListView(
+                controller: scrollCtrl,
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                children: _supportedLanguages.entries.map((e) {
+                  final isSelected = e.key == 'en';
+                  return ListTile(
+                    dense: true,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    tileColor: isSelected
+                        ? AppColors.primary.withValues(alpha: 0.08)
+                        : null,
+                    leading: Text(
+                      _flagForLocale(e.key),
+                      style: const TextStyle(fontSize: 22),
+                    ),
+                    title: Text(
+                      e.value,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w400,
+                        color: isSelected ? AppColors.primary : null,
+                      ),
+                    ),
+                    trailing: isSelected
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: AppColors.primary,
+                            size: 22,
+                          )
+                        : const Icon(
+                            Icons.circle_outlined,
+                            color: Colors.grey,
+                            size: 22,
+                          ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      if (e.key != 'en') {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '${e.value} translation ready — activate when needed',
+                            ),
+                            backgroundColor: AppColors.primary,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _flagForLocale(String code) {
+    switch (code) {
+      case 'en':
+        return '🇬🇧';
+      case 'hi':
+        return '🇮🇳';
+      case 'ta':
+        return '🇮🇳';
+      case 'te':
+        return '🇮🇳';
+      case 'kn':
+        return '🇮🇳';
+      case 'ml':
+        return '🇮🇳';
+      case 'ar':
+        return '🇸🇦';
+      case 'es':
+        return '🇪🇸';
+      case 'fr':
+        return '🇫🇷';
+      default:
+        return '🌐';
+    }
+  }
+
+  void _showAboutPopup(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // App icon
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFF9B6DFF), Color(0xFF6B3FA0)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF9B6DFF).withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.person, color: Colors.white, size: 36),
+              ),
+              const SizedBox(height: 16),
+              // App name
+              RichText(
+                text: const TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'p',
+                      style: TextStyle(
+                        color: Color(0xFF9B6DFF),
+                        fontSize: 28,
+                        fontWeight: FontWeight.w300,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    TextSpan(
+                      text: 'PULSE',
+                      style: TextStyle(
+                        color: Color(0xFF6B3FA0),
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'HRMS, as it should be...',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: isDark ? Colors.white54 : Colors.grey,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Details
+              _aboutRow(theme, 'Version', _appVersion),
+              _aboutRow(
+                theme,
+                'Platform',
+                Theme.of(context).platform.name.toUpperCase(),
+              ),
+              _aboutRow(theme, 'Developer', 'PPULSE Technologies'),
+              _aboutRow(theme, 'Support', 'support@ppulse.com'),
+              const SizedBox(height: 16),
+              Text(
+                '\u00a9 2026 PPULSE Technologies. All rights reserved.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontSize: 10,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Close'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _aboutRow(ThemeData theme, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+          ),
+          const Spacer(),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

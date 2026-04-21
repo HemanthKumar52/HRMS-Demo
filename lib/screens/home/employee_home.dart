@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
@@ -707,13 +709,46 @@ class _LeaveTypeChip extends StatelessWidget {
   }
 }
 
-class _AttendanceTimerCard extends StatelessWidget {
+class _AttendanceTimerCard extends StatefulWidget {
   final AppProvider provider;
   const _AttendanceTimerCard({required this.provider});
 
   @override
+  State<_AttendanceTimerCard> createState() => _AttendanceTimerCardState();
+}
+
+class _AttendanceTimerCardState extends State<_AttendanceTimerCard> {
+  Timer? _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    // Tick every second so the elapsed timer updates live.
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && widget.provider.isPunchedIn) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  String _elapsed() {
+    final start = widget.provider.punchInTime;
+    if (start == null) return '00:00:00';
+    final diff = DateTime.now().difference(start);
+    final h = diff.inHours.toString().padLeft(2, '0');
+    final m = (diff.inMinutes % 60).toString().padLeft(2, '0');
+    final s = (diff.inSeconds % 60).toString().padLeft(2, '0');
+    return '$h:$m:$s';
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final provider = widget.provider;
     final isPunchedIn = provider.isPunchedIn;
 
     return NeuCard(
@@ -772,44 +807,71 @@ class _AttendanceTimerCard extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           if (isPunchedIn && provider.punchInTime != null) ...[
+            // Running elapsed timer
             Text(
-              DateFormat('hh:mm a').format(provider.punchInTime!),
+              _elapsed(),
               style: theme.textTheme.headlineLarge?.copyWith(
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w800,
                 color: AppColors.primary,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
             const SizedBox(height: 4),
-            Text('Punched in at', style: theme.textTheme.bodySmall),
+            Text(
+              'Punched in at ${DateFormat('hh:mm a').format(provider.punchInTime!)}',
+              style: theme.textTheme.bodySmall,
+            ),
             const SizedBox(height: 16),
           ],
           if (provider.isBiometricPunch && isPunchedIn)
-            Container(
-              width: double.infinity,
-              height: 50,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.3),
-                ),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.fingerprint, color: AppColors.primary, size: 22),
-                  SizedBox(width: 10),
-                  Text(
-                    'Synced from Biometric',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary,
+            Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.3),
                     ),
                   ),
-                ],
-              ),
+                  child: const Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.fingerprint,
+                            color: AppColors.primary,
+                            size: 22,
+                          ),
+                          SizedBox(width: 10),
+                          Text(
+                            'Checked in via Biometric',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 6),
+                      Text(
+                        'Please use the biometric device to check out',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             )
           else
             SizedBox(

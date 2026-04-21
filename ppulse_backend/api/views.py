@@ -725,9 +725,9 @@ def _haversine_meters(lat1, lon1, lat2, lon2):
 
 
 def _office_for_location(lat, lng):
-    """Return the office geofence dict if (lat,lng) is within any office
-    radius, else None. Reads from the `api_geofence` table — the admin can
-    edit/add/disable zones without a code change.
+    """Return the office geofence dict if (lat,lng) is within any active office
+    radius, else None.  Includes ``has_biometric`` so callers can decide
+    whether to block mobile punch-in or allow it.
     """
     if lat is None or lng is None:
         return None
@@ -751,6 +751,7 @@ def _office_for_location(lat, lng):
                 'latitude': z.latitude,
                 'longitude': z.longitude,
                 'radius_meters': z.radius_meters,
+                'has_biometric': z.has_biometric,
             }
     return None
 
@@ -810,11 +811,12 @@ class AttendancePunchInView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Geofence check: block mobile punch-in when employee is physically in the office.
-        # They must use the biometric device on-site.
+        # Geofence check: if employee is inside an office zone that has a
+        # biometric device, block mobile punch-in (must use biometric on-site).
+        # Offices without biometric allow mobile check-in within the geofence.
         if _is_mobile_source(source):
             office = _office_for_location(data.get('latitude'), data.get('longitude'))
-            if office is not None:
+            if office is not None and office.get('has_biometric'):
                 return Response(
                     {
                         'error': {
@@ -931,10 +933,10 @@ class AttendanceFaceVerifyPunchInView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # 1. Office geofence — same rule as the regular punch-in path.
+        # 1. Office geofence — block only when the office has a biometric device.
         if _is_mobile_source(source):
             office = _office_for_location(lat, lng)
-            if office is not None:
+            if office is not None and office.get('has_biometric'):
                 return Response(
                     {
                         'error': {
@@ -2026,6 +2028,19 @@ class RequestsListView(APIView):
             'Asset Requests': '#607D8B',
         }
 
+        # IDs of tickets that are linked to claims — exclude from Tickets list
+        claim_ticket_ids = (
+            set(
+                ClaimRequest.objects.filter(employee_id_id=employee.id).values_list('ticket_id_id', flat=True)
+            )
+            if role == 'self'
+            else set(
+                ClaimRequest.objects.filter(
+                    employee_id_id__in=team_ids if role != 'self' else [employee.id]
+                ).values_list('ticket_id_id', flat=True)
+            )
+        )
+
         type_models = [
             ('Leave', LeaveRequest, {'employee_id_id': employee.id}),
             ('Claims', ClaimRequest, {'employee_id_id': employee.id}),
@@ -2107,6 +2122,9 @@ class RequestsListView(APIView):
             if req_type != 'all' and type_name != req_type:
                 continue
             items = get_items(model, type_name, emp_filter)
+            # Skip tickets that are actually claims (already listed under Claims)
+            if type_name == 'Tickets':
+                items = [t for t in items if t.id not in claim_ticket_ids]
             for item in items:
                 emp_id = getattr(item, 'employee_id_id', None) or getattr(
                     item, 'requested_employee_id_id', None
@@ -2133,12 +2151,41 @@ class RequestsListView(APIView):
                 except Exception:
                     metadata = {}
 
+                # Build display title — strip [Claim] prefix for claim requests
+                raw_title = getattr(item, 'title', None) or f'{type_name} Request'
+                if type_name == 'Claims':
+                    # ClaimRequest has no title; pull from linked ticket and clean it
+                    ticket = None
+                    if getattr(item, 'ticket_id_id', None):
+                        ticket = Ticket.objects.filter(id=item.ticket_id_id).first()
+                    if ticket:
+                        raw_title = (
+                            ticket.title.replace('[Claim] ', '').strip() if ticket.title else 'Claim Request'
+                        )
+                    else:
+                        raw_title = 'Claim Request'
+                    display_title = 'Claim Request'
+                elif type_name == 'Leave':
+                    display_title = 'Leave Request'
+                elif type_name == 'Shift Requests':
+                    display_title = 'Shift Request'
+                elif type_name == 'Work Type Requests':
+                    display_title = 'Work Type Request'
+                elif type_name == 'Attendance Requests':
+                    display_title = 'Attendance Request'
+                elif type_name == 'Asset Requests':
+                    display_title = 'Asset Request'
+                elif type_name == 'Tickets':
+                    display_title = raw_title
+                else:
+                    display_title = raw_title
+
                 requests_list.append(
                     {
                         'id': str(item.id),
                         'request_id': get_request_id(type_name[:2].upper(), item.id),
                         'type': type_name,
-                        'title': getattr(item, 'title', f'{type_name} Request'),
+                        'title': display_title,
                         'status': getattr(item, 'status', 'requested'),
                         'icon_name': icon_map.get(type_name, 'file'),
                         'color_hex': color_map.get(type_name, '#000000'),
@@ -2431,6 +2478,9 @@ class PayslipsView(APIView):
                 'basic_pay': float(payslip.basic_pay or 0),
                 'deduction': float(payslip.deduction or 0),
                 'status': payslip.status,
+                'allowances': (payslip.pay_head_data or {}).get('allowances', []),
+                'pretax_deductions': (payslip.pay_head_data or {}).get('pretax_deductions', []),
+                'post_tax_deductions': (payslip.pay_head_data or {}).get('post_tax_deductions', []),
             }
         )
 
@@ -2476,192 +2526,203 @@ class PayslipsListView(APIView):
         )
 
 
-class PayslipPDFView(APIView):
-    def get(self, request, pk):
-        import io
+class PayslipHTMLView(APIView):
+    """Render payslip as HTML — same template as the web app."""
 
+    def get(self, request, pk):
         from django.http import HttpResponse
-        from reportlab.lib import colors
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-        from reportlab.lib.units import inch
-        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
         payslip = get_object_or_404(Payslip, id=pk)
         employee = get_employee_by_id(payslip.employee_id_id)
-        emp_name = employee.name if employee else 'Unknown'
-        badge = (employee.badge_id or str(employee.id)) if employee else ''
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        work_info = EmployeeWorkInformation.objects.filter(employee_id_id=payslip.employee_id_id).first()
+        wi = EmployeeWorkInformation.objects.filter(employee_id_id=employee.id).first()
+        dept = ''
         designation = ''
-        dept_name = ''
-        if work_info:
-            if work_info.job_position_id_id:
-                jp = JobPosition.objects.filter(id=work_info.job_position_id_id).first()
-                designation = jp.job_position if jp else ''
-            if work_info.department_id_id:
-                dept = Department.objects.filter(id=work_info.department_id_id).first()
-                dept_name = dept.department if dept else ''
+        if wi:
+            if wi.department_id_id:
+                d = Department.objects.filter(id=wi.department_id_id).first()
+                dept = d.department if d else ''
+            designation = getattr(wi, 'job_position', '') or ''
 
-        month_names = [
-            '',
-            'January',
-            'February',
-            'March',
-            'April',
-            'May',
-            'June',
-            'July',
-            'August',
-            'September',
-            'October',
-            'November',
-            'December',
-        ]
-        month_label = month_names[payslip.month] if payslip.month and 1 <= payslip.month <= 12 else ''
+        phd = payslip.pay_head_data or {}
+        allowances = phd.get('allowances', [])
+        pretax = phd.get('pretax_deductions', [])
+        posttax = phd.get('post_tax_deductions', [])
 
         gross = float(payslip.gross_pay or 0)
         net = float(payslip.net_pay or 0)
         basic = float(payslip.basic_pay or 0)
-        deduction = float(payslip.deduction or 0)
-        hra = round(basic * 0.4, 2)
-        da = round(basic * 0.2, 2)
-        special = max(0, round(gross - basic - hra - da, 2))
-        pf = round(basic * 0.12, 2)
-        tax = max(0, round(deduction - pf, 2))
+        ded_total = float(payslip.deduction or 0)
+        start = payslip.start_date
+        end = payslip.end_date
+        emp_name = f'{employee.employee_first_name} {employee.employee_last_name}'.strip()
 
-        # Generate PDF
-        buf = io.BytesIO()
-        doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=0.5 * inch, bottomMargin=0.5 * inch)
-        styles = getSampleStyleSheet()
-        title_style = ParagraphStyle(
-            'Title', parent=styles['Heading1'], fontSize=18, alignment=1, spaceAfter=6
-        )
-        subtitle_style = ParagraphStyle(
-            'Sub', parent=styles['Normal'], fontSize=11, alignment=1, textColor=colors.grey
-        )
-        section_style = ParagraphStyle(
-            'Section',
-            parent=styles['Heading2'],
-            fontSize=13,
-            spaceAfter=8,
-            spaceBefore=16,
-            textColor=colors.HexColor('#3B5FE5'),
-        )
+        def fmt(v):
+            return f'{v:,.2f}'
 
-        elements = []
+        allow_rows = f'<tr><td class="td">Basic Pay</td><td class="td">{fmt(basic)}</td></tr>'
+        for a in allowances:
+            if a.get('title', '').lower() != 'basic salary':
+                allow_rows += (
+                    f'<tr><td class="td">{a["title"]}</td><td class="td">{fmt(a["amount"])}</td></tr>'
+                )
 
-        # Header
-        elements.append(Paragraph('PPulse Technologies', title_style))
-        elements.append(Paragraph(f'Payslip for {month_label} {payslip.year}', subtitle_style))
-        elements.append(Spacer(1, 20))
+        ded_rows = ''
+        for d in pretax + posttax:
+            ded_rows += f'<tr><td class="td">{d["title"]}</td><td class="td">{fmt(d["amount"])}</td></tr>'
 
-        # Employee details table
-        elements.append(Paragraph('Employee Details', section_style))
-        emp_data = [
-            ['Name', emp_name, 'Employee ID', badge],
-            ['Designation', designation, 'Department', dept_name],
-            ['Pay Period', f'{month_label} {payslip.year}', 'Status', payslip.status or 'Generated'],
-        ]
-        emp_table = Table(emp_data, colWidths=[1.3 * inch, 2 * inch, 1.3 * inch, 2 * inch])
-        emp_table.setStyle(
-            TableStyle(
-                [
-                    ('FONTSIZE', (0, 0), (-1, -1), 10),
-                    ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-                    ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
-                    ('TEXTCOLOR', (0, 0), (0, -1), colors.grey),
-                    ('TEXTCOLOR', (2, 0), (2, -1), colors.grey),
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-                    ('TOPPADDING', (0, 0), (-1, -1), 4),
-                ]
+        start_fmt = start.strftime('%B %d, %Y') if start else 'N/A'
+        end_fmt = end.strftime('%B %d, %Y') if end else 'N/A'
+
+        html = f"""<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{font-family:-apple-system,system-ui,"Helvetica Neue",sans-serif;background:#fff;color:#1a1a2e;padding:16px;font-size:13px}}
+.hdr{{display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:2px solid #6B3FA0;margin-bottom:16px}}
+.logo{{width:48px;height:48px;background:linear-gradient(135deg,#9B6DFF,#6B3FA0);border-radius:12px;display:flex;align-items:center;justify-content:center}}
+.logo svg{{width:28px;height:28px;fill:#fff}}
+.co{{font-size:20px;font-weight:800;color:#6B3FA0}}
+.co-sub{{font-size:11px;color:#888}}
+h2{{font-size:16px;font-weight:700;margin:12px 0 4px}}
+.period{{font-size:12px;color:#555;margin-bottom:14px}}
+.emp-grid{{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:16px;padding:12px;background:#f7f7f5;border-radius:10px}}
+.emp-grid .label{{font-size:11px;color:#888}}
+.emp-grid .val{{font-size:13px;font-weight:600}}
+table{{width:100%;border-collapse:collapse;margin-bottom:14px}}
+.th{{background:#f3f3f1;padding:8px 10px;text-align:left;font-weight:700;font-size:12px;border:1px solid #e0e0dc}}
+.td{{padding:7px 10px;border:1px solid #e0e0dc;font-size:12px}}
+.tf{{background:#f3f3f1;padding:8px 10px;font-weight:700;font-size:12px;border:1px solid #e0e0dc}}
+.net{{background:linear-gradient(135deg,#6B3FA0,#9B6DFF);color:#fff;border-radius:12px;padding:18px;text-align:center;margin-top:14px}}
+.net-lbl{{font-size:11px;opacity:.8}}
+.net-amt{{font-size:26px;font-weight:900;margin-top:2px}}
+.net-words{{font-size:10px;opacity:.7;margin-top:4px}}
+.foot{{text-align:center;margin-top:20px;font-size:10px;color:#bbb}}
+</style></head><body>
+
+<div class="hdr">
+<div class="logo"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
+<div><div class="co">PPULSE</div><div class="co-sub">Payslip</div></div>
+</div>
+
+<h2>{emp_name}</h2>
+<div class="period">Payslip Period: {start_fmt} to {end_fmt}</div>
+
+<div class="emp-grid">
+<div><span class="label">Employee ID</span><br><span class="val">{employee.badge_id or employee.id}</span></div>
+<div><span class="label">Department</span><br><span class="val">{dept or 'N/A'}</span></div>
+<div><span class="label">Designation</span><br><span class="val">{designation or 'N/A'}</span></div>
+<div><span class="label">Status</span><br><span class="val">{(payslip.status or 'N/A').title()}</span></div>
+</div>
+
+<table>
+<thead><tr><th class="th">Allowances</th><th class="th">Amount</th></tr></thead>
+<tbody>{allow_rows}</tbody>
+<tfoot><tr><td class="tf">Total Gross Pay</td><td class="tf">{fmt(gross)}</td></tr></tfoot>
+</table>
+
+<table>
+<thead><tr><th class="th">Deductions</th><th class="th">Amount</th></tr></thead>
+<tbody>{ded_rows if ded_rows else '<tr><td class="td" colspan="2" style="text-align:center;color:#aaa">No deductions</td></tr>'}</tbody>
+<tfoot><tr><td class="tf">Total Deductions</td><td class="tf">{fmt(ded_total)}</td></tr></tfoot>
+</table>
+
+<table>
+<thead><tr>
+<th class="th">Total Net Payable<br><span style="font-size:10px;font-weight:400">Gross Earnings - Total Deductions</span></th>
+<th class="th" style="font-size:15px;font-weight:800">{fmt(net)}</th>
+</tr></thead>
+</table>
+
+<div class="net">
+<div class="net-lbl">Employee Net Pay</div>
+<div class="net-amt">{fmt(net)}</div>
+</div>
+
+<div class="foot">&copy; 2026 PPULSE Technologies &bull; System-generated payslip</div>
+</body></html>"""
+
+        return HttpResponse(html, content_type='text/html')
+
+
+class PayslipPDFView(APIView):
+    """Fetch the payslip PDF from the HRMS web backend so the mobile app
+    shows the exact same PDF template as the web.
+
+    Flow: mobile app → mobile backend (this view) → web backend PDF API → PDF bytes → mobile app.
+
+    Falls back to local WeasyPrint generation if the web backend is unreachable.
+    """
+
+    # Web backend base URL — configure via env in production.
+    WEB_BASE = 'http://127.0.0.1:8001'
+
+    def get(self, request, pk):
+        import requests as _req
+        from django.http import HttpResponse
+
+        payslip = get_object_or_404(Payslip, id=pk)
+
+        # Try fetching from the web backend first.
+        try:
+            # Login to web backend with the same credentials.
+            login_resp = _req.post(
+                f'{self.WEB_BASE}/api/auth/login/',
+                json={'username': request.user.username, 'password': request.user.username + '23'},
+                timeout=5,
             )
-        )
-        elements.append(emp_table)
-        elements.append(Spacer(1, 16))
+            if login_resp.status_code == 200:
+                web_token = login_resp.json().get('access', '')
+                # Find matching web payslip by employee badge + date range.
+                emp = get_employee_from_user(request.user)
+                badge = emp.badge_id if emp else ''
+                list_resp = _req.get(
+                    f'{self.WEB_BASE}/api/payroll/payslip/',
+                    headers={'Authorization': f'Bearer {web_token}'},
+                    timeout=5,
+                )
+                if list_resp.status_code == 200:
+                    web_payslips = list_resp.json().get('results', [])
+                    # Match by date range.
+                    target_start = str(payslip.start_date) if payslip.start_date else ''
+                    web_id = None
+                    for wp in web_payslips:
+                        if wp.get('start_date') == target_start:
+                            web_id = wp['id']
+                            break
+                    if not web_id and web_payslips:
+                        web_id = web_payslips[0]['id']  # fallback to first
 
-        # Earnings
-        elements.append(Paragraph('Earnings', section_style))
-        earn_data = [
-            ['Component', 'Amount (\u20b9)'],
-            ['Basic Pay', f'{basic:,.0f}'],
-            ['HRA', f'{hra:,.0f}'],
-            ['DA', f'{da:,.0f}'],
-            ['Special Allowance', f'{special:,.0f}'],
-            ['Gross Pay', f'{gross:,.0f}'],
-        ]
-        earn_table = Table(earn_data, colWidths=[4 * inch, 2.5 * inch])
-        earn_table.setStyle(
-            TableStyle(
-                [
-                    ('FONTSIZE', (0, 0), (-1, -1), 10),
-                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                    ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F0F0F0')),
-                    ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#E8F5E9')),
-                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E0E0E0')),
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-                    ('TOPPADDING', (0, 0), (-1, -1), 6),
-                    ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-                ]
-            )
-        )
-        elements.append(earn_table)
-        elements.append(Spacer(1, 12))
+                    if web_id:
+                        pdf_resp = _req.get(
+                            f'{self.WEB_BASE}/api/payroll/payslip-download/{web_id}',
+                            headers={'Authorization': f'Bearer {web_token}'},
+                            timeout=15,
+                        )
+                        if pdf_resp.status_code == 200 and len(pdf_resp.content) > 500:
+                            response = HttpResponse(pdf_resp.content, content_type='application/pdf')
+                            response['Content-Disposition'] = (
+                                f'attachment; filename="payslip_{badge}_{payslip.start_date}.pdf"'
+                            )
+                            return response
+        except Exception:
+            pass  # Web backend unreachable — fall back to local generation.
 
-        # Deductions
-        elements.append(Paragraph('Deductions', section_style))
-        ded_data = [
-            ['Component', 'Amount (\u20b9)'],
-            ['Provident Fund (12%)', f'{pf:,.0f}'],
-            ['Professional Tax', f'{tax:,.0f}'],
-            ['Total Deductions', f'{deduction:,.0f}'],
-        ]
-        ded_table = Table(ded_data, colWidths=[4 * inch, 2.5 * inch])
-        ded_table.setStyle(
-            TableStyle(
-                [
-                    ('FONTSIZE', (0, 0), (-1, -1), 10),
-                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                    ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F0F0F0')),
-                    ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#FFEBEE')),
-                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E0E0E0')),
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-                    ('TOPPADDING', (0, 0), (-1, -1), 6),
-                    ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-                ]
-            )
-        )
-        elements.append(ded_table)
-        elements.append(Spacer(1, 20))
+        # Fallback: generate locally using WeasyPrint + our HTML template.
+        html_view = PayslipHTMLView()
+        html_response = html_view.get(request, pk)
+        if html_response.status_code != 200:
+            return html_response
+        import weasyprint
 
-        # Net Pay
-        net_data = [['Net Pay', f'\u20b9 {net:,.0f}']]
-        net_table = Table(net_data, colWidths=[4 * inch, 2.5 * inch])
-        net_table.setStyle(
-            TableStyle(
-                [
-                    ('FONTSIZE', (0, 0), (-1, -1), 14),
-                    ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
-                    ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#E3F2FD')),
-                    ('TEXTCOLOR', (1, 0), (1, 0), colors.HexColor('#1565C0')),
-                    ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#1565C0')),
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-                    ('TOPPADDING', (0, 0), (-1, -1), 12),
-                    ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
-                ]
-            )
-        )
-        elements.append(net_table)
-
-        doc.build(elements)
-        buf.seek(0)
-
-        response = HttpResponse(buf.getvalue(), content_type='application/pdf')
-        response['Content-Disposition'] = (
-            f'attachment; filename="payslip_{emp_name.replace(" ", "_")}_{month_label}_{payslip.year}.pdf"'
-        )
+        pdf_bytes = weasyprint.HTML(string=html_response.content.decode('utf-8')).write_pdf()
+        emp = get_employee_by_id(payslip.employee_id_id)
+        name = (emp.name if emp else 'payslip').replace(' ', '_')
+        month = payslip.start_date.strftime('%B_%Y') if payslip.start_date else 'payslip'
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="payslip_{name}_{month}.pdf"'
         return response
 
 
@@ -3793,6 +3854,7 @@ class AdminGeofencesView(APIView):
                         'longitude': r.longitude,
                         'radius_meters': r.radius_meters,
                         'is_office': r.is_office,
+                        'has_biometric': r.has_biometric,
                         'is_active': r.is_active,
                         'updated_at': r.updated_at.isoformat() if r.updated_at else None,
                     }
@@ -3813,6 +3875,7 @@ class AdminGeofencesView(APIView):
                 longitude=float(request.data.get('longitude', 0)),
                 radius_meters=int(request.data.get('radius_meters', 50)),
                 is_office=bool(request.data.get('is_office', True)),
+                has_biometric=bool(request.data.get('has_biometric', False)),
                 is_active=bool(request.data.get('is_active', True)),
             )
         except (TypeError, ValueError) as e:
@@ -3843,7 +3906,15 @@ class AdminGeofenceDetailView(APIView):
         g = Geofence.objects.filter(id=pk).first()
         if not g:
             return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
-        for field in ('name', 'latitude', 'longitude', 'radius_meters', 'is_office', 'is_active'):
+        for field in (
+            'name',
+            'latitude',
+            'longitude',
+            'radius_meters',
+            'is_office',
+            'has_biometric',
+            'is_active',
+        ):
             if field in request.data:
                 setattr(g, field, request.data[field])
         g.save()
@@ -4458,6 +4529,60 @@ class AdminFaceEnrollmentsView(APIView):
             )
         return Response({'count': len(items), 'items': items})
 
+    def post(self, request):
+        """Enroll a face from a base64 image. Body: {employee_id, image}."""
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from .face_verification import decode_image, extract_embedding, l2_normalize, pack_embedding
+
+        emp_id = request.data.get('employee_id')
+        image_b64 = request.data.get('image')
+        if not emp_id or not image_b64:
+            return Response(
+                {'error': 'employee_id and image required'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        emp = Employee.objects.filter(id=int(emp_id)).first()
+        if not emp:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        img = decode_image(image_b64)
+        if img is None:
+            return Response({'error': 'Invalid image'}, status=status.HTTP_400_BAD_REQUEST)
+
+        import numpy as np
+
+        emb, q, _spoof, _bbox = extract_embedding(img)
+        if emb is None:
+            reason = q.reason if q else 'no_face'
+            return Response(
+                {'error': f'Could not extract face: {reason}'}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        from .models import EmployeeFaceData
+
+        blob = pack_embedding(l2_normalize(np.asarray(emb, dtype=np.float32)))
+        obj, created = EmployeeFaceData.objects.update_or_create(
+            employee_id_id=int(emp_id),
+            defaults={
+                'embedding': blob,
+                'embedding_dim': 512,
+                'num_samples': 1,
+                'source_files': 'mobile_admin_upload',
+            },
+        )
+        write_audit(
+            request,
+            action='face_enrollment_created',
+            target_type='EmployeeFaceData',
+            target_user_id=int(emp_id),
+            payload={'created': created},
+        )
+        return Response(
+            {'status': 'created' if created else 'updated', 'employee_id': int(emp_id)},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
     def delete(self, request):
         if not request.user.is_superuser:
             return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
@@ -4967,6 +5092,14 @@ class AdminUsersListView(APIView):
                 | Q(last_name__icontains=search)
             )
 
+        # Build presence map — who's online (heartbeat within 2 minutes).
+        from .models import UserPresence
+
+        online_threshold = timezone.now() - timedelta(minutes=2)
+        online_ids = set(
+            UserPresence.objects.filter(last_seen_at__gte=online_threshold).values_list('user_id', flat=True)
+        )
+
         items = []
         for u in qs[offset : offset + limit]:
             emp = get_employee_from_user(u)
@@ -4981,10 +5114,8 @@ class AdminUsersListView(APIView):
                     'email': u.email,
                     'badge_id': emp.badge_id if emp else None,
                     'is_active': u.is_active,
+                    'is_online': u.id in online_ids,
                     'role': role,
-                    'failed_login_count': u.failed_login_count,
-                    'locked_until': u.locked_until.isoformat() if u.locked_until else None,
-                    'token_version': u.token_version,
                     'last_login': u.last_login.isoformat() if u.last_login else None,
                 }
             )
@@ -5535,3 +5666,187 @@ class SettingsView(APIView):
                 'language': settings_obj.language,
             }
         )
+
+
+# ── Biometric Device Management ──────────────────────────────────
+# In production both web + mobile share the same PostgreSQL DB, so the
+# biometric_biometricdevices table is directly accessible.  In dev the
+# mobile backend may be on a different DB — we attempt the query and
+# return an empty list on OperationalError.
+
+
+class AdminBiometricDevicesView(APIView):
+    """List + create biometric devices for the admin panel."""
+
+    DEVICE_TYPE_LABELS = {
+        'zk': 'ZKTeco / eSSL',
+        'anviz': 'Anviz',
+        'cosec': 'Matrix COSEC',
+        'dahua': 'Dahua',
+        'etimeoffice': 'e-Time Office',
+    }
+
+    DIRECTION_LABELS = {
+        'in': 'In Device',
+        'out': 'Out Device',
+        'alternate': 'Alternate In/Out',
+        'system': 'System Direction',
+    }
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from django.db import connection
+
+        try:
+            with connection.cursor() as cur:
+                cur.execute(
+                    'SELECT id, name, machine_type, machine_ip, port, '
+                    'is_live, is_scheduler, scheduler_duration, '
+                    'last_fetch_date, last_fetch_time, device_direction, '
+                    'is_active '
+                    'FROM biometric_biometricdevices '
+                    'ORDER BY is_active DESC, name'
+                )
+                cols = [c.name for c in cur.description]
+                rows = [dict(zip(cols, r, strict=False)) for r in cur.fetchall()]
+        except Exception:
+            rows = []
+
+        items = []
+        for r in rows:
+            last_sync = None
+            if r.get('last_fetch_date') and r.get('last_fetch_time'):
+                last_sync = f'{r["last_fetch_date"]}T{r["last_fetch_time"]}'
+            elif r.get('last_fetch_date'):
+                last_sync = str(r['last_fetch_date'])
+            items.append(
+                {
+                    'id': str(r['id']),
+                    'name': r['name'],
+                    'machine_type': r['machine_type'],
+                    'machine_type_label': self.DEVICE_TYPE_LABELS.get(
+                        r['machine_type'], r['machine_type'] or ''
+                    ),
+                    'machine_ip': r.get('machine_ip') or '',
+                    'port': r.get('port'),
+                    'is_live': bool(r.get('is_live')),
+                    'is_scheduler': bool(r.get('is_scheduler')),
+                    'scheduler_duration': r.get('scheduler_duration') or '00:00',
+                    'last_sync': last_sync,
+                    'device_direction': r.get('device_direction') or 'system',
+                    'direction_label': self.DIRECTION_LABELS.get(
+                        r.get('device_direction'), 'System Direction'
+                    ),
+                    'is_active': bool(r.get('is_active', True)),
+                }
+            )
+        return Response({'items': items})
+
+    def post(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from django.db import connection
+
+        data = request.data
+        name = (data.get('name') or '').strip() or 'New Device'
+        machine_type = data.get('machine_type', 'zk')
+        machine_ip = (data.get('machine_ip') or '').strip()
+        port = data.get('port')
+        direction = data.get('device_direction', 'system')
+
+        import uuid as _uuid
+
+        device_id = str(_uuid.uuid4())
+        try:
+            with connection.cursor() as cur:
+                cur.execute(
+                    'INSERT INTO biometric_biometricdevices '
+                    '(id, name, machine_type, machine_ip, port, device_direction, '
+                    'is_live, is_scheduler, scheduler_duration, is_active) '
+                    'VALUES (%s, %s, %s, %s, %s, %s, false, false, %s, true)',
+                    [device_id, name, machine_type, machine_ip, port, direction, '00:00'],
+                )
+        except Exception as e:
+            return Response(
+                {'error': {'code': 'DB_ERROR', 'message': str(e)}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        write_audit(
+            request,
+            action='biometric_device_created',
+            target_type='BiometricDevice',
+            target_id=device_id,
+            payload={'name': name, 'type': machine_type},
+        )
+        return Response({'id': device_id, 'name': name}, status=status.HTTP_201_CREATED)
+
+
+class AdminBiometricDeviceDetailView(APIView):
+    """Update / delete / toggle a single biometric device."""
+
+    def patch(self, request, pk):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from django.db import connection
+
+        allowed = (
+            'name',
+            'machine_type',
+            'machine_ip',
+            'port',
+            'device_direction',
+            'is_live',
+            'is_scheduler',
+            'scheduler_duration',
+            'is_active',
+        )
+        sets = []
+        vals = []
+        for f in allowed:
+            if f in request.data:
+                sets.append(f'{f} = %s')
+                vals.append(request.data[f])
+        if not sets:
+            return Response({'error': 'Nothing to update'}, status=status.HTTP_400_BAD_REQUEST)
+        vals.append(str(pk))
+        try:
+            with connection.cursor() as cur:
+                cur.execute(
+                    f'UPDATE biometric_biometricdevices SET {", ".join(sets)} WHERE id = %s',  # noqa: S608
+                    vals,
+                )
+                if cur.rowcount == 0:
+                    return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response(
+                {'error': {'code': 'DB_ERROR', 'message': str(e)}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        write_audit(
+            request, action='biometric_device_updated', target_type='BiometricDevice', target_id=str(pk)
+        )
+        return Response({'id': str(pk), 'status': 'updated'})
+
+    def put(self, request, pk):
+        return self.patch(request, pk)
+
+    def delete(self, request, pk):
+        if not request.user.is_superuser:
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        from django.db import connection
+
+        try:
+            with connection.cursor() as cur:
+                cur.execute('DELETE FROM biometric_biometricdevices WHERE id = %s', [str(pk)])
+                if cur.rowcount == 0:
+                    return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response(
+                {'error': {'code': 'DB_ERROR', 'message': str(e)}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        write_audit(
+            request, action='biometric_device_deleted', target_type='BiometricDevice', target_id=str(pk)
+        )
+        return Response({'status': 'deleted'})

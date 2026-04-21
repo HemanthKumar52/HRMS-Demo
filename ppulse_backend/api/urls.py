@@ -13,6 +13,8 @@ from .views import (
     AdminAuditLogsCsvExportView,
     AdminAuditLogsView,
     AdminBackupView,
+    AdminBiometricDeviceDetailView,
+    AdminBiometricDevicesView,
     AdminCommandCenterView,
     AdminConsentLedgerView,
     AdminEmailTemplatesView,
@@ -69,6 +71,7 @@ from .views import (
     NotificationsReadAllView,
     NotificationsView,
     OrgChartView,
+    PayslipHTMLView,
     PayslipPDFView,
     PayslipsListView,
     PayslipsView,
@@ -136,6 +139,7 @@ urlpatterns = [
     path('payslips', PayslipsView.as_view(), name='payslips'),
     path('payslips/list', PayslipsListView.as_view(), name='payslips_list'),
     path('payslips/<int:pk>/pdf', PayslipPDFView.as_view(), name='payslip_pdf'),
+    path('payslips/<int:pk>/html', PayslipHTMLView.as_view(), name='payslip_html'),
     # Notifications
     path('notifications', NotificationsView.as_view(), name='notifications'),
     path('notifications/<int:pk>/read', NotificationReadView.as_view(), name='notification_read'),
@@ -205,4 +209,11 @@ urlpatterns = [
     path('admin/allowed-ips', AdminAllowedIpsView.as_view(), name='admin_allowed_ips'),
     path('admin/allowed-ips/<int:pk>', AdminAllowedIpDetailView.as_view(), name='admin_allowed_ip_detail'),
     path('admin/login-records', AdminLoginRecordsView.as_view(), name='admin_login_records'),
+    # Biometric device management
+    path('admin/biometric-devices', AdminBiometricDevicesView.as_view(), name='admin_biometric_devices'),
+    path(
+        'admin/biometric-devices/<str:pk>',
+        AdminBiometricDeviceDetailView.as_view(),
+        name='admin_biometric_device_detail',
+    ),
 ]

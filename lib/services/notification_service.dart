@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
 
 class NotificationService {
@@ -92,12 +93,23 @@ class NotificationService {
     onNotificationTap?.call();
   }
 
+  /// Check if the user has disabled push notifications in app settings.
+  Future<bool> _isNotificationEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('notifications_enabled') ?? true;
+  }
+
   Future<void> show({
     required String title,
     required String body,
     String? payload,
     bool vibrate = true,
   }) async {
+    // Respect the user's in-app notification preference
+    if (!await _isNotificationEnabled()) {
+      debugPrint('PUSH_NOTIF: Suppressed (user disabled) "$title"');
+      return;
+    }
     debugPrint('PUSH_NOTIF: Firing "$title" - "$body"');
     if (!_initialized) await init();
 

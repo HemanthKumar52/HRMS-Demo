@@ -74,6 +74,21 @@ class _AdminAllowedIpsScreenState extends State<AdminAllowedIpsScreen> {
     }
   }
 
+  Future<void> _toggleActive(Map<String, dynamic> r, bool active) async {
+    try {
+      await ApiService.updateAdminAllowedIp(
+        (r['id'] as num).toInt(),
+        {'is_active': active},
+      );
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed: $e')),
+      );
+    }
+  }
+
   Future<void> _delete(Map<String, dynamic> r) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -261,17 +276,33 @@ class _AdminAllowedIpsScreenState extends State<AdminAllowedIpsScreen> {
                                 ],
                               ),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.edit_rounded, size: 20),
-                              onPressed: () => _editor(existing: r),
+                            Switch.adaptive(
+                              value: (r['is_active'] ?? false) as bool,
+                              activeColor: AppColors.success,
+                              onChanged: (v) => _toggleActive(r, v),
                             ),
-                            IconButton(
+                            PopupMenuButton<String>(
                               icon: const Icon(
-                                Icons.delete_outline_rounded,
+                                Icons.more_vert_rounded,
                                 size: 20,
-                                color: AppColors.danger,
                               ),
-                              onPressed: () => _delete(r),
+                              onSelected: (action) {
+                                if (action == 'edit') _editor(existing: r);
+                                if (action == 'delete') _delete(r);
+                              },
+                              itemBuilder: (_) => const [
+                                PopupMenuItem(
+                                  value: 'edit',
+                                  child: Text('Edit'),
+                                ),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text(
+                                    'Delete',
+                                    style: TextStyle(color: AppColors.danger),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),

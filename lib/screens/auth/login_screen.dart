@@ -136,8 +136,18 @@ class _LoginScreenState extends State<LoginScreen>
         final refreshToken = data['refresh_token'];
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', token);
-        if (refreshToken != null)
+        if (refreshToken != null) {
           await prefs.setString('refresh_token', refreshToken);
+        }
+        // Save login credentials for web backend payroll API access.
+        await prefs.setString(
+          'user_name_login',
+          _usernameController.text.trim(),
+        );
+        await prefs.setString(
+          'user_pass_login',
+          _passwordController.text.trim(),
+        );
         await prefs.setString('employee_id', userData['employee_id'] ?? '');
         await prefs.setString('user_name', userData['name'] ?? '');
         await prefs.setString('user_email', userData['email'] ?? '');

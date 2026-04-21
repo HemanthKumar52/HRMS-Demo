@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
 
-/// Admin "Users" tab — list of every employee with role + status filters and
-/// per-row actions (enable / disable / promote / demote / force-reset / force-logout).
-///
-/// Backed by `GET /v1/admin/users` and several POST endpoints under
-/// `/v1/admin/users/{id}/...`. Admin-only.
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
 
@@ -55,23 +51,19 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     }
   }
 
-  Future<void> _action(
-    int userId,
-    String action, {
-    Map<String, dynamic>? body,
-  }) async {
+  Future<void> _action(int userId, String action) async {
     try {
-      await ApiService.adminUserAction(userId, action, body: body);
+      await ApiService.adminUserAction(userId, action);
       if (!mounted) return;
-      _showSnack('$action completed', AppColors.success);
+      _snack('$action completed', AppColors.success);
       await _load();
     } catch (e) {
       if (!mounted) return;
-      _showSnack('Failed: $e', AppColors.danger);
+      _snack('Failed: $e', AppColors.danger);
     }
   }
 
-  void _showSnack(String msg, Color color) {
+  void _snack(String msg, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
@@ -82,17 +74,86 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     );
   }
 
+  void _openActions(Map<String, dynamic> user) {
+    final name = (user['name'] ?? '—').toString();
+    final isActive = user['is_active'] == true;
+    final userId = ((user['id'] ?? 0) as num).toInt();
+
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade400,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              name,
+              style: Theme.of(
+                ctx,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 16),
+            _ActionTile(
+              icon: isActive ? Icons.lock_outline : Icons.lock_open_outlined,
+              label: isActive ? 'Disable Account' : 'Enable Account',
+              color: isActive ? AppColors.danger : AppColors.success,
+              onTap: () {
+                Navigator.pop(ctx);
+                _action(userId, isActive ? 'disable' : 'enable');
+              },
+            ),
+            _ActionTile(
+              icon: Icons.logout_rounded,
+              label: 'Force Logout',
+              color: AppColors.warning,
+              onTap: () {
+                Navigator.pop(ctx);
+                _action(userId, 'force-logout');
+              },
+            ),
+            _ActionTile(
+              icon: Icons.lock_reset_rounded,
+              label: 'Send Password Reset',
+              color: AppColors.primary,
+              onTap: () {
+                Navigator.pop(ctx);
+                _action(userId, 'reset-password');
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            // Search bar.
+            // Search + filter
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
               child: Row(
                 children: [
                   Expanded(
@@ -100,10 +161,10 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       onChanged: (v) => _search = v,
                       onSubmitted: (_) => _load(),
                       decoration: InputDecoration(
-                        hintText: 'Search by name / email / badge id…',
+                        hintText: 'Search employees...',
                         prefixIcon: const Icon(Icons.search_rounded, size: 20),
                         filled: true,
-                        fillColor: theme.brightness == Brightness.dark
+                        fillColor: isDark
                             ? Colors.white.withValues(alpha: 0.05)
                             : Colors.grey.withValues(alpha: 0.08),
                         border: OutlineInputBorder(
@@ -117,7 +178,43 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  // Filter icon
+                  PopupMenuButton<String>(
+                    icon: Badge(
+                      isLabelVisible: _roleFilter != 'All',
+                      backgroundColor: AppColors.primary,
+                      child: const Icon(Icons.filter_list_rounded),
+                    ),
+                    onSelected: (v) {
+                      setState(() => _roleFilter = v);
+                      _load();
+                    },
+                    itemBuilder: (_) => _roles
+                        .map(
+                          (r) => PopupMenuItem(
+                            value: r,
+                            child: Row(
+                              children: [
+                                if (_roleFilter == r)
+                                  const Icon(
+                                    Icons.check_rounded,
+                                    size: 18,
+                                    color: AppColors.primary,
+                                  )
+                                else
+                                  const SizedBox(width: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  r == 'All'
+                                      ? 'All Roles'
+                                      : r[0].toUpperCase() + r.substring(1),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
                   IconButton(
                     icon: const Icon(Icons.refresh_rounded),
                     onPressed: _loading ? null : _load,
@@ -125,32 +222,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 ],
               ),
             ),
-            // Role chips.
-            SizedBox(
-              height: 44,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _roles.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (_, i) {
-                  final r = _roles[i];
-                  return ChoiceChip(
-                    label: Text(
-                      r == 'All' ? 'All' : r[0].toUpperCase() + r.substring(1),
-                    ),
-                    selected: _roleFilter == r,
-                    onSelected: (_) {
-                      setState(() => _roleFilter = r);
-                      _load();
-                    },
-                    selectedColor: AppColors.primary.withValues(alpha: 0.18),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 4),
 
+            // List
             Expanded(
               child: _loading && _users.isEmpty
                   ? const Center(
@@ -159,22 +232,90 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       ),
                     )
                   : _error != null
-                  ? _ErrorView(message: _error!, onRetry: _load)
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            color: AppColors.danger,
+                            size: 40,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _error!,
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _load,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    )
                   : RefreshIndicator(
                       color: AppColors.primary,
                       onRefresh: _load,
                       child: ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
                         itemCount: _users.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (_, i) => _UserRow(
-                          row: _users[i],
-                          onAction: (action, [body]) => _action(
-                            ((_users[i]['id'] ?? 0) as num).toInt(),
-                            action,
-                            body: body,
-                          ),
-                        ),
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (_, i) {
+                          final user = _users[i];
+                          final name = (user['name'] ?? '—').toString();
+                          final isOnline = user['is_online'] == true;
+
+                          return GestureDetector(
+                            onTap: () => _openActions(user),
+                            child: NeuCard(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 20,
+                                    backgroundColor: AppColors.primary
+                                        .withValues(alpha: 0.12),
+                                    child: Text(
+                                      name.isNotEmpty
+                                          ? name[0].toUpperCase()
+                                          : '?',
+                                      style: const TextStyle(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      name,
+                                      style: theme.textTheme.titleSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                  ),
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: isOnline
+                                          ? AppColors.success
+                                          : Colors.grey.shade300,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
             ),
@@ -185,247 +326,33 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   }
 }
 
-class _UserRow extends StatelessWidget {
-  final Map<String, dynamic> row;
-  final Future<void> Function(String action, [Map<String, dynamic>? body])
-  onAction;
-
-  const _UserRow({required this.row, required this.onAction});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final name = (row['name'] ?? '—').toString();
-    final email = (row['email'] ?? '').toString();
-    final role = (row['role'] ?? 'employee').toString();
-    final isActive = row['is_active'] == true;
-    final badge = (row['badge_id'] ?? '').toString();
-
-    return NeuCard(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: _roleColor(role).withValues(alpha: 0.15),
-                child: Text(
-                  name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?',
-                  style: TextStyle(
-                    color: _roleColor(role),
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (email.isNotEmpty)
-                      Text(
-                        email,
-                        style: theme.textTheme.bodySmall,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        _Pill(text: role, color: _roleColor(role)),
-                        _Pill(
-                          text: isActive ? 'active' : 'disabled',
-                          color: isActive
-                              ? AppColors.success
-                              : AppColors.danger,
-                        ),
-                        if (badge.isNotEmpty)
-                          _Pill(text: badge, color: AppColors.primary),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert_rounded),
-                onSelected: (v) async {
-                  if (v == 'enable') {
-                    await onAction('enable');
-                  } else if (v == 'disable') {
-                    await onAction('disable');
-                  } else if (v == 'force_logout') {
-                    await onAction('force-logout');
-                  } else if (v == 'force_reset') {
-                    await onAction('reset-password');
-                  } else if (v == 'promote_hr') {
-                    await onAction('promote', {'role': 'hr'});
-                  } else if (v == 'promote_admin') {
-                    await onAction('promote', {'role': 'admin'});
-                  } else if (v == 'demote_employee') {
-                    await onAction('promote', {'role': 'employee'});
-                  }
-                },
-                itemBuilder: (_) => [
-                  if (isActive)
-                    const PopupMenuItem(
-                      value: 'disable',
-                      child: ListTile(
-                        leading: Icon(Icons.lock_outline),
-                        title: Text('Disable account'),
-                        dense: true,
-                      ),
-                    )
-                  else
-                    const PopupMenuItem(
-                      value: 'enable',
-                      child: ListTile(
-                        leading: Icon(Icons.lock_open_outlined),
-                        title: Text('Enable account'),
-                        dense: true,
-                      ),
-                    ),
-                  const PopupMenuItem(
-                    value: 'force_logout',
-                    child: ListTile(
-                      leading: Icon(Icons.logout_rounded),
-                      title: Text('Force logout'),
-                      dense: true,
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'force_reset',
-                    child: ListTile(
-                      leading: Icon(Icons.lock_reset_rounded),
-                      title: Text('Send password reset'),
-                      dense: true,
-                    ),
-                  ),
-                  const PopupMenuDivider(),
-                  if (role != 'admin')
-                    const PopupMenuItem(
-                      value: 'promote_admin',
-                      child: ListTile(
-                        leading: Icon(Icons.shield_outlined),
-                        title: Text('Promote to admin'),
-                        dense: true,
-                      ),
-                    ),
-                  if (role != 'hr')
-                    const PopupMenuItem(
-                      value: 'promote_hr',
-                      child: ListTile(
-                        leading: Icon(Icons.workspace_premium_outlined),
-                        title: Text('Promote to HR'),
-                        dense: true,
-                      ),
-                    ),
-                  if (role != 'employee')
-                    const PopupMenuItem(
-                      value: 'demote_employee',
-                      child: ListTile(
-                        leading: Icon(Icons.person_outline),
-                        title: Text('Demote to employee'),
-                        dense: true,
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _roleColor(String r) {
-    switch (r) {
-      case 'admin':
-        return AppColors.danger;
-      case 'hr':
-        return AppColors.warning;
-      case 'manager':
-        return AppColors.secondary;
-      default:
-        return AppColors.primary;
-    }
-  }
-}
-
-class _Pill extends StatelessWidget {
-  final String text;
+class _ActionTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
   final Color color;
-  const _Pill({required this.text, required this.color});
+  final VoidCallback onTap;
+  const _ActionTile({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      margin: const EdgeInsets.only(top: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
+    return ListTile(
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(10),
         ),
+        child: Icon(icon, color: color, size: 20),
       ),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _ErrorView({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, color: AppColors.danger, size: 48),
-            const SizedBox(height: 12),
-            Text(
-              'Could not load users',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Retry'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
+      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+      trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+      onTap: onTap,
     );
   }
 }

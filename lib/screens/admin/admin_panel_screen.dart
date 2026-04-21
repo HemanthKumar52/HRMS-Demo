@@ -65,7 +65,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Admin Panel',
+          _labels[_index],
           style: TextStyle(
             fontWeight: FontWeight.w800,
             color: isDark ? AppColors.darkText : AppColors.lightText,

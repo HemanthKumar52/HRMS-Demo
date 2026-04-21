@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neu_card.dart';
+import '../manager/approvals_screen.dart';
 
 /// Super-admin command center.
 ///
@@ -118,6 +119,14 @@ class _AdminCommandCenterScreenState extends State<AdminCommandCenterScreen> {
           'dd MMM yyyy · hh:mm a',
         ).format(DateTime.parse(asOfRaw).toLocal());
       } catch (_) {}
+    }
+
+    void _openApprovals(BuildContext ctx, int tab) {
+      Navigator.of(ctx).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ApprovalsScreen(initialTab: tab),
+        ),
+      );
     }
 
     return [
@@ -262,36 +271,43 @@ class _AdminCommandCenterScreenState extends State<AdminCommandCenterScreen> {
                   label: 'Leave Requests',
                   count: ((pending['leave_requests'] ?? 0) as num).toInt(),
                   color: AppColors.warning,
+                  onTap: () => _openApprovals(context, 0),
                 ),
                 _PendingRow(
                   label: 'Claims',
                   count: ((pending['claims'] ?? 0) as num).toInt(),
                   color: AppColors.primary,
+                  onTap: () => _openApprovals(context, 1),
                 ),
                 _PendingRow(
                   label: 'Tickets',
                   count: ((pending['tickets'] ?? 0) as num).toInt(),
                   color: AppColors.secondary,
+                  onTap: () => _openApprovals(context, 2),
                 ),
                 _PendingRow(
                   label: 'Shift Requests',
                   count: ((pending['shift_requests'] ?? 0) as num).toInt(),
                   color: AppColors.pink,
+                  onTap: () => _openApprovals(context, 3),
                 ),
                 _PendingRow(
                   label: 'Work Type Requests',
                   count: ((pending['work_type_requests'] ?? 0) as num).toInt(),
                   color: AppColors.success,
+                  onTap: () => _openApprovals(context, 3),
                 ),
                 _PendingRow(
                   label: 'Regularization',
                   count: ((pending['attendance_requests'] ?? 0) as num).toInt(),
                   color: AppColors.orange,
+                  onTap: () => _openApprovals(context, 4),
                 ),
                 _PendingRow(
                   label: 'Asset Requests',
                   count: ((pending['asset_requests'] ?? 0) as num).toInt(),
                   color: AppColors.danger,
+                  onTap: () => _openApprovals(context, 0),
                 ),
                 const Divider(height: 24),
                 Row(
@@ -449,42 +465,53 @@ class _PendingRow extends StatelessWidget {
   final String label;
   final int count;
   final Color color;
+  final VoidCallback? onTap;
   const _PendingRow({
     required this.label,
     required this.count,
     required this.color,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 10),
-          Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
-            child: Text(
-              '$count',
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w800,
-                fontSize: 13,
+            const SizedBox(width: 10),
+            Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 6),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: Colors.grey.shade400,
+            ),
+          ],
+        ),
       ),
     );
   }

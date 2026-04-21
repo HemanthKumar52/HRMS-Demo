@@ -13,7 +13,9 @@ import '../../widgets/status_chip.dart';
 /// Each tab loads its own slice from the backend, supports pull-to-refresh, and
 /// approves / rejects through the existing accept/reject endpoints.
 class ApprovalsScreen extends StatefulWidget {
-  const ApprovalsScreen({super.key});
+  /// Optional initial tab index (0=Leave, 1=Claims, 2=Tickets, 3=WorkType, 4=Attendance).
+  final int initialTab;
+  const ApprovalsScreen({super.key, this.initialTab = 0});
 
   @override
   State<ApprovalsScreen> createState() => _ApprovalsScreenState();
@@ -26,7 +28,11 @@ class _ApprovalsScreenState extends State<ApprovalsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(
+      length: 5,
+      vsync: this,
+      initialIndex: widget.initialTab.clamp(0, 4),
+    );
   }
 
   @override

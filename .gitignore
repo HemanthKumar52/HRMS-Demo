@@ -153,3 +153,4 @@ windows/flutter/generated_plugins.cmake
 
 # Ignore vscode AI rules
 .github/instructions/codacy.instructions.md
+*.sql
