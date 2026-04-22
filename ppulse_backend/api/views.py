@@ -2516,9 +2516,14 @@ class PayslipsListView(APIView):
                 'year': year,
                 'payslips': [
                     {
+                        'id': p.id,
                         'month': p.month,
                         'label': month_names[p.month] if p.month and 1 <= p.month <= 12 else '',
                         'net_pay': float(p.net_pay) if p.net_pay else 0,
+                        'gross_pay': float(p.gross_pay) if p.gross_pay else 0,
+                        'basic_pay': float(p.basic_pay) if p.basic_pay else 0,
+                        'deduction': float(p.deduction) if p.deduction else 0,
+                        'status': p.status or 'draft',
                     }
                     for p in payslips
                 ],
