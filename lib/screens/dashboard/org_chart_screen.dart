@@ -472,156 +472,194 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
             ],
           ),
         ),
-        // Chart
+        // Chart — auto-fit to viewport on first render
         Expanded(
-          child: GestureDetector(
-            onDoubleTap: _resetZoom,
-            child: InteractiveViewer(
-              transformationController: _transformCtrl,
-              minScale: 0.05,
-              maxScale: 6.0,
-              boundaryMargin: const EdgeInsets.all(1000),
-              child: SizedBox(
-                width: canvasSize,
-                height: canvasSize,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    // Connection lines
-                    CustomPaint(
-                      size: Size(canvasSize, canvasSize),
-                      painter: _LinesPainter(
-                        lines: chart.lines,
-                        center: Offset(center, center),
-                        isDark: isDark,
-                      ),
-                    ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Auto-fit: scale so entire chart fits in viewport
+              final viewW = constraints.maxWidth;
+              final viewH = constraints.maxHeight;
+              final scaleX = viewW / canvasSize;
+              final scaleY = viewH / canvasSize;
+              final fitScale = min(scaleX, scaleY) * 0.92;
 
-                    // Ring guide circles with tier labels
-                    for (int r = 1; r < chart.radii.length; r++)
-                      Positioned(
-                        left: center - chart.radii[r],
-                        top: center - chart.radii[r],
-                        child: IgnorePointer(
-                          child: SizedBox(
-                            width: chart.radii[r] * 2,
-                            height: chart.radii[r] * 2,
-                            child: Stack(
-                              children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: chart.nodes
-                                          .firstWhere(
-                                            (n) => n.ring == r,
-                                            orElse: () => chart.nodes.first,
-                                          )
-                                          .color
-                                          .withValues(
-                                            alpha: isDark ? 0.08 : 0.06,
-                                          ),
-                                      width: 1,
-                                    ),
-                                  ),
-                                ),
-                                // Ring label at top
-                                Positioned(
-                                  top: 0,
-                                  left: 0,
-                                  right: 0,
-                                  child: Center(
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: isDark
-                                            ? Colors.black.withValues(
-                                                alpha: 0.6,
-                                              )
-                                            : Colors.white.withValues(
-                                                alpha: 0.8,
-                                              ),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        _labelForRing(r, activeTiers),
-                                        style: TextStyle(
-                                          fontSize: 8,
-                                          fontWeight: FontWeight.w600,
-                                          color: isDark
-                                              ? Colors.white38
-                                              : Colors.grey,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+              // Set initial transform to center and fit
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (_transformCtrl.value == Matrix4.identity()) {
+                  final dx = (viewW - canvasSize * fitScale) / 2;
+                  final dy = (viewH - canvasSize * fitScale) / 2;
+                  _transformCtrl.value = Matrix4.identity()
+                    ..setEntry(0, 3, dx)
+                    ..setEntry(1, 3, dy)
+                    ..setEntry(0, 0, fitScale)
+                    ..setEntry(1, 1, fitScale)
+                    ..setEntry(2, 2, fitScale);
+                }
+              });
+
+              return GestureDetector(
+                onDoubleTap: () {
+                  // Double-tap toggles between fit-all and 1:1
+                  final dx = (viewW - canvasSize * fitScale) / 2;
+                  final dy = (viewH - canvasSize * fitScale) / 2;
+                  _transformCtrl.value = Matrix4.identity()
+                    ..setEntry(0, 3, dx)
+                    ..setEntry(1, 3, dy)
+                    ..setEntry(0, 0, fitScale)
+                    ..setEntry(1, 1, fitScale)
+                    ..setEntry(2, 2, fitScale);
+                  HapticFeedback.lightImpact();
+                },
+                child: InteractiveViewer(
+                  transformationController: _transformCtrl,
+                  minScale: 0.02,
+                  maxScale: 8.0,
+                  boundaryMargin: const EdgeInsets.all(2000),
+                  child: SizedBox(
+                    width: canvasSize,
+                    height: canvasSize,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        // Connection lines
+                        CustomPaint(
+                          size: Size(canvasSize, canvasSize),
+                          painter: _LinesPainter(
+                            lines: chart.lines,
+                            center: Offset(center, center),
+                            isDark: isDark,
                           ),
                         ),
-                      ),
 
-                    // Nodes
-                    ...chart.nodes.asMap().entries.map((entry) {
-                      final idx = entry.key;
-                      final pn = entry.value;
-                      final isCenter = pn.ring == 0;
-                      final nodeSize = isCenter
-                          ? 50.0
-                          : (pn.node.tier <= 1 ? 30.0 : 24.0);
-                      final tagWidth = isCenter ? 140.0 : 120.0;
-                      final widgetWidth = max(nodeSize * 2, tagWidth) + 10;
-
-                      return Positioned(
-                        left: center + pn.x - widgetWidth / 2,
-                        top: center + pn.y - nodeSize - 5,
-                        child:
-                            GestureDetector(
-                                  onTap: () => _showNodeDetail(pn.node),
-                                  child: SizedBox(
-                                    width: widgetWidth,
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        _NodeCircle(
-                                          node: pn.node,
-                                          size: nodeSize,
-                                          color: pn.color,
-                                          isCenter: isCenter,
+                        // Ring guide circles with tier labels
+                        for (int r = 1; r < chart.radii.length; r++)
+                          Positioned(
+                            left: center - chart.radii[r],
+                            top: center - chart.radii[r],
+                            child: IgnorePointer(
+                              child: SizedBox(
+                                width: chart.radii[r] * 2,
+                                height: chart.radii[r] * 2,
+                                child: Stack(
+                                  children: [
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: chart.nodes
+                                              .firstWhere(
+                                                (n) => n.ring == r,
+                                                orElse: () => chart.nodes.first,
+                                              )
+                                              .color
+                                              .withValues(
+                                                alpha: isDark ? 0.08 : 0.06,
+                                              ),
+                                          width: 1,
                                         ),
-                                        const SizedBox(height: 5),
-                                        _NameTag(
-                                          node: pn.node,
-                                          color: pn.color,
-                                          isDark: isDark,
-                                          maxW: tagWidth,
-                                          isCenter: isCenter,
-                                        ),
-                                      ],
+                                      ),
                                     ),
-                                  ),
-                                )
-                                .animate()
-                                .fadeIn(
-                                  duration: 350.ms,
-                                  delay: (pn.ring * 120 + idx * 20).ms,
-                                )
-                                .scale(
-                                  begin: const Offset(0.5, 0.5),
-                                  end: const Offset(1, 1),
-                                  duration: 350.ms,
-                                  delay: (pn.ring * 120 + idx * 20).ms,
+                                    // Ring label at top
+                                    Positioned(
+                                      top: 0,
+                                      left: 0,
+                                      right: 0,
+                                      child: Center(
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: isDark
+                                                ? Colors.black.withValues(
+                                                    alpha: 0.6,
+                                                  )
+                                                : Colors.white.withValues(
+                                                    alpha: 0.8,
+                                                  ),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            _labelForRing(r, activeTiers),
+                                            style: TextStyle(
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.w600,
+                                              color: isDark
+                                                  ? Colors.white38
+                                                  : Colors.grey,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                      );
-                    }),
-                  ],
+                              ),
+                            ),
+                          ),
+
+                        // Nodes
+                        ...chart.nodes.asMap().entries.map((entry) {
+                          final idx = entry.key;
+                          final pn = entry.value;
+                          final isCenter = pn.ring == 0;
+                          final nodeSize = isCenter
+                              ? 50.0
+                              : (pn.node.tier <= 1 ? 30.0 : 24.0);
+                          final tagWidth = isCenter ? 140.0 : 120.0;
+                          final widgetWidth = max(nodeSize * 2, tagWidth) + 10;
+
+                          return Positioned(
+                            left: center + pn.x - widgetWidth / 2,
+                            top: center + pn.y - nodeSize - 5,
+                            child:
+                                GestureDetector(
+                                      onTap: () => _showNodeDetail(pn.node),
+                                      child: SizedBox(
+                                        width: widgetWidth,
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            _NodeCircle(
+                                              node: pn.node,
+                                              size: nodeSize,
+                                              color: pn.color,
+                                              isCenter: isCenter,
+                                            ),
+                                            const SizedBox(height: 5),
+                                            _NameTag(
+                                              node: pn.node,
+                                              color: pn.color,
+                                              isDark: isDark,
+                                              maxW: tagWidth,
+                                              isCenter: isCenter,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                    .animate()
+                                    .fadeIn(
+                                      duration: 350.ms,
+                                      delay: (pn.ring * 120 + idx * 20).ms,
+                                    )
+                                    .scale(
+                                      begin: const Offset(0.5, 0.5),
+                                      end: const Offset(1, 1),
+                                      duration: 350.ms,
+                                      delay: (pn.ring * 120 + idx * 20).ms,
+                                    ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ],
