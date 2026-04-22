@@ -4,15 +4,15 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
 
-// ── Enterprise Circular Org Chart ───────────────────────────────
-// Handles unlimited hierarchy depth, 100s of employees.
-// Data-driven: everything comes from /org-chart API (DB).
-// Each ring = one level of depth. Lines connect parent → child.
-// Colors assigned per depth level.
+// ── Corporate Hierarchy Org Chart ─────────────────────────────────
+// Proper corporate structure: CEO at center, then C-suite ring,
+// Directors/Board ring, HR/Managers ring, Team Leads ring, Employees ring.
+// Nodes classified by designation tier, not just BFS depth.
 // Pinch-to-zoom + double-tap reset + tap node for detail.
 
 class OrgChartScreen extends StatefulWidget {
@@ -55,44 +55,131 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
     if (mounted) setState(() => _isLoading = false);
   }
 
-  // ── Build flat ring structure from tree ────────────────────────
-  // Each _FlatNode knows its ring, angle position, and parent index.
-  _ChartData _buildChart() {
-    if (_rawRoots.isEmpty) return _ChartData([], [], []);
+  // ── Designation tier classification ──────────────────────────────
+  // Maps designation keywords to tier index:
+  //   0 = CEO/MD/Founder (center)
+  //   1 = C-suite (CTO, CFO, CPO, COO, CMO, CIO, CHRO)
+  //   2 = Board/VP/Director
+  //   3 = HR/System Admin/Senior Manager
+  //   4 = Manager/Team Lead
+  //   5 = Employee/Developer/Tester/Engineer/Designer/Analyst
+  static int _tierForDesignation(String designation, int bfsDepth) {
+    final d = designation.toLowerCase().trim();
 
-    // Parse tree
+    // Tier 0: CEO / Managing Director / Founder
+    if (d.contains('ceo') ||
+        d.contains('chief executive') ||
+        d.contains('managing director') ||
+        d.contains('founder') ||
+        d.contains('president') ||
+        d.contains('chairperson') ||
+        d.contains('chairman')) {
+      return 0;
+    }
+
+    // Tier 1: C-Suite
+    if (d.startsWith('c') && d.length <= 4 && !d.contains(' '))
+      return 1; // CTO, CFO, CPO, COO, CMO, CIO
+    if (d.contains('chief ') ||
+        d.contains('cto') ||
+        d.contains('cfo') ||
+        d.contains('cpo') ||
+        d.contains('coo') ||
+        d.contains('cmo') ||
+        d.contains('cio') ||
+        d.contains('chro') ||
+        d.contains('cso')) {
+      return 1;
+    }
+
+    // Tier 2: Board / VP / Director
+    if (d.contains('board') ||
+        d.contains('vice president') ||
+        d.contains('vp ') ||
+        d.endsWith(' vp') ||
+        d == 'vp' ||
+        d.contains('director') ||
+        d.contains('head of') ||
+        d.contains('avp')) {
+      return 2;
+    }
+
+    // Tier 3: HR / System Admin / Senior Manager
+    if (d.contains('hr ') ||
+        d.startsWith('hr') ||
+        d.contains('human resource') ||
+        d.contains('system admin') ||
+        d.contains('senior manager') ||
+        d.contains('general manager') ||
+        d.contains('gm') ||
+        d.contains('admin')) {
+      return 3;
+    }
+
+    // Tier 4: Manager / Team Lead / Lead
+    if (d.contains('manager') ||
+        d.contains('team lead') ||
+        d.contains('tech lead') ||
+        d.contains('lead') ||
+        d.contains('supervisor') ||
+        d.contains('coordinator')) {
+      return 4;
+    }
+
+    // Tier 5: Employees — everyone else
+    return 5;
+  }
+
+  // ── Build chart from tree data ────────────────────────────────
+  _ChartData _buildChart() {
+    if (_rawRoots.isEmpty) return const _ChartData([], [], []);
+
     final roots = _rawRoots.map(_OrgNode.fromMap).toList();
 
-    // BFS to flatten into rings
-    final rings = <List<_OrgNode>>[];
-    // Ring 0: single main root (pick the one with most children or first)
-    roots.sort((a, b) => b.totalDescendants.compareTo(a.totalDescendants));
-    final mainRoot = roots.first;
-    rings.add([mainRoot]);
-
-    // Ring 1: main root's children + other roots
-    final ring1 = <_OrgNode>[...mainRoot.children];
-    for (int i = 0; i < roots.length; i++) {
-      if (roots[i] != mainRoot) ring1.add(roots[i]);
-    }
-    if (ring1.isNotEmpty) rings.add(ring1);
-
-    // Subsequent rings: keep going until no more children
-    var current = ring1;
-    for (int depth = 2; depth <= 10; depth++) {
-      final next = <_OrgNode>[];
-      for (final p in current) {
-        next.addAll(p.children);
+    // Flatten entire tree via BFS
+    final allNodes = <_OrgNode>[];
+    final parentMap = <_OrgNode, _OrgNode?>{}; // child -> parent
+    void flattenBFS(List<_OrgNode> nodes, _OrgNode? parent, int depth) {
+      for (final node in nodes) {
+        node.bfsDepth = depth;
+        allNodes.add(node);
+        parentMap[node] = parent;
+        flattenBFS(node.children, node, depth + 1);
       }
-      if (next.isEmpty) break;
-      rings.add(next);
-      current = next;
     }
 
-    // Compute radii dynamically
+    flattenBFS(roots, null, 0);
+
+    // Classify each node into a tier based on designation
+    for (final node in allNodes) {
+      node.tier = _tierForDesignation(node.designation, node.bfsDepth);
+    }
+
+    // If no CEO found, promote the root with most descendants to tier 0
+    if (!allNodes.any((n) => n.tier == 0)) {
+      roots.sort((a, b) => b.totalDescendants.compareTo(a.totalDescendants));
+      roots.first.tier = 0;
+    }
+
+    // Group nodes by tier
+    final tierMap = <int, List<_OrgNode>>{};
+    for (final node in allNodes) {
+      tierMap.putIfAbsent(node.tier, () => []).add(node);
+    }
+
+    // Build ordered rings (skip empty tiers)
+    final activeTiers = tierMap.keys.toList()..sort();
+    final rings = <List<_OrgNode>>[];
+    final tierToRing = <int, int>{};
+    for (final tier in activeTiers) {
+      tierToRing[tier] = rings.length;
+      rings.add(tierMap[tier]!);
+    }
+
+    // Compute radii
     const minNodeArc = 140.0;
-    const minRingGap = 150.0;
-    final radii = <double>[0];
+    const minRingGap = 180.0;
+    final radii = <double>[0.0]; // ring 0 is center
     for (int r = 1; r < rings.length; r++) {
       final count = rings[r].length;
       final needed = (count * minNodeArc) / (2 * pi);
@@ -100,75 +187,57 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
       radii.add(max(needed, minR));
     }
 
-    // Build flat positioned nodes
+    // Position nodes
     final nodes = <_PositionedNode>[];
-    // Center node
-    nodes.add(
-      _PositionedNode(
-        node: mainRoot,
-        ring: 0,
-        angle: 0,
-        x: 0,
-        y: 0,
-        color: _colorForRing(0, rings.length),
-      ),
-    );
+    final nodeIndexMap = <_OrgNode, int>{}; // node -> global index
 
-    // Parent index tracking for line connections
-    final parentIndices = <int, int>{}; // nodeGlobalIndex -> parentGlobalIndex
-
-    for (int r = 1; r < rings.length; r++) {
-      final count = rings[r].length;
-      for (int i = 0; i < count; i++) {
-        final angle = (2 * pi * i / count) - (pi / 2);
-        final x = radii[r] * cos(angle);
-        final y = radii[r] * sin(angle);
+    for (int r = 0; r < rings.length; r++) {
+      final ring = rings[r];
+      if (r == 0 && ring.length == 1) {
+        // Center node
         final globalIdx = nodes.length;
-
-        // Find parent in previous ring
-        final parentRing = rings[r - 1];
-        int parentGlobalStart = 0;
-        for (int pr = 0; pr < r - 1; pr++) {
-          parentGlobalStart += rings[pr].length;
-        }
-
-        // Match child to parent
-        int parentIdx = 0;
-        if (r == 1) {
-          parentIdx = 0; // all ring 1 nodes connect to center
-        } else {
-          // Find which parent this child belongs to
-          int childCounter = 0;
-          for (int pi = 0; pi < parentRing.length; pi++) {
-            final pChildCount = parentRing[pi].children.length;
-            if (i < childCounter + pChildCount) {
-              parentIdx = parentGlobalStart + pi;
-              break;
-            }
-            childCounter += pChildCount;
-          }
-        }
-        parentIndices[globalIdx] = parentIdx;
-
+        nodeIndexMap[ring[0]] = globalIdx;
         nodes.add(
           _PositionedNode(
-            node: rings[r][i],
+            node: ring[0],
             ring: r,
-            angle: angle,
-            x: x,
-            y: y,
-            color: _colorForRing(r, rings.length),
+            angle: 0,
+            x: 0,
+            y: 0,
+            color: _tierColors[activeTiers[r] % _tierColors.length],
           ),
         );
+      } else {
+        final count = ring.length;
+        for (int i = 0; i < count; i++) {
+          final angle = (2 * pi * i / count) - (pi / 2);
+          final x = radii[r] * cos(angle);
+          final y = radii[r] * sin(angle);
+          final globalIdx = nodes.length;
+          nodeIndexMap[ring[i]] = globalIdx;
+          nodes.add(
+            _PositionedNode(
+              node: ring[i],
+              ring: r,
+              angle: angle,
+              x: x,
+              y: y,
+              color: _tierColors[activeTiers[r] % _tierColors.length],
+            ),
+          );
+        }
       }
     }
 
-    // Build lines
+    // Build connection lines from parent map
     final lines = <_ConnectionLine>[];
-    for (final entry in parentIndices.entries) {
-      final childIdx = entry.key;
-      final parentIdx = entry.value;
-      if (parentIdx < nodes.length && childIdx < nodes.length) {
+    for (final entry in parentMap.entries) {
+      final child = entry.key;
+      final parent = entry.value;
+      if (parent == null) continue;
+      final childIdx = nodeIndexMap[child];
+      final parentIdx = nodeIndexMap[parent];
+      if (childIdx != null && parentIdx != null) {
         lines.add(
           _ConnectionLine(
             from: Offset(nodes[parentIdx].x, nodes[parentIdx].y),
@@ -182,42 +251,31 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
     return _ChartData(nodes, lines, radii);
   }
 
-  // Ring colors — enough for 8+ levels
-  static const _levelColors = [
+  // Tier colors — corporate hierarchy
+  static const _tierColors = [
+    Color(0xFFD4AF37), // CEO/Founder — gold
     Color(0xFF7C3AED), // C-Suite — purple
-    Color(0xFF2563EB), // Directors — blue
-    Color(0xFF059669), // Managers — green
-    Color(0xFF0891B2), // Team Leads — cyan
-    Color(0xFFD97706), // Senior — amber
-    Color(0xFFDC2626), // Junior — red
-    Color(0xFF7C3AED), // Intern — purple (cycle)
-    Color(0xFF2563EB), // Others — blue (cycle)
+    Color(0xFF2563EB), // Directors/VP — blue
+    Color(0xFF059669), // HR/Senior Mgmt — green
+    Color(0xFF0891B2), // Manager/TL — cyan
+    Color(0xFFE97451), // Employees — coral
   ];
 
-  Color _colorForRing(int ring, int totalRings) {
-    return _levelColors[ring % _levelColors.length];
-  }
+  // Tier labels
+  static const _tierLabels = [
+    'CEO / Founder',
+    'C-Suite',
+    'Directors / VP',
+    'HR / Senior Management',
+    'Managers / Team Leads',
+    'Employees',
+  ];
 
-  // Smart ring labels based on whether nodes have children
-  String _labelForRing(int ring, int totalRings, List<_PositionedNode> nodes) {
-    if (ring == 0) return 'C-Suite';
-    final ringNodes = nodes.where((n) => n.ring == ring).toList();
-    final allLeaf = ringNodes.every((n) => n.node.children.isEmpty);
-    final hasManagers = ringNodes.any((n) {
-      final d = n.node.designation.toLowerCase();
-      return d.contains('manager') ||
-          d.contains('director') ||
-          d.contains('head') ||
-          d.contains('vp') ||
-          d.contains('lead');
-    });
-
-    if (allLeaf) return 'Employees';
-    if (ring == 1) {
-      if (hasManagers) return 'Managers';
-      return 'Directors';
+  String _labelForRing(int ring, List<int> activeTiers) {
+    if (ring < activeTiers.length) {
+      final tier = activeTiers[ring];
+      if (tier < _tierLabels.length) return _tierLabels[tier];
     }
-    if (ring == 2) return hasManagers ? 'Team Leads' : 'Managers';
     return 'Level ${ring + 1}';
   }
 
@@ -230,6 +288,8 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
     HapticFeedback.lightImpact();
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final tierColor = _tierColors[node.tier % _tierColors.length];
+
     showModalBottomSheet(
       context: context,
       backgroundColor: theme.cardColor,
@@ -252,7 +312,7 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
             const SizedBox(height: 20),
             CircleAvatar(
               radius: 36,
-              backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+              backgroundColor: tierColor.withValues(alpha: 0.15),
               backgroundImage:
                   node.avatarUrl != null && node.avatarUrl!.isNotEmpty
                   ? NetworkImage(node.avatarUrl!)
@@ -260,10 +320,10 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
               child: node.avatarUrl == null || node.avatarUrl!.isEmpty
                   ? Text(
                       node.initials,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
+                        color: tierColor,
                       ),
                     )
                   : null,
@@ -277,40 +337,50 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
             ),
             if (node.designation.isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text(
-                node.designation,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: isDark ? Colors.white54 : Colors.grey,
-                ),
-              ),
-            ],
-            if (node.department.isNotEmpty) ...[
-              const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
+                  color: tierColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  node.department,
-                  style: const TextStyle(
-                    color: AppColors.primary,
+                  node.designation,
+                  style: TextStyle(
+                    color: tierColor,
                     fontWeight: FontWeight.w600,
-                    fontSize: 12,
+                    fontSize: 13,
                   ),
                 ),
               ),
             ],
-            const SizedBox(height: 12),
-            if (node.children.isNotEmpty)
+            if (node.department.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                node.department,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: isDark ? Colors.white54 : Colors.grey,
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            Text(
+              _tierLabels[node.tier % _tierLabels.length],
+              style: TextStyle(
+                fontSize: 11,
+                color: tierColor,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (node.children.isNotEmpty) ...[
+              const SizedBox(height: 4),
               Text(
                 '${node.children.length} direct report(s)',
                 style: theme.textTheme.bodySmall,
               ),
+            ],
           ],
         ),
       ),
@@ -355,28 +425,32 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
     final chart = _buildChart();
     if (chart.nodes.isEmpty) return const Center(child: Text('No data'));
 
-    final totalRings =
-        chart.nodes.map((n) => n.ring).reduce((a, b) => a > b ? a : b) + 1;
+    // Get active tiers for legend
+    final activeTierSet = <int>{};
+    for (final n in chart.nodes) {
+      activeTierSet.add(n.node.tier);
+    }
+    final activeTiers = activeTierSet.toList()..sort();
 
     // Legend
     final legendItems = <Widget>[];
-    for (int r = 0; r < totalRings; r++) {
-      final count = chart.nodes.where((n) => n.ring == r).length;
-      final label = _labelForRing(r, totalRings, chart.nodes);
-      legendItems.add(
-        _legendDot(_colorForRing(r, totalRings), '$label ($count)'),
-      );
+    for (final tier in activeTiers) {
+      final count = chart.nodes.where((n) => n.node.tier == tier).length;
+      final label = tier < _tierLabels.length
+          ? _tierLabels[tier]
+          : 'Level ${tier + 1}';
+      final color = _tierColors[tier % _tierColors.length];
+      legendItems.add(_legendDot(color, '$label ($count)'));
     }
-    final totalCount = chart.nodes.length;
 
     // Canvas size
     final maxR = chart.radii.isNotEmpty ? chart.radii.last : 60.0;
-    final canvasSize = (maxR + 160) * 2;
+    final canvasSize = (maxR + 200) * 2;
     final center = canvasSize / 2;
 
     return Column(
       children: [
-        // Legend + total count
+        // Legend
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 2),
           child: Column(
@@ -389,7 +463,7 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                '$totalCount employees',
+                '${chart.nodes.length} employees',
                 style: TextStyle(
                   fontSize: 11,
                   color: isDark ? Colors.white38 : Colors.grey,
@@ -404,9 +478,9 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
             onDoubleTap: _resetZoom,
             child: InteractiveViewer(
               transformationController: _transformCtrl,
-              minScale: 0.08,
+              minScale: 0.05,
               maxScale: 6.0,
-              boundaryMargin: const EdgeInsets.all(800),
+              boundaryMargin: const EdgeInsets.all(1000),
               child: SizedBox(
                 width: canvasSize,
                 height: canvasSize,
@@ -423,24 +497,69 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
                       ),
                     ),
 
-                    // Ring guide circles
+                    // Ring guide circles with tier labels
                     for (int r = 1; r < chart.radii.length; r++)
                       Positioned(
                         left: center - chart.radii[r],
                         top: center - chart.radii[r],
                         child: IgnorePointer(
-                          child: Container(
+                          child: SizedBox(
                             width: chart.radii[r] * 2,
                             height: chart.radii[r] * 2,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: _colorForRing(
-                                  r,
-                                  totalRings,
-                                ).withValues(alpha: isDark ? 0.06 : 0.05),
-                                width: 1,
-                              ),
+                            child: Stack(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: chart.nodes
+                                          .firstWhere(
+                                            (n) => n.ring == r,
+                                            orElse: () => chart.nodes.first,
+                                          )
+                                          .color
+                                          .withValues(
+                                            alpha: isDark ? 0.08 : 0.06,
+                                          ),
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
+                                // Ring label at top
+                                Positioned(
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  child: Center(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isDark
+                                            ? Colors.black.withValues(
+                                                alpha: 0.6,
+                                              )
+                                            : Colors.white.withValues(
+                                                alpha: 0.8,
+                                              ),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        _labelForRing(r, activeTiers),
+                                        style: TextStyle(
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDark
+                                              ? Colors.white38
+                                              : Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -453,8 +572,8 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
                       final isCenter = pn.ring == 0;
                       final nodeSize = isCenter
                           ? 50.0
-                          : (pn.ring == 1 ? 28.0 : 24.0);
-                      final tagWidth = isCenter ? 130.0 : 110.0;
+                          : (pn.node.tier <= 1 ? 30.0 : 24.0);
+                      final tagWidth = isCenter ? 140.0 : 120.0;
                       final widgetWidth = max(nodeSize * 2, tagWidth) + 10;
 
                       return Positioned(
@@ -528,7 +647,7 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
   }
 }
 
-// ── Positioned data ─────────────────────────────────────────────
+// ── Data structures ────────────────────────────────────────────────
 class _ChartData {
   final List<_PositionedNode> nodes;
   final List<_ConnectionLine> lines;
@@ -564,7 +683,7 @@ class _ConnectionLine {
   });
 }
 
-// ── Node circle widget ──────────────────────────────────────────
+// ── Node circle widget ─────────────────────────────────────────────
 class _NodeCircle extends StatelessWidget {
   final _OrgNode node;
   final double size;
@@ -589,14 +708,16 @@ class _NodeCircle extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: isCenter
-            ? LinearGradient(colors: [color, color.withValues(alpha: 0.7)])
+            ? LinearGradient(
+                colors: [color, color.withValues(alpha: 0.7)],
+              )
             : null,
         color: isCenter ? null : color,
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: isCenter ? 0.35 : 0.25),
-            blurRadius: isCenter ? 20 : 8,
-            spreadRadius: isCenter ? 3 : 1,
+            color: color.withValues(alpha: isCenter ? 0.4 : 0.25),
+            blurRadius: isCenter ? 24 : 8,
+            spreadRadius: isCenter ? 4 : 1,
           ),
         ],
       ),
@@ -613,18 +734,21 @@ class _NodeCircle extends StatelessWidget {
                         Icon(
                           Icons.person,
                           color: Colors.white,
-                          size: size * 0.55,
+                          size: size * 0.5,
                         ),
                         if (node.designation.isNotEmpty)
-                          Text(
-                            node.designation,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: size * 0.16,
-                              fontWeight: FontWeight.w700,
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Text(
+                              node.designation,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: size * 0.14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
                             ),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
                           ),
                       ],
                     )
@@ -641,7 +765,7 @@ class _NodeCircle extends StatelessWidget {
   }
 }
 
-// ── Name tag widget ─────────────────────────────────────────────
+// ── Name tag widget ────────────────────────────────────────────────
 class _NameTag extends StatelessWidget {
   final _OrgNode node;
   final Color color;
@@ -665,7 +789,7 @@ class _NameTag extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E2030) : Colors.white,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
@@ -726,7 +850,7 @@ class _NameTag extends StatelessWidget {
   }
 }
 
-// ── Data model ──────────────────────────────────────────────────
+// ── Data model ─────────────────────────────────────────────────────
 class _OrgNode {
   final String name;
   final String designation;
@@ -734,14 +858,18 @@ class _OrgNode {
   final String? avatarUrl;
   final String initials;
   final List<_OrgNode> children;
+  int tier; // assigned during chart building
+  int bfsDepth; // BFS depth from root
 
-  const _OrgNode({
+  _OrgNode({
     required this.name,
     required this.designation,
     required this.department,
     this.avatarUrl,
     required this.initials,
     required this.children,
+    this.tier = 5,
+    this.bfsDepth = 0,
   });
 
   int get totalDescendants {
@@ -773,13 +901,13 @@ class _OrgNode {
   }
 }
 
-// ── Lines painter ───────────────────────────────────────────────
+// ── Lines painter ──────────────────────────────────────────────────
 class _LinesPainter extends CustomPainter {
   final List<_ConnectionLine> lines;
   final Offset center;
   final bool isDark;
 
-  const _LinesPainter({
+  _LinesPainter({
     required this.lines,
     required this.center,
     required this.isDark,
@@ -789,16 +917,28 @@ class _LinesPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     for (final line in lines) {
       final paint = Paint()
-        ..color = line.color.withValues(alpha: isDark ? 0.15 : 0.1)
+        ..color = line.color.withValues(alpha: isDark ? 0.15 : 0.12)
         ..strokeWidth = 1.2
         ..style = PaintingStyle.stroke;
 
       final from = center + line.from;
       final to = center + line.to;
-      canvas.drawLine(from, to, paint);
+
+      // Curved bezier line
+      final mid = Offset((from.dx + to.dx) / 2, (from.dy + to.dy) / 2);
+      final ctrl = Offset(
+        mid.dx + (to.dy - from.dy) * 0.15,
+        mid.dy - (to.dx - from.dx) * 0.15,
+      );
+
+      final path = Path()
+        ..moveTo(from.dx, from.dy)
+        ..quadraticBezierTo(ctrl.dx, ctrl.dy, to.dx, to.dy);
+
+      canvas.drawPath(path, paint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _LinesPainter old) => lines != old.lines;
 }
