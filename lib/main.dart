@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'providers/app_provider.dart';
@@ -69,6 +70,14 @@ class _PPulseAppState extends State<PPulseApp> {
       title: 'PPULSE',
       debugShowCheckedModeBanner: false,
       theme: themeProvider.cupertinoTheme,
+      // Material widgets (RefreshIndicator, Scaffold, TextField, etc.)
+      // require MaterialLocalizations even inside CupertinoApp.
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en')],
       home: const SplashScreen(),
       routes: {
         '/request-detail': (context) => const RequestDetailScreen(),
