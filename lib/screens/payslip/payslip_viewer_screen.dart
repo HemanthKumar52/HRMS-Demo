@@ -1,18 +1,22 @@
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:pdfx/pdfx.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/platform_adaptive.dart';
 
-/// Displays the payslip PDF fetched from the web backend — same template
-/// as the web app with company logo, earnings/deductions tables, YTD.
+/// Displays the payslip using the same HTML template as the web app.
+/// Shows the HTML payslip inline in a WebView, with download PDF option.
 class PayslipViewerScreen extends StatefulWidget {
   final String month;
   final int year;
   final int? payslipId;
+
   const PayslipViewerScreen({
     super.key,
     required this.month,
@@ -25,52 +29,51 @@ class PayslipViewerScreen extends StatefulWidget {
 }
 
 class _PayslipViewerScreenState extends State<PayslipViewerScreen> {
-  PdfControllerPinch? _pdfController;
-  int _totalPages = 0;
-  int _currentPage = 1;
+  WebViewController? _webController;
   bool _isLoading = true;
+  bool _isDownloading = false;
   String? _error;
-  String? _savedPath;
 
   @override
   void initState() {
     super.initState();
-    _loadPdf();
+    _loadPayslipHTML();
   }
 
-  Future<void> _loadPdf() async {
+  Future<int?> _resolvePayslipId() async {
+    if (widget.payslipId != null) return widget.payslipId;
+
+    final monthIndex =
+        [
+          'January',
+          'February',
+          'March',
+          'April',
+          'May',
+          'June',
+          'July',
+          'August',
+          'September',
+          'October',
+          'November',
+          'December',
+        ].indexOf(widget.month) +
+        1;
+
+    final list = await ApiService.getPayslipsList(year: widget.year);
+    final payslips = List<Map<String, dynamic>>.from(list['payslips'] ?? []);
+    final match = payslips
+        .where((p) => (p['month'] as num?)?.toInt() == monthIndex)
+        .toList();
+    if (match.isNotEmpty) {
+      return (match.first['id'] as num?)?.toInt();
+    }
+    return null;
+  }
+
+  Future<void> _loadPayslipHTML() async {
     try {
-      int? payslipId = widget.payslipId;
-
-      if (payslipId == null) {
-        final monthIndex =
-            [
-              'January',
-              'February',
-              'March',
-              'April',
-              'May',
-              'June',
-              'July',
-              'August',
-              'September',
-              'October',
-              'November',
-              'December',
-            ].indexOf(widget.month) +
-            1;
-        final list = await ApiService.getPayslipsList(year: widget.year);
-        final payslips = List<Map<String, dynamic>>.from(
-          list['payslips'] ?? [],
-        );
-        final match = payslips
-            .where((p) => (p['month'] as num?)?.toInt() == monthIndex)
-            .toList();
-        if (match.isNotEmpty) {
-          payslipId = (match.first['id'] as num?)?.toInt();
-        }
-      }
-
+      final payslipId = await _resolvePayslipId();
       if (payslipId == null) {
         setState(() {
           _error = 'Payslip not found';
@@ -79,22 +82,25 @@ class _PayslipViewerScreenState extends State<PayslipViewerScreen> {
         return;
       }
 
-      // Fetch PDF via ApiService — this calls the web backend's PDF API
-      final response = await ApiService.getPayslipPdf(payslipId);
+      // Fetch HTML from the mobile backend (same template as web)
+      final headers = await ApiService.getAuthHeaders();
+      final baseUrl = ApiService.currentBaseUrl;
+      final url = '$baseUrl/payslips/$payslipId/html';
 
-      if (response.statusCode == 200 && response.bodyBytes.length > 500) {
-        final dir = await getTemporaryDirectory();
-        final file = File('${dir.path}/payslip_$payslipId.pdf');
-        await file.writeAsBytes(response.bodyBytes);
-        _savedPath = file.path;
+      final response = await ApiService.getRaw(url, headers: headers);
 
-        _pdfController = PdfControllerPinch(
-          document: PdfDocument.openFile(file.path),
-        );
+      if (response.statusCode == 200) {
+        final htmlContent = response.body;
+
+        _webController = WebViewController()
+          ..setJavaScriptMode(JavaScriptMode.unrestricted)
+          ..setBackgroundColor(Colors.white)
+          ..loadHtmlString(htmlContent);
+
         setState(() => _isLoading = false);
       } else {
         setState(() {
-          _error = 'Failed to load PDF (${response.statusCode})';
+          _error = 'Failed to load payslip (${response.statusCode})';
           _isLoading = false;
         });
       }
@@ -107,31 +113,40 @@ class _PayslipViewerScreenState extends State<PayslipViewerScreen> {
   }
 
   Future<void> _downloadPdf() async {
-    if (_savedPath == null) return;
+    setState(() => _isDownloading = true);
+    HapticFeedback.mediumImpact();
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final fileName = 'payslip_${widget.month}_${widget.year}.pdf';
-      final dest = File('${dir.path}/$fileName');
-      await File(_savedPath!).copy(dest.path);
+      final payslipId = await _resolvePayslipId();
+      if (payslipId == null) throw Exception('Payslip not found');
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.white, size: 20),
-              const SizedBox(width: 10),
-              Expanded(child: Text('Downloaded: $fileName')),
-            ],
+      final response = await ApiService.getPayslipPdf(payslipId);
+      if (response.statusCode == 200 && response.bodyBytes.length > 500) {
+        final dir = await getApplicationDocumentsDirectory();
+        final fileName = 'payslip_${widget.month}_${widget.year}.pdf';
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(response.bodyBytes);
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(child: Text('Downloaded: $fileName')),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            duration: const Duration(seconds: 3),
           ),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          duration: const Duration(seconds: 3),
-        ),
-      );
+        );
+      } else {
+        throw Exception('PDF generation failed');
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -145,125 +160,110 @@ class _PayslipViewerScreenState extends State<PayslipViewerScreen> {
         ),
       );
     }
-  }
-
-  @override
-  void dispose() {
-    _pdfController?.dispose();
-    super.dispose();
+    if (mounted) setState(() => _isDownloading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          '${widget.month} ${widget.year}',
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        elevation: 0,
+      appBar: adaptiveAppBar(
+        context: context,
+        title: '${widget.month} ${widget.year}',
+        showBackButton: true,
         actions: [
-          if (_savedPath != null)
-            IconButton(
-              icon: const Icon(Icons.download_rounded),
-              tooltip: 'Download PDF',
-              onPressed: _downloadPdf,
-            ),
-          if (_totalPages > 0)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Text(
-                  '$_currentPage / $_totalPages',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey,
+          if (_isDownloading)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: isApplePlatform
+                  ? const CupertinoActivityIndicator(radius: 10)
+                  : const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.primary,
+                      ),
+                    ),
+            )
+          else
+            isApplePlatform
+                ? CupertinoButton(
+                    padding: const EdgeInsets.only(right: 16),
+                    onPressed: _downloadPdf,
+                    child: const Icon(
+                      CupertinoIcons.arrow_down_doc,
+                      size: 22,
+                    ),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.download_rounded),
+                    tooltip: 'Download PDF',
+                    onPressed: _downloadPdf,
                   ),
-                ),
-              ),
-            ),
         ],
       ),
       body: _isLoading
-          ? const Center(
+          ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(color: AppColors.primary),
-                  SizedBox(height: 16),
-                  Text(
+                  isApplePlatform
+                      ? const CupertinoActivityIndicator(radius: 14)
+                      : const CircularProgressIndicator(
+                          color: AppColors.primary,
+                        ),
+                  const SizedBox(height: 16),
+                  const Text(
                     'Loading payslip...',
                     style: TextStyle(color: Colors.grey),
                   ),
                 ],
               ),
             )
-          : _error != null || _pdfController == null
+          : _error != null || _webController == null
           ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.picture_as_pdf_rounded,
-                    size: 64,
-                    color: Colors.grey,
+                  Icon(
+                    isApplePlatform
+                        ? CupertinoIcons.doc_text
+                        : Icons.description_outlined,
+                    size: 48,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    _error ?? 'Could not load payslip',
+                    style: TextStyle(color: Colors.grey.shade500),
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    'PDF not available',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 8),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32),
-                      child: Text(
-                        _error!,
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 13,
+                  isApplePlatform
+                      ? CupertinoButton(
+                          onPressed: () {
+                            setState(() {
+                              _isLoading = true;
+                              _error = null;
+                            });
+                            _loadPayslipHTML();
+                          },
+                          child: const Text('Retry'),
+                        )
+                      : ElevatedButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _isLoading = true;
+                              _error = null;
+                            });
+                            _loadPayslipHTML();
+                          },
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry'),
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             )
-          : PdfViewPinch(
-              controller: _pdfController!,
-              onDocumentLoaded: (document) {
-                setState(() => _totalPages = document.pagesCount);
-              },
-              onPageChanged: (page) {
-                setState(() => _currentPage = page);
-              },
-              builders: PdfViewPinchBuilders<DefaultBuilderOptions>(
-                options: const DefaultBuilderOptions(),
-                documentLoaderBuilder: (_) => const Center(
-                  child: CircularProgressIndicator(color: AppColors.primary),
-                ),
-                errorBuilder: (_, error) => Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: AppColors.danger,
-                        size: 48,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Failed to render PDF',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          : WebViewWidget(controller: _webController!),
     );
   }
 }

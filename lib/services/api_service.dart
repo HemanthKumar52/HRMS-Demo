@@ -77,6 +77,21 @@ class ApiService {
     };
   }
 
+  /// Public access to auth headers (for direct HTTP calls).
+  static Future<Map<String, String>> getAuthHeaders() => _getHeaders();
+
+  /// Public access to the current base URL.
+  static String get currentBaseUrl => baseUrl;
+
+  /// Raw HTTP GET with custom URL and headers.
+  static Future<http.Response> getRaw(
+    String url, {
+    Map<String, String>? headers,
+  }) async {
+    final h = headers ?? await _getHeaders();
+    return http.get(Uri.parse(url), headers: h);
+  }
+
   static Future<dynamic> get(String endpoint) async {
     var headers = await _getHeaders();
     var response = await http.get(
