@@ -71,6 +71,26 @@ class _PayslipScreenState extends State<PayslipScreen> {
       );
       _payslips = response['payslips'] ?? [];
       _employees = List<String>.from(response['employees'] ?? []);
+
+      // Auto-select the latest month that has a payslip
+      if (_payslips.isNotEmpty) {
+        final months =
+            _payslips
+                .cast<Map<String, dynamic>>()
+                .map((p) => (p['month'] as num?)?.toInt() ?? 0)
+                .where((m) => m > 0)
+                .toList()
+              ..sort();
+        if (months.isNotEmpty) {
+          final latestMonth = months.last;
+          // Only auto-select if current month has no data
+          final currentHasData = months.contains(_selectedMonthIndex + 1);
+          if (!currentHasData) {
+            _selectedMonthIndex = latestMonth - 1;
+          }
+        }
+      }
+
       await _loadPayslipDetails();
     } catch (e) {
       _payslips = [];
