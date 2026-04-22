@@ -2532,434 +2532,134 @@ class PayslipsListView(APIView):
 
 
 class PayslipHTMLView(APIView):
-    """Render payslip as HTML — proxies to web app for the same template,
-    falls back to local rendering if web is unreachable."""
+    """Proxy payslip HTML directly from the web app — exact same template.
+    No local generation — everything comes from web."""
 
     WEB_BASE = 'http://127.0.0.1:8001'
 
-    def get(self, request, pk):
+    def _web_session(self, username):
+        """Create an authenticated session on the web backend."""
         import requests as _req
+
+        session = _req.Session()
+        login_page = session.get(f'{self.WEB_BASE}/login/', timeout=5)
+        csrf = login_page.cookies.get('csrftoken', '')
+        session.post(
+            f'{self.WEB_BASE}/login/',
+            data={'username': username, 'password': 'Ppulse@123', 'csrfmiddlewaretoken': csrf},
+            headers={'Referer': f'{self.WEB_BASE}/login/'},
+            timeout=5,
+        )
+        return session
+
+    def _find_web_payslip_id(self, session, payslip):
+        """Find the matching payslip ID on the web backend."""
+        import requests as _req
+
+        # Login via API to get token for REST calls
+        login_resp = _req.post(
+            f'{self.WEB_BASE}/api/auth/login/',
+            json={'username': 'admin', 'password': 'Ppulse@123'},
+            timeout=5,
+        )
+        if login_resp.status_code != 200:
+            return None
+        token = login_resp.json().get('access', '')
+
+        employee = get_employee_by_id(payslip.employee_id_id)
+        badge = employee.badge_id if employee else ''
+        target_start = str(payslip.start_date) if payslip.start_date else ''
+
+        list_resp = _req.get(
+            f'{self.WEB_BASE}/api/payroll/payslip/?view=admin',
+            headers={'Authorization': f'Bearer {token}'},
+            timeout=5,
+        )
+        if list_resp.status_code != 200:
+            return None
+
+        for wp in list_resp.json().get('results', []):
+            wp_emp = wp.get('employee') or {}
+            if wp.get('start_date') == target_start and wp_emp.get('badge_id') == badge:
+                return wp['id']
+        # Fallback: match by date only
+        for wp in list_resp.json().get('results', []):
+            if wp.get('start_date') == target_start:
+                return wp['id']
+        return None
+
+    def get(self, request, pk):
         from django.http import HttpResponse
 
         payslip = get_object_or_404(Payslip, id=pk)
-        employee = get_employee_by_id(payslip.employee_id_id)
 
-        # Try fetching the rendered HTML from web backend (same template)
         try:
-            login_resp = _req.post(
-                f'{self.WEB_BASE}/api/auth/login/',
-                json={'username': request.user.username, 'password': 'Ppulse@123'},
-                timeout=5,
-            )
-            if login_resp.status_code != 200:
-                # Try with stored credentials
-                login_resp = _req.post(
-                    f'{self.WEB_BASE}/api/auth/login/',
-                    json={'username': 'admin', 'password': 'admin'},
-                    timeout=5,
-                )
-            if login_resp.status_code == 200:
-                web_token = login_resp.json().get('access', '')
-                # Find matching web payslip
-                badge = employee.badge_id if employee else ''
-                list_resp = _req.get(
-                    f'{self.WEB_BASE}/api/payroll/payslip/?view=admin',
-                    headers={'Authorization': f'Bearer {web_token}'},
-                    timeout=5,
-                )
-                if list_resp.status_code == 200:
-                    web_payslips = list_resp.json().get('results', [])
-                    target_start = str(payslip.start_date) if payslip.start_date else ''
-                    web_id = None
-                    for wp in web_payslips:
-                        wp_emp = wp.get('employee') or {}
-                        if wp.get('start_date') == target_start and wp_emp.get('badge_id') == badge:
-                            web_id = wp['id']
-                            break
-                    if not web_id:
-                        for wp in web_payslips:
-                            if wp.get('start_date') == target_start:
-                                web_id = wp['id']
-                                break
-
-                    if web_id:
-                        # Get the web's rendered payslip detail page
-                        detail_resp = _req.get(
-                            f'{self.WEB_BASE}/api/payroll/payslip/{web_id}/',
-                            headers={'Authorization': f'Bearer {web_token}'},
-                            timeout=10,
-                        )
-                        if detail_resp.status_code == 200:
-                            ctx = detail_resp.json()
-                            return HttpResponse(
-                                self._render_web_style_html(ctx, employee, payslip),
-                                content_type='text/html',
-                            )
+            session = self._web_session('admin')
+            web_id = self._find_web_payslip_id(session, payslip)
+            if web_id:
+                # Fetch the exact same rendered HTML from the web
+                resp = session.get(f'{self.WEB_BASE}/payroll/view-payslip/{web_id}/', timeout=10)
+                if resp.status_code == 200 and len(resp.content) > 500:
+                    return HttpResponse(resp.content, content_type='text/html')
         except Exception:
-            pass  # Web unreachable — fall back to local rendering
+            pass
 
-        # Fallback: render locally with Kaaspro-style template
-        return HttpResponse(
-            self._render_local_html(payslip, employee),
-            content_type='text/html',
-        )
-
-    def _render_web_style_html(self, ctx, employee, payslip):
-        """Render payslip HTML matching the web app's Kaaspro template."""
-        emp = ctx.get('employee') or {}
-        company = ctx.get('company') or {}
-
-        # Extract data from web context
-        earnings = ctx.get('aggregated_earnings', [])
-        deductions = ctx.get('aggregated_deductions', [])
-        currency = ctx.get('currency', '₹')
-        net_pay = ctx.get('net_pay', 0)
-        gross_pay = ctx.get('total_earnings', 0)
-        total_ded = ctx.get('total_deductions', 0)
-        net_words = ctx.get('net_pay_in_words', '')
-        start_name = ctx.get('month_start_name', '')
-        end_name = ctx.get('month_end_name', '')
-        paid_days = ctx.get('paid_days', 0)
-        lop_days = ctx.get('lop_days', 0)
-        badge = emp.get('badge_id', employee.badge_id or '')
-        emp_name = emp.get('name', employee.name or '')
-        dept = emp.get('department', '')
-        position = emp.get('job_position', '')
-        bank_name = emp.get('bank_name', '')
-        account_no = emp.get('account_number', '')
-        company_name = company.get('name', 'Kaaspro Technologies')
-
-        def fmt(v):
-            try:
-                return f'{float(v):,.2f}'
-            except (ValueError, TypeError):
-                return '0.00'
-
-        # Build earnings rows with YTD
-        earn_rows = ''
-        for e in earnings:
-            title = e.get('title', e.get('name', ''))
-            amount = e.get('amount', 0)
-            ytd = e.get('ytd', amount)
-            earn_rows += f'<tr><td class="td">{title}</td><td class="td">{fmt(amount)}</td><td class="td">{fmt(ytd)}</td></tr>'
-
-        # Build deduction rows with YTD
-        ded_rows = ''
-        for d in deductions:
-            title = d.get('title', d.get('name', ''))
-            amount = d.get('amount', 0)
-            ytd = d.get('ytd', amount)
-            ded_rows += f'<tr><td class="td">{title}</td><td class="td">{fmt(amount)}</td><td class="td">{fmt(ytd)}</td></tr>'
-
-        return self._build_kaaspro_html(
-            company_name=company_name,
-            emp_name=emp_name,
-            badge=badge,
-            dept=dept,
-            position=position,
-            bank_name=bank_name,
-            account_no=account_no,
-            start_name=start_name,
-            end_name=end_name,
-            paid_days=paid_days,
-            lop_days=lop_days,
-            earn_rows=earn_rows,
-            ded_rows=ded_rows,
-            gross_pay=gross_pay,
-            total_ded=total_ded,
-            net_pay=net_pay,
-            net_words=net_words,
-            currency=currency,
-            status=payslip.status,
-        )
-
-    def _render_local_html(self, payslip, employee):
-        """Render from local DB data with Kaaspro-style template."""
-        wi = EmployeeWorkInformation.objects.filter(employee_id_id=employee.id).first() if employee else None
-        dept = ''
-        position = ''
-        if wi:
-            if wi.department_id_id:
-                d = Department.objects.filter(id=wi.department_id_id).first()
-                dept = d.department if d else ''
-            jp = None
-            if wi.job_position_id_id:
-                jp = JobPosition.objects.filter(id=wi.job_position_id_id).first()
-            position = jp.job_position if jp else ''
-
-        phd = payslip.pay_head_data or {}
-        allowances = phd.get('allowances', [])
-        pretax = phd.get('pretax_deductions', [])
-        posttax = phd.get('post_tax_deductions', [])
-
-        gross = float(payslip.gross_pay or 0)
-        net = float(payslip.net_pay or 0)
-        basic = float(payslip.basic_pay or 0)
-        ded_total = float(payslip.deduction or 0)
-        emp_name = employee.name if employee else 'Employee'
-        badge = employee.badge_id or str(employee.id) if employee else ''
-
-        def fmt(v):
-            return f'{float(v):,.2f}'
-
-        earn_rows = ''
-        for a in allowances:
-            earn_rows += f'<tr><td class="td">{a.get("title", "")}</td><td class="td">{fmt(a.get("amount", 0))}</td><td class="td">-</td></tr>'
-        if basic and not any(a.get('title', '').lower() in ('basic salary', 'basic pay') for a in allowances):
-            earn_rows = (
-                f'<tr><td class="td">Basic Pay</td><td class="td">{fmt(basic)}</td><td class="td">-</td></tr>'
-                + earn_rows
-            )
-
-        ded_rows = ''
-        for d in pretax + posttax:
-            ded_rows += f'<tr><td class="td">{d.get("title", "")}</td><td class="td">{fmt(d.get("amount", 0))}</td><td class="td">-</td></tr>'
-
-        start_name = payslip.start_date.strftime('%B %d, %Y') if payslip.start_date else 'N/A'
-        end_name = payslip.end_date.strftime('%B %d, %Y') if payslip.end_date else 'N/A'
-
-        return self._build_kaaspro_html(
-            company_name='Kaaspro Technologies',
-            emp_name=emp_name,
-            badge=badge,
-            dept=dept,
-            position=position,
-            bank_name='',
-            account_no='N/A',
-            start_name=start_name,
-            end_name=end_name,
-            paid_days=0,
-            lop_days=0,
-            earn_rows=earn_rows,
-            ded_rows=ded_rows,
-            gross_pay=gross,
-            total_ded=ded_total,
-            net_pay=net,
-            net_words='',
-            currency='₹',
-            status=payslip.status,
-        )
-
-    @staticmethod
-    def _build_kaaspro_html(
-        *,
-        company_name,
-        emp_name,
-        badge,
-        dept,
-        position,
-        bank_name,
-        account_no,
-        start_name,
-        end_name,
-        paid_days,
-        lop_days,
-        earn_rows,
-        ded_rows,
-        gross_pay,
-        total_ded,
-        net_pay,
-        net_words,
-        currency,
-        status,
-    ):
-        """Build the Kaaspro-branded payslip HTML matching the web template exactly."""
-
-        def fmt(v):
-            try:
-                return f'{float(v):,.2f}'
-            except (ValueError, TypeError):
-                return '0.00'
-
-        # Use HTML entity for rupee to avoid UTF encoding issues in WebView
-        cur = '&#x20B9;' if currency in ('₹', '&#x20B9;', '') else currency
-        month_label = start_name.split(' ')[0] if start_name else 'N/A'
-
-        return (
-            f"""<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>
-*{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:'Poppins',-apple-system,system-ui,sans-serif;background:#fff;color:#1a1a2e;padding:20px;font-size:13px}}
-.oh-payslip{{max-width:800px;width:100%;margin:0 auto}}
-.company-row{{display:flex;align-items:center;gap:16px;margin-bottom:6px}}
-.company-logo{{width:80px;height:80px;background:linear-gradient(135deg,#7C3AED,#5B21B6);border-radius:16px;display:flex;align-items:center;justify-content:center}}
-.company-logo svg{{width:44px;height:44px;fill:#fff}}
-.company-name{{font-size:25px;font-weight:500}}
-.company-addr{{font-size:13px;color:#555;margin-bottom:20px;line-height:1.5}}
-.payslip-header{{margin-bottom:16px}}
-.payslip-title{{font-size:22px;font-weight:500;margin-bottom:2px}}
-.payslip-period{{font-size:14px;color:#555}}
-.payslip-meta{{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #e9edf1}}
-.meta-left h2{{font-size:18px;font-weight:700;margin-bottom:2px}}
-.meta-left .sub{{font-size:13px;color:#666}}
-.meta-right{{text-align:right}}
-.meta-right .net-label{{font-size:12px;color:#888}}
-.meta-right .net-amount{{font-size:22px;font-weight:800;color:#1a1a2e}}
-.meta-right .days{{font-size:12px;color:#888;margin-top:2px}}
-.bank-row{{font-size:13px;margin-bottom:16px;display:flex;justify-content:space-between}}
-.bank-row .label{{color:#555}}
-.bank-row .value{{font-weight:600}}
-table{{width:100%;border-collapse:collapse;margin:16px 0;border:1px solid #e9edf1}}
-.th{{background:#e9edf1;padding:10px 12px;text-align:left;font-weight:700;font-size:12px}}
-.td{{padding:8px 12px;font-size:12px;border-bottom:1px solid #f0f0f0}}
-.tf{{background:#e9edf1;padding:10px 12px;font-weight:700;font-size:12px}}
-.net-box{{background:#e9edf1;padding:16px;text-align:center;margin:16px 0}}
-.net-box .title{{font-size:16px;font-weight:700}}
-.net-box .note{{font-size:11px;color:#666;margin-top:4px}}
-.footer{{text-align:center;margin-top:24px;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:12px}}
-</style></head><body>
-<div class="oh-payslip">
-
-<table style="width:100%;border-collapse:collapse;border:1px solid white;margin-bottom:8px">
-<tr>
-<td style="vertical-align:top;width:80px">
-<div class="company-logo"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
-</td>
-<td style="vertical-align:middle;padding-left:12px">
-<div class="company-name">{company_name}</div>
-</td>
-</tr>
-</table>
-
-<div class="company-addr">123 Business Street Chennai Tamil Nadu India 600001</div>
-
-<div class="payslip-meta">
-<div class="meta-left">
-<div style="font-size:14px;font-weight:700;margin-bottom:8px">Payslip for the month of {month_label}</div>
-<h2>{emp_name.upper()}, <span style="font-weight:400;font-size:15px">{badge}</span></h2>
-<div class="sub">{position or 'Employee'} | Date of Joining: -</div>
-</div>
-<div class="meta-right">
-<div class="net-label">Total Net Pay</div>
-<div class="net-amount">{cur}{fmt(net_pay)}</div>
-<div class="days">Paid Days : {paid_days} | LOP Days : {lop_days}</div>
-</div>
-</div>
-
-<div class="bank-row">
-<span class="label">Bank Account No</span>
-<span class="value">: {account_no or 'N/A'}</span>
-</div>
-
-<table>
-<thead><tr>
-<th class="th">EARNINGS</th><th class="th">AMOUNT</th><th class="th">YTD</th>
-<th class="th">DEDUCTIONS</th><th class="th">AMOUNT</th><th class="th">YTD</th>
-</tr></thead>
-<tbody>"""
-            + _merge_earn_ded_rows(earn_rows, ded_rows)
-            + f"""</tbody>
-<tfoot><tr>
-<td class="tf">Gross Earnings</td><td class="tf">{fmt(gross_pay)}</td><td class="tf">-</td>
-<td class="tf">Total Deductions</td><td class="tf">{fmt(total_ded)}</td><td class="tf">-</td>
-</tr></tfoot>
-</table>
-
-<div class="net-box">
-<div class="title">Total Net Payable &ndash; {net_words or '(Indian Rupee)'}</div>
-<div class="note">**Total Net Payable = Gross Earnings - Total Deductions</div>
-</div>
-
-<div class="footer">&mdash; This is a system-generated document. &mdash;</div>
-</div>
-</body></html>"""
-        )
-
-
-def _merge_earn_ded_rows(earn_html, ded_html):
-    """Merge earnings and deductions into side-by-side table rows."""
-    import re
-
-    earn_rows = re.findall(r'<tr>(.*?)</tr>', earn_html, re.DOTALL)
-    ded_rows = re.findall(r'<tr>(.*?)</tr>', ded_html, re.DOTALL)
-    max_rows = max(len(earn_rows), len(ded_rows))
-    result = ''
-    empty = '<td class="td"></td><td class="td"></td><td class="td"></td>'
-    for i in range(max_rows):
-        e = earn_rows[i] if i < len(earn_rows) else empty
-        d = ded_rows[i] if i < len(ded_rows) else empty
-        result += f'<tr>{e}{d}</tr>'
-    return result
+        return Response({'error': 'Web backend unreachable'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 
 class PayslipPDFView(APIView):
-    """Fetch the payslip PDF from the HRMS web backend so the mobile app
-    shows the exact same PDF template as the web.
+    """Proxy payslip PDF directly from the web app — no local generation."""
 
-    Flow: mobile app → mobile backend (this view) → web backend PDF API → PDF bytes → mobile app.
-
-    Falls back to local WeasyPrint generation if the web backend is unreachable.
-    """
-
-    # Web backend base URL — configure via env in production.
     WEB_BASE = 'http://127.0.0.1:8001'
 
     def get(self, request, pk):
-        import requests as _req
         from django.http import HttpResponse
 
         payslip = get_object_or_404(Payslip, id=pk)
 
-        # Try fetching from the web backend first.
         try:
-            # Login to web backend with the same credentials.
-            login_resp = _req.post(
-                f'{self.WEB_BASE}/api/auth/login/',
-                json={'username': request.user.username, 'password': request.user.username + '23'},
-                timeout=5,
-            )
-            if login_resp.status_code == 200:
-                web_token = login_resp.json().get('access', '')
-                # Find matching web payslip by employee badge + date range.
-                emp = get_employee_from_user(request.user)
-                badge = emp.badge_id if emp else ''
-                list_resp = _req.get(
-                    f'{self.WEB_BASE}/api/payroll/payslip/',
-                    headers={'Authorization': f'Bearer {web_token}'},
-                    timeout=5,
+            # Use session auth (web views require session, not JWT)
+            html_view = PayslipHTMLView()
+            session = html_view._web_session('admin')
+            web_id = html_view._find_web_payslip_id(session, payslip)
+
+            if web_id:
+                # Try the web's PDF download endpoint
+                pdf_resp = session.get(
+                    f'{self.WEB_BASE}/payroll/view-payslip-pdf/{web_id}/',
+                    timeout=15,
                 )
-                if list_resp.status_code == 200:
-                    web_payslips = list_resp.json().get('results', [])
-                    # Match by date range.
-                    target_start = str(payslip.start_date) if payslip.start_date else ''
-                    web_id = None
-                    for wp in web_payslips:
-                        if wp.get('start_date') == target_start:
-                            web_id = wp['id']
-                            break
-                    if not web_id and web_payslips:
-                        web_id = web_payslips[0]['id']  # fallback to first
+                if pdf_resp.status_code == 200 and 'pdf' in pdf_resp.headers.get('content-type', ''):
+                    employee = get_employee_by_id(payslip.employee_id_id)
+                    badge = employee.badge_id if employee else 'payslip'
+                    response = HttpResponse(pdf_resp.content, content_type='application/pdf')
+                    response['Content-Disposition'] = (
+                        f'attachment; filename="payslip_{badge}_{payslip.start_date}.pdf"'
+                    )
+                    return response
 
-                    if web_id:
-                        pdf_resp = _req.get(
-                            f'{self.WEB_BASE}/api/payroll/payslip-download/{web_id}',
-                            headers={'Authorization': f'Bearer {web_token}'},
-                            timeout=15,
-                        )
-                        if pdf_resp.status_code == 200 and len(pdf_resp.content) > 500:
-                            response = HttpResponse(pdf_resp.content, content_type='application/pdf')
-                            response['Content-Disposition'] = (
-                                f'attachment; filename="payslip_{badge}_{payslip.start_date}.pdf"'
-                            )
-                            return response
+                # PDF endpoint failed — generate from HTML using WeasyPrint
+                html_resp = session.get(
+                    f'{self.WEB_BASE}/payroll/view-payslip/{web_id}/',
+                    timeout=10,
+                )
+                if html_resp.status_code == 200:
+                    import weasyprint
+
+                    pdf_bytes = weasyprint.HTML(
+                        string=html_resp.text,
+                        base_url=self.WEB_BASE,
+                    ).write_pdf()
+                    employee = get_employee_by_id(payslip.employee_id_id)
+                    name = (employee.name if employee else 'payslip').replace(' ', '_')
+                    month = payslip.start_date.strftime('%B_%Y') if payslip.start_date else 'payslip'
+                    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+                    response['Content-Disposition'] = f'attachment; filename="payslip_{name}_{month}.pdf"'
+                    return response
         except Exception:
-            pass  # Web backend unreachable — fall back to local generation.
+            pass
 
-        # Fallback: generate locally using WeasyPrint + our HTML template.
-        html_view = PayslipHTMLView()
-        html_response = html_view.get(request, pk)
-        if html_response.status_code != 200:
-            return html_response
-        import weasyprint
-
-        pdf_bytes = weasyprint.HTML(string=html_response.content.decode('utf-8')).write_pdf()
-        emp = get_employee_by_id(payslip.employee_id_id)
-        name = (emp.name if emp else 'payslip').replace(' ', '_')
-        month = payslip.start_date.strftime('%B_%Y') if payslip.start_date else 'payslip'
-        response = HttpResponse(pdf_bytes, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="payslip_{name}_{month}.pdf"'
-        return response
+        return Response({'error': 'Web backend unreachable'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 
 class NotificationsView(APIView):
