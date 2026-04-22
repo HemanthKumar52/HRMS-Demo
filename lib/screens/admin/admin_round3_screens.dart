@@ -676,28 +676,49 @@ class _AdminFaceEnrollmentsScreenState
   }
 
   Future<void> _delete(Map<String, dynamic> r) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete face data?'),
-        content: Text(
-          '${r['employee_name']} will need to re-enroll their face.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: AppColors.danger),
+    final ok = await (isApplePlatform
+        ? showCupertinoDialog<bool>(
+            context: context,
+            builder: (ctx) => CupertinoAlertDialog(
+              title: const Text('Delete face data?'),
+              content: Text(
+                '${r['employee_name']} will need to re-enroll their face.',
+              ),
+              actions: [
+                CupertinoDialogAction(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
+                CupertinoDialogAction(
+                  isDestructiveAction: true,
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Delete'),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
-    );
+          )
+        : showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Delete face data?'),
+              content: Text(
+                '${r['employee_name']} will need to re-enroll their face.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text(
+                    'Delete',
+                    style: TextStyle(color: AppColors.danger),
+                  ),
+                ),
+              ],
+            ),
+          ));
     if (ok != true) return;
     try {
       await ApiService.deleteAdminFaceEnrollment(
@@ -1324,30 +1345,53 @@ class _AdminGdprToolsScreenState extends State<AdminGdprToolsScreen> {
   Future<void> _delete() async {
     final id = int.tryParse(_idCtl.text.trim());
     if (id == null) return;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Anonymize this user?'),
-        content: const Text(
-          'PII (name, email, phone, address) will be replaced with anonymized values. '
-          'Face data will be deleted. The user will be deactivated and all their tokens revoked. '
-          'Aggregates (attendance count, leave totals) are preserved.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              'Anonymize',
-              style: TextStyle(color: AppColors.danger),
+    final ok = await (isApplePlatform
+        ? showCupertinoDialog<bool>(
+            context: context,
+            builder: (ctx) => CupertinoAlertDialog(
+              title: const Text('Anonymize this user?'),
+              content: const Text(
+                'PII (name, email, phone, address) will be replaced with anonymized values. '
+                'Face data will be deleted. The user will be deactivated and all their tokens revoked. '
+                'Aggregates (attendance count, leave totals) are preserved.',
+              ),
+              actions: [
+                CupertinoDialogAction(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
+                CupertinoDialogAction(
+                  isDestructiveAction: true,
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Anonymize'),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
-    );
+          )
+        : showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Anonymize this user?'),
+              content: const Text(
+                'PII (name, email, phone, address) will be replaced with anonymized values. '
+                'Face data will be deleted. The user will be deactivated and all their tokens revoked. '
+                'Aggregates (attendance count, leave totals) are preserved.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text(
+                    'Anonymize',
+                    style: TextStyle(color: AppColors.danger),
+                  ),
+                ),
+              ],
+            ),
+          ));
     if (ok != true) return;
     setState(() => _busy = true);
     try {
@@ -1528,43 +1572,87 @@ class _AdminRetentionPoliciesScreenState
     final daysCtl = TextEditingController(
       text: existing?['max_days']?.toString() ?? '365',
     );
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(existing == null ? 'New retention policy' : 'Edit policy'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: modelCtl,
-              enabled: existing == null,
-              decoration: const InputDecoration(
-                labelText: 'Model name (e.g. auditlog)',
+    final title = existing == null ? 'New retention policy' : 'Edit policy';
+    void Function() onSave(BuildContext ctx) =>
+        () => Navigator.pop(ctx, {
+          'model_name': modelCtl.text.trim().toLowerCase(),
+          'max_days': int.tryParse(daysCtl.text.trim()) ?? 365,
+        });
+
+    final result = await (isApplePlatform
+        ? showCupertinoDialog<Map<String, dynamic>>(
+            context: context,
+            builder: (ctx) => CupertinoAlertDialog(
+              title: Text(title),
+              content: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CupertinoTextField(
+                      controller: modelCtl,
+                      enabled: existing == null,
+                      placeholder: 'Model name (e.g. auditlog)',
+                      padding: const EdgeInsets.all(12),
+                    ),
+                    const SizedBox(height: 12),
+                    CupertinoTextField(
+                      controller: daysCtl,
+                      keyboardType: TextInputType.number,
+                      placeholder: 'Keep for (days)',
+                      padding: const EdgeInsets.all(12),
+                    ),
+                  ],
+                ),
               ),
+              actions: [
+                CupertinoDialogAction(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                CupertinoDialogAction(
+                  onPressed: onSave(ctx),
+                  child: const Text('Save'),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: daysCtl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Keep for (days)'),
+          )
+        : showDialog<Map<String, dynamic>>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(title),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: modelCtl,
+                    enabled: existing == null,
+                    decoration: const InputDecoration(
+                      labelText: 'Model name (e.g. auditlog)',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: daysCtl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Keep for (days)',
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: onSave(ctx),
+                  child: const Text('Save'),
+                ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, {
-              'model_name': modelCtl.text.trim().toLowerCase(),
-              'max_days': int.tryParse(daysCtl.text.trim()) ?? 365,
-            }),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
+          ));
     if (result == null) return;
     try {
       await ApiService.saveAdminRetentionPolicy(

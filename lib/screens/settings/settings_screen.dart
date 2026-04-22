@@ -494,6 +494,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showLanguagePicker(BuildContext context) {
     final theme = Theme.of(context);
+    if (isApplePlatform) {
+      showCupertinoModalPopup(
+        context: context,
+        builder: (ctx) => CupertinoActionSheet(
+          title: const Text('Select Language'),
+          message: const Text(
+            'Language support is configured and ready to activate.',
+          ),
+          actions: _supportedLanguages.entries.map((e) {
+            final isSelected = e.key == 'en';
+            return CupertinoActionSheetAction(
+              onPressed: () {
+                Navigator.pop(ctx);
+                if (e.key != 'en') {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        '${e.value} translation ready — activate when needed',
+                      ),
+                      backgroundColor: AppColors.primary,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: Text(
+                '${_flagForLocale(e.key)}  ${e.value}',
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                  color: isSelected ? AppColors.primary : null,
+                ),
+              ),
+            );
+          }).toList(),
+          cancelButton: CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+        ),
+      );
+      return;
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -637,6 +682,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
     HapticFeedback.lightImpact();
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    if (isApplePlatform) {
+      showCupertinoDialog(
+        context: context,
+        builder: (ctx) => CupertinoAlertDialog(
+          title: const Text('pPULSE'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              const Text('HRMS, as it should be...'),
+              const SizedBox(height: 12),
+              Text('Version: $_appVersion'),
+              Text(
+                'Platform: ${Theme.of(context).platform.name.toUpperCase()}',
+              ),
+              const Text('Developer: PPULSE Technologies'),
+              const Text('Support: support@ppulse.com'),
+              const SizedBox(height: 8),
+              const Text(
+                '\u00a9 2026 PPULSE Technologies. All rights reserved.',
+                style: TextStyle(fontSize: 10),
+              ),
+            ],
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -770,135 +849,161 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showPrivacyPolicy(BuildContext context) {
     final theme = Theme.of(context);
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: theme.cardColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+    Widget sheetContent(ScrollController? scrollController) => Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: ListView(
+        controller: scrollController,
+        padding: const EdgeInsets.all(24),
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey[400],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
           ),
-          child: ListView(
-            controller: scrollController,
-            padding: const EdgeInsets.all(24),
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Text('Privacy Policy', style: theme.textTheme.titleLarge),
-              const SizedBox(height: 16),
-              Text(
-                'Last updated: March 1, 2026',
-                style: theme.textTheme.bodySmall,
-              ),
-              const SizedBox(height: 16),
-              _policySection(
-                theme,
-                'Data Collection',
-                'We collect personal information necessary for HR management including name, contact details, attendance records, and employment information.',
-              ),
-              _policySection(
-                theme,
-                'Data Usage',
-                'Your data is used solely for HR operations including attendance tracking, leave management, payroll processing, and performance management.',
-              ),
-              _policySection(
-                theme,
-                'Data Protection',
-                'We implement industry-standard security measures to protect your personal information. All data is encrypted in transit and at rest.',
-              ),
-              _policySection(
-                theme,
-                'Data Sharing',
-                'Your personal data is not shared with third parties except as required by law or with your explicit consent.',
-              ),
-              _policySection(
-                theme,
-                'Your Rights',
-                'You have the right to access, correct, or request deletion of your personal data. Contact HR for any privacy-related requests.',
-              ),
-            ],
+          Text('Privacy Policy', style: theme.textTheme.titleLarge),
+          const SizedBox(height: 16),
+          Text(
+            'Last updated: March 1, 2026',
+            style: theme.textTheme.bodySmall,
           ),
-        ),
+          const SizedBox(height: 16),
+          _policySection(
+            theme,
+            'Data Collection',
+            'We collect personal information necessary for HR management including name, contact details, attendance records, and employment information.',
+          ),
+          _policySection(
+            theme,
+            'Data Usage',
+            'Your data is used solely for HR operations including attendance tracking, leave management, payroll processing, and performance management.',
+          ),
+          _policySection(
+            theme,
+            'Data Protection',
+            'We implement industry-standard security measures to protect your personal information. All data is encrypted in transit and at rest.',
+          ),
+          _policySection(
+            theme,
+            'Data Sharing',
+            'Your personal data is not shared with third parties except as required by law or with your explicit consent.',
+          ),
+          _policySection(
+            theme,
+            'Your Rights',
+            'You have the right to access, correct, or request deletion of your personal data. Contact HR for any privacy-related requests.',
+          ),
+        ],
       ),
     );
+
+    if (isApplePlatform) {
+      showCupertinoModalPopup(
+        context: context,
+        builder: (context) => SizedBox(
+          height: MediaQuery.of(context).size.height * 0.85,
+          child: sheetContent(null),
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => DraggableScrollableSheet(
+          initialChildSize: 0.85,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (context, scrollController) =>
+              sheetContent(scrollController),
+        ),
+      );
+    }
   }
 
   void _showTermsOfService(BuildContext context) {
     final theme = Theme.of(context);
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: theme.cardColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+    Widget sheetContent(ScrollController? scrollController) => Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: ListView(
+        controller: scrollController,
+        padding: const EdgeInsets.all(24),
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey[400],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
           ),
-          child: ListView(
-            controller: scrollController,
-            padding: const EdgeInsets.all(24),
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Text('Terms of Service', style: theme.textTheme.titleLarge),
-              const SizedBox(height: 16),
-              Text(
-                'Last updated: March 1, 2026',
-                style: theme.textTheme.bodySmall,
-              ),
-              const SizedBox(height: 16),
-              _policySection(
-                theme,
-                'Acceptance',
-                'By using PPULSE, you agree to these terms of service and our privacy policy.',
-              ),
-              _policySection(
-                theme,
-                'Usage',
-                'This application is provided for employee self-service and HR management purposes only. Unauthorized use is prohibited.',
-              ),
-              _policySection(
-                theme,
-                'Account Security',
-                'You are responsible for maintaining the confidentiality of your login credentials and all activities under your account.',
-              ),
-              _policySection(
-                theme,
-                'Modifications',
-                'We reserve the right to modify these terms at any time. Continued use of the service constitutes acceptance of modified terms.',
-              ),
-            ],
+          Text('Terms of Service', style: theme.textTheme.titleLarge),
+          const SizedBox(height: 16),
+          Text(
+            'Last updated: March 1, 2026',
+            style: theme.textTheme.bodySmall,
           ),
-        ),
+          const SizedBox(height: 16),
+          _policySection(
+            theme,
+            'Acceptance',
+            'By using PPULSE, you agree to these terms of service and our privacy policy.',
+          ),
+          _policySection(
+            theme,
+            'Usage',
+            'This application is provided for employee self-service and HR management purposes only. Unauthorized use is prohibited.',
+          ),
+          _policySection(
+            theme,
+            'Account Security',
+            'You are responsible for maintaining the confidentiality of your login credentials and all activities under your account.',
+          ),
+          _policySection(
+            theme,
+            'Modifications',
+            'We reserve the right to modify these terms at any time. Continued use of the service constitutes acceptance of modified terms.',
+          ),
+        ],
       ),
     );
+
+    if (isApplePlatform) {
+      showCupertinoModalPopup(
+        context: context,
+        builder: (context) => SizedBox(
+          height: MediaQuery.of(context).size.height * 0.85,
+          child: sheetContent(null),
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => DraggableScrollableSheet(
+          initialChildSize: 0.85,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (context, scrollController) =>
+              sheetContent(scrollController),
+        ),
+      );
+    }
   }
 
   Widget _policySection(ThemeData theme, String title, String content) {

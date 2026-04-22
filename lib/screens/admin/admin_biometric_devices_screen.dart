@@ -90,26 +90,45 @@ class _AdminBiometricDevicesScreenState
   }
 
   Future<void> _delete(Map<String, dynamic> row) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete device?'),
-        content: Text('Remove "${row['name']}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: AppColors.danger),
+    final ok = await (isApplePlatform
+        ? showCupertinoDialog<bool>(
+            context: context,
+            builder: (ctx) => CupertinoAlertDialog(
+              title: const Text('Delete device?'),
+              content: Text('Remove "${row['name']}"?'),
+              actions: [
+                CupertinoDialogAction(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
+                CupertinoDialogAction(
+                  isDestructiveAction: true,
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Delete'),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
-    );
+          )
+        : showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Delete device?'),
+              content: Text('Remove "${row['name']}"?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text(
+                    'Delete',
+                    style: TextStyle(color: AppColors.danger),
+                  ),
+                ),
+              ],
+            ),
+          ));
     if (ok != true) return;
     try {
       await ApiService.deleteAdminBiometricDevice(row['id'].toString());

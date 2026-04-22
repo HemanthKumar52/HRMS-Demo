@@ -54,10 +54,17 @@ class _AdminAllowedIpsScreenState extends State<AdminAllowedIpsScreen> {
   }
 
   Future<void> _editor({Map<String, dynamic>? existing}) async {
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (ctx) => _IpEditor(existing: existing, callerIp: _callerIp),
-    );
+    final result = await (isApplePlatform
+        ? showCupertinoDialog<Map<String, dynamic>>(
+            context: context,
+            builder: (ctx) =>
+                _IpEditor(existing: existing, callerIp: _callerIp),
+          )
+        : showDialog<Map<String, dynamic>>(
+            context: context,
+            builder: (ctx) =>
+                _IpEditor(existing: existing, callerIp: _callerIp),
+          ));
     if (result == null) return;
     try {
       if (existing == null) {
@@ -93,28 +100,49 @@ class _AdminAllowedIpsScreenState extends State<AdminAllowedIpsScreen> {
   }
 
   Future<void> _delete(Map<String, dynamic> r) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Remove allowlist entry?'),
-        content: Text(
-          '${r['label']} (${r['cidr']}) will no longer be permitted.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              'Remove',
-              style: TextStyle(color: AppColors.danger),
+    final ok = await (isApplePlatform
+        ? showCupertinoDialog<bool>(
+            context: context,
+            builder: (ctx) => CupertinoAlertDialog(
+              title: const Text('Remove allowlist entry?'),
+              content: Text(
+                '${r['label']} (${r['cidr']}) will no longer be permitted.',
+              ),
+              actions: [
+                CupertinoDialogAction(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
+                CupertinoDialogAction(
+                  isDestructiveAction: true,
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Remove'),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
-    );
+          )
+        : showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Remove allowlist entry?'),
+              content: Text(
+                '${r['label']} (${r['cidr']}) will no longer be permitted.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text(
+                    'Remove',
+                    style: TextStyle(color: AppColors.danger),
+                  ),
+                ),
+              ],
+            ),
+          ));
     if (ok != true) return;
     try {
       await ApiService.deleteAdminAllowedIp((r['id'] as num).toInt());
@@ -352,73 +380,125 @@ class _IpEditorState extends State<_IpEditor> {
     super.dispose();
   }
 
+  void _submit() {
+    if (_cidr.text.trim().isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('CIDR required')));
+      return;
+    }
+    Navigator.pop(context, {
+      'label': _label.text.trim(),
+      'cidr': _cidr.text.trim(),
+      'is_active': _active,
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.existing == null ? 'New allowlist rule' : 'Edit rule'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: _label,
-              decoration: const InputDecoration(
-                labelText: 'Label (e.g. Office WiFi)',
-              ),
+    final title = widget.existing == null ? 'New allowlist rule' : 'Edit rule';
+
+    final formFields = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (isApplePlatform)
+          CupertinoTextField(
+            controller: _label,
+            placeholder: 'Label (e.g. Office WiFi)',
+            padding: const EdgeInsets.all(12),
+          )
+        else
+          TextField(
+            controller: _label,
+            decoration: const InputDecoration(
+              labelText: 'Label (e.g. Office WiFi)',
             ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _cidr,
-              decoration: const InputDecoration(
-                labelText: 'IP / CIDR',
-                hintText: '203.0.113.42  or  203.0.113.0/24',
-              ),
-              keyboardType: TextInputType.url,
+          ),
+        const SizedBox(height: 10),
+        if (isApplePlatform)
+          CupertinoTextField(
+            controller: _cidr,
+            placeholder: 'IP / CIDR  (e.g. 203.0.113.0/24)',
+            keyboardType: TextInputType.url,
+            padding: const EdgeInsets.all(12),
+          )
+        else
+          TextField(
+            controller: _cidr,
+            decoration: const InputDecoration(
+              labelText: 'IP / CIDR',
+              hintText: '203.0.113.42  or  203.0.113.0/24',
             ),
-            if (widget.callerIp.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: TextButton.icon(
-                  icon: const Icon(Icons.add_link_rounded, size: 18),
-                  label: Text('Use my current IP (${widget.callerIp})'),
-                  onPressed: () => setState(() => _cidr.text = widget.callerIp),
-                ),
-              ),
-            const SizedBox(height: 4),
-            SwitchListTile.adaptive(
-              title: const Text('Active'),
-              value: _active,
-              onChanged: (v) => setState(() => _active = v),
-              contentPadding: EdgeInsets.zero,
-            ),
-            const Text(
-              'WARNING: enabling enforcement will block any account that '
-              'tries to log in from outside this allowlist.',
-              style: TextStyle(color: AppColors.danger, fontSize: 12),
-            ),
-          ],
+            keyboardType: TextInputType.url,
+          ),
+        if (widget.callerIp.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: isApplePlatform
+                ? CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () =>
+                        setState(() => _cidr.text = widget.callerIp),
+                    child: Text(
+                      'Use my current IP (${widget.callerIp})',
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  )
+                : TextButton.icon(
+                    icon: const Icon(Icons.add_link_rounded, size: 18),
+                    label: Text('Use my current IP (${widget.callerIp})'),
+                    onPressed: () =>
+                        setState(() => _cidr.text = widget.callerIp),
+                  ),
+          ),
+        const SizedBox(height: 4),
+        SwitchListTile.adaptive(
+          title: const Text('Active'),
+          value: _active,
+          onChanged: (v) => setState(() => _active = v),
+          contentPadding: EdgeInsets.zero,
         ),
-      ),
+        const Text(
+          'WARNING: enabling enforcement will block any account that '
+          'tries to log in from outside this allowlist.',
+          style: TextStyle(color: AppColors.danger, fontSize: 12),
+        ),
+      ],
+    );
+
+    if (isApplePlatform) {
+      return CupertinoAlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: formFields,
+          ),
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          CupertinoDialogAction(
+            onPressed: _submit,
+            child: const Text('Save'),
+          ),
+        ],
+      );
+    }
+
+    return AlertDialog(
+      title: Text(title),
+      content: SingleChildScrollView(child: formFields),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: () {
-            if (_cidr.text.trim().isEmpty) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('CIDR required')));
-              return;
-            }
-            Navigator.pop(context, {
-              'label': _label.text.trim(),
-              'cidr': _cidr.text.trim(),
-              'is_active': _active,
-            });
-          },
+          onPressed: _submit,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,

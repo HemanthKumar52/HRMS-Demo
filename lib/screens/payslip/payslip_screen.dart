@@ -131,26 +131,16 @@ class _PayslipScreenState extends State<PayslipScreen> {
   Future<void> _downloadPayslipPdf() async {
     final payslipId = _selectedPayslip['id'];
     if (payslipId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('No payslip available for this month'),
-          backgroundColor: AppColors.warning,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
+      _showFeedback(
+        'No payslip available for this month',
+        color: AppColors.warning,
       );
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Downloading PDF...'),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: const Duration(seconds: 1),
-      ),
+    _showFeedback(
+      'Downloading PDF...',
+      color: AppColors.primary,
+      duration: const Duration(seconds: 1),
     );
     try {
       final id = payslipId is int
@@ -170,21 +160,16 @@ class _PayslipScreenState extends State<PayslipScreen> {
           payload: 'payslip_download',
         );
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                const SizedBox(width: 10),
-                Expanded(child: Text('Downloaded: $fileName')),
-              ],
-            ),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            duration: const Duration(seconds: 3),
+        _showFeedback(
+          'Downloaded: $fileName',
+          color: AppColors.success,
+          duration: const Duration(seconds: 3),
+          icon: Icon(
+            isApplePlatform
+                ? CupertinoIcons.check_mark_circled_solid
+                : Icons.check_circle,
+            color: isApplePlatform ? CupertinoColors.activeGreen : Colors.white,
+            size: 20,
           ),
         );
       } else {
@@ -192,17 +177,9 @@ class _PayslipScreenState extends State<PayslipScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Download failed: ${e.toString().replaceAll('Exception: ', '')}',
-          ),
-          backgroundColor: AppColors.danger,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
+      _showFeedback(
+        'Download failed: ${e.toString().replaceAll('Exception: ', '')}',
+        color: AppColors.danger,
       );
     }
   }
@@ -253,6 +230,60 @@ class _PayslipScreenState extends State<PayslipScreen> {
         ),
       ),
     );
+  }
+
+  /// Show a brief feedback message. Uses a temporary CupertinoAlertDialog on
+  /// iOS that auto-dismisses, and a SnackBar on Android.
+  void _showFeedback(
+    String message, {
+    Color? color,
+    Duration duration = const Duration(seconds: 2),
+    Widget? icon,
+  }) {
+    if (!mounted) return;
+    if (isApplePlatform) {
+      showCupertinoDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (ctx) {
+          Future.delayed(duration, () {
+            if (Navigator.of(ctx, rootNavigator: true).canPop()) {
+              Navigator.of(ctx, rootNavigator: true).pop();
+            }
+          });
+          return CupertinoAlertDialog(
+            content: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (icon != null) ...[icon, const SizedBox(width: 8)],
+                Flexible(child: Text(message)),
+              ],
+            ),
+          );
+        },
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: icon != null
+              ? Row(
+                  children: [
+                    icon,
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(message)),
+                  ],
+                )
+              : Text(message),
+          backgroundColor: color ?? AppColors.primary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          duration: duration,
+        ),
+      );
+    }
   }
 
   double get _grossSalary =>
