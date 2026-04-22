@@ -544,7 +544,14 @@ class ApiService {
     final y = year ?? DateTime.now().year;
     final sixMonthsAgo = DateTime.now().subtract(const Duration(days: 180));
 
-    // Try the mobile-backend proxy first (proxies to web HRMS).
+    // Try local mobile DB first (always available, has synced data).
+    try {
+      final localData = await get('/payslips/list?year=$y');
+      final localPayslips = localData['payslips'] as List? ?? [];
+      if (localPayslips.isNotEmpty) return localData;
+    } catch (_) {}
+
+    // Then try the mobile-backend proxy (proxies to web HRMS).
     try {
       final proxyData = await getWebPayslips(admin: true);
       final results = List<Map<String, dynamic>>.from(
@@ -645,7 +652,7 @@ class ApiService {
       }
     } catch (_) {}
 
-    // Final fallback: mobile backend local DB.
+    // Primary source: mobile backend local DB (always available).
     return await get('/payslips/list?year=$y');
   }
 
@@ -655,13 +662,21 @@ class ApiService {
     int? year,
     int? id,
   }) async {
-    // If we have an ID, fetch via proxy first.
+    // Try local mobile backend first (always available).
+    final now = DateTime.now();
+    final m = month ?? now.month;
+    final y = year ?? now.year;
+    try {
+      final localData = await get('/payslips?month=$m&year=$y');
+      if (localData['error'] == null) return localData;
+    } catch (_) {}
+
+    // Then try web proxy if we have an ID.
     if (id != null) {
       try {
         return await getWebPayslipDetail(id);
       } catch (_) {}
 
-      // Fallback: direct web backend call.
       try {
         final token = await _getWebToken();
         final resp = await http.get(
@@ -673,11 +688,7 @@ class ApiService {
         }
       } catch (_) {}
     }
-    // Final fallback: mobile backend local DB.
-    final now = DateTime.now();
-    final m = month ?? now.month;
-    final y = year ?? now.year;
-    return await get('/payslips?month=$m&year=$y');
+    return {'error': 'No payslip found'};
   }
 
   /// Download payslip PDF — tries direct web first (for binary),
