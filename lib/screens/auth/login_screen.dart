@@ -915,6 +915,42 @@ class _GlassInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (isApplePlatform) {
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: CupertinoTextField(
+          controller: controller,
+          obscureText: obscure,
+          placeholder: hint,
+          placeholderStyle: TextStyle(
+            color: Colors.white.withValues(alpha: 0.3),
+            fontSize: 14,
+          ),
+          style: const TextStyle(color: Colors.white, fontSize: 15),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          prefix: Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: Icon(
+              icon,
+              color: Colors.white.withValues(alpha: 0.35),
+              size: 20,
+            ),
+          ),
+          suffix: suffix != null
+              ? Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: suffix!,
+                )
+              : null,
+          decoration: const BoxDecoration(), // handled by parent Container
+        ),
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),

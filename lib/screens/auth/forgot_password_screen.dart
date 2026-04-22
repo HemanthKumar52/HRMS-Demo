@@ -170,40 +170,67 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          TextFormField(
-            controller: _identifierController,
-            keyboardType: TextInputType.emailAddress,
-            autocorrect: false,
-            textInputAction: TextInputAction.done,
-            onFieldSubmitted: (_) => _submit(),
-            decoration: InputDecoration(
-              hintText: 'you@company.com',
-              prefixIcon: const Icon(Icons.alternate_email_rounded, size: 20),
-              filled: true,
-              fillColor: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.grey.withValues(alpha: 0.08),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: AppColors.primary,
-                  width: 1.5,
+          if (isApplePlatform)
+            CupertinoTextField(
+              controller: _identifierController,
+              keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _submit(),
+              placeholder: 'you@company.com',
+              prefix: Padding(
+                padding: const EdgeInsets.only(left: 12),
+                child: Icon(
+                  Icons.alternate_email_rounded,
+                  size: 20,
+                  color: isDark
+                      ? AppColors.darkSubtext
+                      : AppColors.lightSubtext,
                 ),
               ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : CupertinoColors.systemFill,
+                borderRadius: BorderRadius.circular(14),
               ),
+            )
+          else
+            TextFormField(
+              controller: _identifierController,
+              keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _submit(),
+              decoration: InputDecoration(
+                hintText: 'you@company.com',
+                prefixIcon: const Icon(Icons.alternate_email_rounded, size: 20),
+                filled: true,
+                fillColor: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.grey.withValues(alpha: 0.08),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(
+                    color: AppColors.primary,
+                    width: 1.5,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Required';
+                return null;
+              },
             ),
-            validator: (v) {
-              if (v == null || v.trim().isEmpty) return 'Required';
-              return null;
-            },
-          ),
           if (_errorText != null) ...[
             const SizedBox(height: 10),
             Text(
@@ -212,39 +239,67 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
           ],
           const SizedBox(height: 22),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: _isSubmitting ? null : _submit,
-              icon: _isSubmitting
-                  ? SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: isApplePlatform
-                          ? const CupertinoActivityIndicator(
-                              color: Colors.white,
-                            )
-                          : const CircularProgressIndicator(
-                              strokeWidth: 2,
+          if (isApplePlatform)
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: CupertinoButton.filled(
+                onPressed: _isSubmitting ? null : _submit,
+                borderRadius: BorderRadius.circular(14),
+                padding: EdgeInsets.zero,
+                child: _isSubmitting
+                    ? const CupertinoActivityIndicator(color: Colors.white)
+                    : const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.send_rounded,
+                            size: 20,
+                            color: Colors.white,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Send Reset Link',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
                               color: Colors.white,
                             ),
-                    )
-                  : const Icon(Icons.send_rounded, size: 20),
-              label: const Text(
-                'Send Reset Link',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                          ),
+                        ],
+                      ),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+            )
+          else
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: _isSubmitting ? null : _submit,
+                icon: _isSubmitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.send_rounded, size: 20),
+                label: const Text(
+                  'Send Reset Link',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
