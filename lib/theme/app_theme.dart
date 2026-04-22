@@ -48,6 +48,12 @@ class NeuDecoration {
     return BoxDecoration(
       color: isDark ? theme.cardColor : const Color(0xFFE4E8EE),
       borderRadius: BorderRadius.circular(radius),
+      border: Border.all(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.06)
+            : Colors.grey.withValues(alpha: 0.18),
+        width: 0.5,
+      ),
       boxShadow: isDark
           ? [
               BoxShadow(

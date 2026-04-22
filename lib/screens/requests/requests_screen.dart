@@ -577,12 +577,13 @@ class _RequestsScreenState extends State<RequestsScreen> {
           // Scrollable tab bar / iOS segmented control
           if (isApplePlatform)
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
               child: SizedBox(
                 width: double.infinity,
-                child: CupertinoSegmentedControl<int>(
+                child: CupertinoSlidingSegmentedControl<int>(
                   groupValue: safeIndex,
                   onValueChanged: (val) {
+                    if (val == null) return;
                     HapticFeedback.selectionClick();
                     provider.setRequestsTabIndex(val);
                   },
@@ -590,8 +591,8 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     for (var i = 0; i < tabTitles.length; i++)
                       i: Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 8,
+                          horizontal: 12,
+                          vertical: 6,
                         ),
                         child: Text(
                           tabTitles[i],
@@ -599,7 +600,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                             fontSize: 13,
                             fontWeight: safeIndex == i
                                 ? FontWeight.w600
-                                : FontWeight.w500,
+                                : FontWeight.w400,
                           ),
                         ),
                       ),

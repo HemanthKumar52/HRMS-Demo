@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -124,90 +125,180 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     bool isDark,
     List<Widget> screens,
   ) {
+    final topPadding = MediaQuery.of(context).padding.top;
+    const headerHeight = 56.0;
+    final totalHeaderHeight = topPadding + headerHeight;
+
     return Scaffold(
       backgroundColor: AdaptiveColors.background(context),
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(52),
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
+      // No appBar — we overlay a liquid glass header on top
+      extendBodyBehindAppBar: true,
+      body: Stack(
+        children: [
+          // Content — extends behind header and bottom nav
+          Positioned.fill(
+            child: IndexedStack(
+              index: provider.bottomNavIndex.clamp(0, screens.length - 1),
+              children: screens,
+            ),
+          ),
+
+          // ── Liquid Glass Header (frosted blur, content scrolls behind) ──
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+                child: Container(
+                  height: totalHeaderHeight,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.black.withValues(alpha: 0.6)
+                        : Colors.white.withValues(alpha: 0.7),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.08)
+                            : Colors.black.withValues(alpha: 0.06),
+                        width: 0.5,
+                      ),
+                    ),
+                  ),
+                  padding: EdgeInsets.only(
+                    top: topPadding,
+                    left: 16,
+                    right: 16,
+                  ),
+                  child: Row(
                     children: [
-                      Text(
-                        'Good ${_getGreeting()},',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w400,
-                          color: AdaptiveColors.secondaryText(context),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Good ${_getGreeting()},',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w400,
+                                color: AdaptiveColors.secondaryText(context),
+                              ),
+                            ),
+                            Text(
+                              provider.userName.split(' ').first,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: AdaptiveColors.primaryText(context),
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      Text(
-                        provider.userName.split(' ').first,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: AdaptiveColors.primaryText(context),
-                          letterSpacing: -0.3,
-                        ),
+                      _buildIOSNotificationButton(context, provider),
+                      const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: () => showProfileSheet(context),
+                        child: _buildProfileAvatar(provider, isDark, 34),
                       ),
                     ],
                   ),
                 ),
-                _buildIOSNotificationButton(context, provider),
-                const SizedBox(width: 12),
-                GestureDetector(
-                  onTap: () => showProfileSheet(context),
-                  child: _buildProfileAvatar(provider, isDark, 34),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
-      body: Stack(
-        children: [
-          IndexedStack(
-            index: provider.bottomNavIndex.clamp(0, screens.length - 1),
-            children: screens,
-          ),
+
+          // Dynamic Island overlay
           const DynamicIslandOverlay(),
         ],
       ),
-      bottomNavigationBar: CupertinoTabBar(
-        currentIndex: provider.bottomNavIndex,
-        onTap: (index) {
-          HapticFeedback.selectionClick();
-          provider.setBottomNavIndex(index);
-        },
-        activeColor: AppColors.primary,
-        inactiveColor: CupertinoColors.systemGrey,
-        backgroundColor: isDark
-            ? const Color(0xFF1C1C1E).withValues(alpha: 0.94)
-            : Colors.white.withValues(alpha: 0.94),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.square_grid_2x2_fill),
-            label: 'Dashboard',
+
+      // ── Liquid Glass Bottom Nav ──
+      bottomNavigationBar: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.5)
+                  : Colors.white.withValues(alpha: 0.65),
+              border: Border(
+                top: BorderSide(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : Colors.black.withValues(alpha: 0.06),
+                  width: 0.5,
+                ),
+              ),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 6, bottom: 2),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: List.generate(4, (index) {
+                    final isActive = provider.bottomNavIndex == index;
+                    final icons = [
+                      CupertinoIcons.square_grid_2x2_fill,
+                      CupertinoIcons.doc_text_fill,
+                      CupertinoIcons.hand_raised_fill,
+                      CupertinoIcons.doc_text,
+                    ];
+                    final labels = [
+                      'Dashboard',
+                      'Requests',
+                      'Attendance',
+                      'Payslip',
+                    ];
+                    return CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                        provider.setBottomNavIndex(index);
+                      },
+                      child: SizedBox(
+                        width: 70,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              icons[index],
+                              size: 22,
+                              color: isActive
+                                  ? AppColors.primary
+                                  : (isDark
+                                        ? Colors.white.withValues(alpha: 0.4)
+                                        : Colors.grey.shade500),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              labels[index],
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: isActive
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: isActive
+                                    ? AppColors.primary
+                                    : (isDark
+                                          ? Colors.white.withValues(alpha: 0.4)
+                                          : Colors.grey.shade500),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.doc_text_fill),
-            label: 'Requests',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.hand_raised_fill),
-            label: 'Attendance',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.doc_text),
-            label: 'Payslip',
-          ),
-        ],
+        ),
       ),
     );
   }
