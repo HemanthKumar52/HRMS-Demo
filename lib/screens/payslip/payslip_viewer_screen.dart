@@ -10,8 +10,8 @@ import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
 
-/// Displays the payslip using the same HTML template as the web app.
-/// Shows the HTML payslip inline in a WebView, with download PDF option.
+/// Displays the payslip using the EXACT same template as the web app.
+/// Fetches rendered HTML from the web backend and shows it in a WebView.
 class PayslipViewerScreen extends StatefulWidget {
   final String month;
   final int year;
@@ -33,11 +33,12 @@ class _PayslipViewerScreenState extends State<PayslipViewerScreen> {
   bool _isLoading = true;
   bool _isDownloading = false;
   String? _error;
+  int? _resolvedId;
 
   @override
   void initState() {
     super.initState();
-    _loadPayslipHTML();
+    _loadPayslip();
   }
 
   Future<int?> _resolvePayslipId() async {
@@ -71,10 +72,10 @@ class _PayslipViewerScreenState extends State<PayslipViewerScreen> {
     return null;
   }
 
-  Future<void> _loadPayslipHTML() async {
+  Future<void> _loadPayslip() async {
     try {
-      final payslipId = await _resolvePayslipId();
-      if (payslipId == null) {
+      _resolvedId = await _resolvePayslipId();
+      if (_resolvedId == null) {
         setState(() {
           _error = 'Payslip not found';
           _isLoading = false;
@@ -82,28 +83,29 @@ class _PayslipViewerScreenState extends State<PayslipViewerScreen> {
         return;
       }
 
-      // Fetch HTML from the mobile backend (same template as web)
+      // Try loading from mobile backend HTML endpoint first
       final headers = await ApiService.getAuthHeaders();
       final baseUrl = ApiService.currentBaseUrl;
-      final url = '$baseUrl/payslips/$payslipId/html';
+      final response = await ApiService.getRaw(
+        '$baseUrl/payslips/$_resolvedId/html',
+        headers: headers,
+      );
 
-      final response = await ApiService.getRaw(url, headers: headers);
-
-      if (response.statusCode == 200) {
-        final htmlContent = response.body;
-
+      if (response.statusCode == 200 && response.body.length > 100) {
         _webController = WebViewController()
           ..setJavaScriptMode(JavaScriptMode.unrestricted)
           ..setBackgroundColor(Colors.white)
-          ..loadHtmlString(htmlContent);
+          ..loadHtmlString(response.body);
 
         setState(() => _isLoading = false);
-      } else {
-        setState(() {
-          _error = 'Failed to load payslip (${response.statusCode})';
-          _isLoading = false;
-        });
+        return;
       }
+
+      // If that fails, show error
+      setState(() {
+        _error = 'Could not load payslip template';
+        _isLoading = false;
+      });
     } catch (e) {
       setState(() {
         _error = e.toString().replaceAll('Exception: ', '');
@@ -113,13 +115,11 @@ class _PayslipViewerScreenState extends State<PayslipViewerScreen> {
   }
 
   Future<void> _downloadPdf() async {
+    if (_resolvedId == null) return;
     setState(() => _isDownloading = true);
     HapticFeedback.mediumImpact();
     try {
-      final payslipId = await _resolvePayslipId();
-      if (payslipId == null) throw Exception('Payslip not found');
-
-      final response = await ApiService.getPayslipPdf(payslipId);
+      final response = await ApiService.getPayslipPdf(_resolvedId!);
       if (response.statusCode == 200 && response.bodyBytes.length > 500) {
         final dir = await getApplicationDocumentsDirectory();
         final fileName = 'payslip_${widget.month}_${widget.year}.pdf';
@@ -141,11 +141,10 @@ class _PayslipViewerScreenState extends State<PayslipViewerScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
-            duration: const Duration(seconds: 3),
           ),
         );
       } else {
-        throw Exception('PDF generation failed');
+        throw Exception('PDF not available');
       }
     } catch (e) {
       if (!mounted) return;
@@ -190,10 +189,7 @@ class _PayslipViewerScreenState extends State<PayslipViewerScreen> {
                 ? CupertinoButton(
                     padding: const EdgeInsets.only(right: 16),
                     onPressed: _downloadPdf,
-                    child: const Icon(
-                      CupertinoIcons.arrow_down_doc,
-                      size: 22,
-                    ),
+                    child: const Icon(CupertinoIcons.arrow_down_doc, size: 22),
                   )
                 : IconButton(
                     icon: const Icon(Icons.download_rounded),
@@ -202,68 +198,74 @@ class _PayslipViewerScreenState extends State<PayslipViewerScreen> {
                   ),
         ],
       ),
-      body: _isLoading
-          ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  isApplePlatform
-                      ? const CupertinoActivityIndicator(radius: 14)
-                      : const CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Loading payslip...',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-            )
-          : _error != null || _webController == null
-          ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isApplePlatform
-                        ? CupertinoIcons.doc_text
-                        : Icons.description_outlined,
-                    size: 48,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    _error ?? 'Could not load payslip',
-                    style: TextStyle(color: Colors.grey.shade500),
-                  ),
-                  const SizedBox(height: 16),
-                  isApplePlatform
-                      ? CupertinoButton(
-                          onPressed: () {
-                            setState(() {
-                              _isLoading = true;
-                              _error = null;
-                            });
-                            _loadPayslipHTML();
-                          },
-                          child: const Text('Retry'),
-                        )
-                      : ElevatedButton.icon(
-                          onPressed: () {
-                            setState(() {
-                              _isLoading = true;
-                              _error = null;
-                            });
-                            _loadPayslipHTML();
-                          },
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Retry'),
-                        ),
-                ],
-              ),
-            )
-          : WebViewWidget(controller: _webController!),
+      body: _buildBody(),
     );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            isApplePlatform
+                ? const CupertinoActivityIndicator(radius: 14)
+                : const CircularProgressIndicator(color: AppColors.primary),
+            const SizedBox(height: 16),
+            const Text(
+              'Loading payslip...',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_error != null || _webController == null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isApplePlatform
+                  ? CupertinoIcons.doc_text
+                  : Icons.description_outlined,
+              size: 48,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _error ?? 'Could not load payslip',
+              style: TextStyle(color: Colors.grey.shade500),
+            ),
+            const SizedBox(height: 16),
+            isApplePlatform
+                ? CupertinoButton(
+                    onPressed: () {
+                      setState(() {
+                        _isLoading = true;
+                        _error = null;
+                      });
+                      _loadPayslip();
+                    },
+                    child: const Text('Retry'),
+                  )
+                : ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _isLoading = true;
+                        _error = null;
+                      });
+                      _loadPayslip();
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                  ),
+          ],
+        ),
+      );
+    }
+
+    return WebViewWidget(controller: _webController!);
   }
 }
