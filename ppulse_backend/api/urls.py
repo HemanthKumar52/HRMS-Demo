@@ -75,6 +75,8 @@ from .views import (
     PayslipPDFView,
     PayslipsListView,
     PayslipsView,
+    PayslipWebDetailProxyView,
+    PayslipWebProxyView,
     PresenceListView,
     RefreshTokenView,
     RequestAcceptView,
@@ -140,6 +142,9 @@ urlpatterns = [
     path('payslips/list', PayslipsListView.as_view(), name='payslips_list'),
     path('payslips/<int:pk>/pdf', PayslipPDFView.as_view(), name='payslip_pdf'),
     path('payslips/<int:pk>/html', PayslipHTMLView.as_view(), name='payslip_html'),
+    # Web HRMS payslip proxy
+    path('payslip/web/', PayslipWebProxyView.as_view(), name='payslip_web_list'),
+    path('payslip/web/<int:pk>/', PayslipWebDetailProxyView.as_view(), name='payslip_web_detail'),
     # Notifications
     path('notifications', NotificationsView.as_view(), name='notifications'),
     path('notifications/<int:pk>/read', NotificationReadView.as_view(), name='notification_read'),

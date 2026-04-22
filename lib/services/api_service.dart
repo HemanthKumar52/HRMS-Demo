@@ -513,11 +513,26 @@ class ApiService {
   // ═══════════════════════════════════════════════════════
 
   // ═══════════════════════════════════════════════════════
-  // PAYROLL — calls the WEB backend APIs directly.
-  // In production both share the same DB so this works seamlessly.
+  // PAYROLL — calls the mobile backend proxy which forwards
+  // to the HRMS web backend. Falls back to direct web calls
+  // or local mobile-backend data when the proxy is unavailable.
   // ═══════════════════════════════════════════════════════
 
-  /// List payslips from web backend.
+  /// Fetch paginated payslip list via the mobile backend proxy.
+  /// Pass [admin] = true to request the admin view (all employees).
+  static Future<Map<String, dynamic>> getWebPayslips({
+    bool admin = false,
+  }) async {
+    final qs = admin ? '?view=admin' : '';
+    return await get('/payslip/web/$qs');
+  }
+
+  /// Fetch a single payslip's full detail via the mobile backend proxy.
+  static Future<Map<String, dynamic>> getWebPayslipDetail(int id) async {
+    return await get('/payslip/web/$id/');
+  }
+
+  /// List payslips from web backend (via proxy).
   /// - Admin: sees all employees' payslips (grouped by employee name)
   /// - Manager: sees assigned team's payslips (in production with shared DB)
   /// - Employee: sees only own payslips
@@ -526,6 +541,58 @@ class ApiService {
     int? year,
     String? filterEmployee,
   }) async {
+    final y = year ?? DateTime.now().year;
+    final sixMonthsAgo = DateTime.now().subtract(const Duration(days: 180));
+
+    // Try the mobile-backend proxy first (proxies to web HRMS).
+    try {
+      final proxyData = await getWebPayslips(admin: true);
+      final results = List<Map<String, dynamic>>.from(
+        proxyData['results'] ?? [],
+      );
+
+      final filtered = results.where((p) {
+        final sd = p['start_date']?.toString() ?? '';
+        final yearMatch = sd.startsWith('$y-');
+        final pDate = DateTime.tryParse(sd);
+        final withinWindow = pDate != null && pDate.isAfter(sixMonthsAgo);
+        if (filterEmployee != null && filterEmployee.isNotEmpty) {
+          final empName = (p['employee'] as Map?)?['name']?.toString() ?? '';
+          return yearMatch && withinWindow && empName == filterEmployee;
+        }
+        return yearMatch && withinWindow;
+      }).toList();
+
+      final employees = <String>{};
+      for (final p in results) {
+        final name = (p['employee'] as Map?)?['name']?.toString() ?? '';
+        if (name.isNotEmpty) employees.add(name);
+      }
+
+      return {
+        'year': y,
+        'employees': employees.toList()..sort(),
+        'payslips': filtered.map((p) {
+          final sd = p['start_date']?.toString() ?? '';
+          final month =
+              int.tryParse(sd.split('-').elementAtOrNull(1) ?? '') ?? 0;
+          return {
+            'id': p['id'],
+            'month': month,
+            'label': p['payslip_month_year'] ?? '',
+            'employee_name': (p['employee'] as Map?)?['name'] ?? '',
+            'employee_badge': (p['employee'] as Map?)?['badge_id'] ?? '',
+            'net_pay': p['net_pay'] ?? 0,
+            'gross_pay': p['gross_pay'] ?? 0,
+            'deduction': p['deduction'] ?? 0,
+            'status': p['status'] ?? '',
+            'currency': p['currency'] ?? '\u20B9',
+          };
+        }).toList(),
+      };
+    } catch (_) {}
+
+    // Fallback: call web backend directly (legacy path).
     try {
       final token = await _getWebToken();
       final resp = await http.get(
@@ -535,18 +602,12 @@ class ApiService {
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
         final results = List<Map<String, dynamic>>.from(data['results'] ?? []);
-        final y = year ?? DateTime.now().year;
-
-        // 6-month limit
-        final sixMonthsAgo = DateTime.now().subtract(const Duration(days: 180));
 
         final filtered = results.where((p) {
           final sd = p['start_date']?.toString() ?? '';
           final yearMatch = sd.startsWith('$y-');
-          // 6-month check
           final pDate = DateTime.tryParse(sd);
           final withinWindow = pDate != null && pDate.isAfter(sixMonthsAgo);
-          // Employee filter (for admin picking a specific employee)
           if (filterEmployee != null && filterEmployee.isNotEmpty) {
             final empName = (p['employee'] as Map?)?['name']?.toString() ?? '';
             return yearMatch && withinWindow && empName == filterEmployee;
@@ -554,7 +615,6 @@ class ApiService {
           return yearMatch && withinWindow;
         }).toList();
 
-        // Build unique employee list (for admin's employee picker)
         final employees = <String>{};
         for (final p in results) {
           final name = (p['employee'] as Map?)?['name']?.toString() ?? '';
@@ -584,19 +644,24 @@ class ApiService {
         };
       }
     } catch (_) {}
-    // Fallback to mobile backend
-    final y = year ?? DateTime.now().year;
+
+    // Final fallback: mobile backend local DB.
     return await get('/payslips/list?year=$y');
   }
 
-  /// Get single payslip detail from web backend.
+  /// Get single payslip detail — tries proxy, then direct web, then local.
   static Future<Map<String, dynamic>> getPayslip({
     int? month,
     int? year,
     int? id,
   }) async {
-    // If we have an ID from the web list, fetch detail from web.
+    // If we have an ID, fetch via proxy first.
     if (id != null) {
+      try {
+        return await getWebPayslipDetail(id);
+      } catch (_) {}
+
+      // Fallback: direct web backend call.
       try {
         final token = await _getWebToken();
         final resp = await http.get(
@@ -608,14 +673,15 @@ class ApiService {
         }
       } catch (_) {}
     }
-    // Fallback to mobile backend
+    // Final fallback: mobile backend local DB.
     final now = DateTime.now();
     final m = month ?? now.month;
     final y = year ?? now.year;
     return await get('/payslips?month=$m&year=$y');
   }
 
-  /// Download payslip PDF from web backend — exact same template as the web.
+  /// Download payslip PDF — tries direct web first (for binary),
+  /// then falls back to mobile backend proxy.
   static Future<http.Response> getPayslipPdf(int id) async {
     try {
       final token = await _getWebToken();

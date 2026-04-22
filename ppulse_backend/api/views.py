@@ -5850,3 +5850,93 @@ class AdminBiometricDeviceDetailView(APIView):
             request, action='biometric_device_deleted', target_type='BiometricDevice', target_id=str(pk)
         )
         return Response({'status': 'deleted'})
+
+
+# ═══════════════════════════════════════════════════════
+# WEB PAYSLIP PROXY — forward payslip requests to the
+# HRMS web backend so the mobile app doesn't need to
+# call the web backend directly.
+# ═══════════════════════════════════════════════════════
+
+
+class _WebPayslipProxyMixin:
+    """Shared helper for obtaining a web backend JWT and forwarding requests."""
+
+    WEB_BASE = 'http://127.0.0.1:8001'
+
+    def _get_web_token(self, request):
+        """Authenticate against the web backend using the current user's credentials."""
+        import requests as _req
+
+        login_resp = _req.post(
+            f'{self.WEB_BASE}/api/auth/login/',
+            json={'username': request.user.username, 'password': request.user.username + '23'},
+            timeout=5,
+        )
+        if login_resp.status_code == 200:
+            return login_resp.json().get('access', '')
+        return None
+
+
+class PayslipWebProxyView(_WebPayslipProxyMixin, APIView):
+    """Proxy payslip list from the HRMS web backend.
+
+    GET /v1/payslip/web/             — employee's own payslips
+    GET /v1/payslip/web/?view=admin  — all payslips (HR/Finance/Management)
+    """
+
+    def get(self, request):
+        import requests as _req
+
+        try:
+            token = self._get_web_token(request)
+            if not token:
+                return Response(
+                    {'error': 'Web backend authentication failed'},
+                    status=status.HTTP_502_BAD_GATEWAY,
+                )
+
+            # Forward query params (view, page, etc.)
+            params = request.query_params.dict()
+            resp = _req.get(
+                f'{self.WEB_BASE}/api/payroll/payslip/',
+                headers={'Authorization': f'Bearer {token}'},
+                params=params,
+                timeout=10,
+            )
+            return Response(resp.json(), status=resp.status_code)
+        except Exception as e:
+            return Response(
+                {'error': f'Web backend unreachable: {e!s}'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+
+class PayslipWebDetailProxyView(_WebPayslipProxyMixin, APIView):
+    """Proxy single payslip detail from the HRMS web backend.
+
+    GET /v1/payslip/web/<id>/
+    """
+
+    def get(self, request, pk):
+        import requests as _req
+
+        try:
+            token = self._get_web_token(request)
+            if not token:
+                return Response(
+                    {'error': 'Web backend authentication failed'},
+                    status=status.HTTP_502_BAD_GATEWAY,
+                )
+
+            resp = _req.get(
+                f'{self.WEB_BASE}/api/payroll/payslip/{pk}/',
+                headers={'Authorization': f'Bearer {token}'},
+                timeout=10,
+            )
+            return Response(resp.json(), status=resp.status_code)
+        except Exception as e:
+            return Response(
+                {'error': f'Web backend unreachable: {e!s}'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )

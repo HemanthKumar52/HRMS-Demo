@@ -71,7 +71,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
       );
       _payslips = response['payslips'] ?? [];
       _employees = List<String>.from(response['employees'] ?? []);
-      _loadPayslipDetails();
+      await _loadPayslipDetails();
     } catch (e) {
       _payslips = [];
       _selectedPayslip = {};
@@ -79,14 +79,52 @@ class _PayslipScreenState extends State<PayslipScreen> {
     if (mounted) setState(() => _isLoading = false);
   }
 
-  void _loadPayslipDetails() {
+  Future<void> _loadPayslipDetails() async {
     final m = _selectedMonthIndex + 1;
     final match = _payslips
         .cast<Map<String, dynamic>>()
         .where((p) => (p['month'] as num?)?.toInt() == m)
         .toList();
     if (match.isNotEmpty) {
-      _selectedPayslip = match.first;
+      _selectedPayslip = Map<String, dynamic>.from(match.first);
+      // Fetch full breakdown from web API (via proxy) for the selected payslip.
+      final payslipId = _selectedPayslip['id'];
+      if (payslipId != null) {
+        try {
+          final id = payslipId is int
+              ? payslipId
+              : int.tryParse(payslipId.toString()) ?? 0;
+          if (id > 0) {
+            final detail = await ApiService.getPayslip(id: id);
+            // Merge the detail fields (allowances, deductions, basic_pay)
+            // into the selected payslip so breakdown charts populate.
+            if (detail.containsKey('allowances') ||
+                detail.containsKey('pretax_deductions') ||
+                detail.containsKey('post_tax_deductions')) {
+              _selectedPayslip['allowances'] = detail['allowances'];
+              _selectedPayslip['pretax_deductions'] =
+                  detail['pretax_deductions'];
+              _selectedPayslip['post_tax_deductions'] =
+                  detail['post_tax_deductions'];
+            }
+            if (detail['basic_pay'] != null) {
+              _selectedPayslip['basic_pay'] = detail['basic_pay'];
+            }
+            if (detail['gross_pay'] != null) {
+              _selectedPayslip['gross_pay'] = detail['gross_pay'];
+            }
+            if (detail['net_pay'] != null) {
+              _selectedPayslip['net_pay'] = detail['net_pay'];
+            }
+            if (detail['deduction'] != null) {
+              _selectedPayslip['deduction'] = detail['deduction'];
+            }
+            if (mounted) setState(() {});
+          }
+        } catch (_) {
+          // Detail fetch failed — still show summary data from the list.
+        }
+      }
     } else {
       _selectedPayslip = {};
     }
