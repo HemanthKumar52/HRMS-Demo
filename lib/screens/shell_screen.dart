@@ -125,97 +125,85 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     bool isDark,
     List<Widget> screens,
   ) {
-    final topPadding = MediaQuery.of(context).padding.top;
-    const headerHeight = 56.0;
-    final totalHeaderHeight = topPadding + headerHeight;
-
     return Scaffold(
       backgroundColor: AdaptiveColors.background(context),
-      // No appBar — we overlay a liquid glass header on top
-      extendBodyBehindAppBar: true,
-      body: Stack(
-        children: [
-          // Content — extends behind header and bottom nav
-          Positioned.fill(
-            child: IndexedStack(
-              index: provider.bottomNavIndex.clamp(0, screens.length - 1),
-              children: screens,
-            ),
-          ),
-
-          // ── Liquid Glass Header (frosted blur, content scrolls behind) ──
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-                child: Container(
-                  height: totalHeaderHeight,
-                  decoration: BoxDecoration(
+      // ── Liquid Glass App Bar ──
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(52),
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.55)
+                    : Colors.white.withValues(alpha: 0.7),
+                border: Border(
+                  bottom: BorderSide(
                     color: isDark
-                        ? Colors.black.withValues(alpha: 0.6)
-                        : Colors.white.withValues(alpha: 0.7),
-                    border: Border(
-                      bottom: BorderSide(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.08)
-                            : Colors.black.withValues(alpha: 0.06),
-                        width: 0.5,
-                      ),
-                    ),
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : Colors.black.withValues(alpha: 0.06),
+                    width: 0.5,
                   ),
-                  padding: EdgeInsets.only(
-                    top: topPadding,
-                    left: 16,
-                    right: 16,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Good ${_getGreeting()},',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w400,
-                                color: AdaptiveColors.secondaryText(context),
+                ),
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: SizedBox(
+                  height: 52,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Good ${_getGreeting()},',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w400,
+                                  color: AdaptiveColors.secondaryText(context),
+                                ),
                               ),
-                            ),
-                            Text(
-                              provider.userName.split(' ').first,
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                                color: AdaptiveColors.primaryText(context),
-                                letterSpacing: -0.3,
+                              Text(
+                                provider.userName.split(' ').first,
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: AdaptiveColors.primaryText(context),
+                                  letterSpacing: -0.3,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      _buildIOSNotificationButton(context, provider),
-                      const SizedBox(width: 12),
-                      GestureDetector(
-                        onTap: () => showProfileSheet(context),
-                        child: _buildProfileAvatar(provider, isDark, 34),
-                      ),
-                    ],
+                        _buildIOSNotificationButton(context, provider),
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () => showProfileSheet(context),
+                          child: _buildProfileAvatar(provider, isDark, 34),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-
-          // Dynamic Island overlay
+        ),
+      ),
+      body: Stack(
+        children: [
+          IndexedStack(
+            index: provider.bottomNavIndex.clamp(0, screens.length - 1),
+            children: screens,
+          ),
           const DynamicIslandOverlay(),
         ],
       ),
-
       // ── Liquid Glass Bottom Nav ──
       bottomNavigationBar: ClipRect(
         child: BackdropFilter(
