@@ -481,7 +481,7 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
               final viewH = constraints.maxHeight;
               final scaleX = viewW / canvasSize;
               final scaleY = viewH / canvasSize;
-              final fitScale = min(scaleX, scaleY) * 0.92;
+              final fitScale = min(scaleX, scaleY) * 1.6;
 
               // Set initial transform to center and fit
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -585,7 +585,7 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
                                           child: Text(
                                             _labelForRing(r, activeTiers),
                                             style: TextStyle(
-                                              fontSize: 8,
+                                              fontSize: 10,
                                               fontWeight: FontWeight.w600,
                                               color: isDark
                                                   ? Colors.white38
@@ -607,9 +607,9 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
                           final pn = entry.value;
                           final isCenter = pn.ring == 0;
                           final nodeSize = isCenter
-                              ? 50.0
-                              : (pn.node.tier <= 1 ? 30.0 : 24.0);
-                          final tagWidth = isCenter ? 140.0 : 120.0;
+                              ? 56.0
+                              : (pn.node.tier <= 1 ? 36.0 : 30.0);
+                          final tagWidth = isCenter ? 155.0 : 135.0;
                           final widgetWidth = max(nodeSize * 2, tagWidth) + 10;
 
                           return Positioned(
@@ -842,7 +842,7 @@ class _NameTag extends StatelessWidget {
             node.name,
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              fontSize: isCenter ? 11 : 9,
+              fontSize: isCenter ? 13 : 11,
               color: isDark ? Colors.white : Colors.black87,
             ),
             textAlign: TextAlign.center,
@@ -854,7 +854,7 @@ class _NameTag extends StatelessWidget {
             Text(
               node.designation,
               style: TextStyle(
-                fontSize: isCenter ? 9 : 7,
+                fontSize: isCenter ? 11 : 9,
                 color: isDark ? Colors.white54 : Colors.grey.shade600,
               ),
               textAlign: TextAlign.center,
@@ -873,7 +873,7 @@ class _NameTag extends StatelessWidget {
               child: Text(
                 node.department,
                 style: TextStyle(
-                  fontSize: 7,
+                  fontSize: 9,
                   fontWeight: FontWeight.w700,
                   color: color,
                 ),
