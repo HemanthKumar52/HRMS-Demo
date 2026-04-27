@@ -100,7 +100,7 @@ class _AdminHolidaysScreenState extends State<AdminHolidaysScreen> {
   String _fmt(String? iso) {
     if (iso == null) return '—';
     try {
-      return DateFormat('EEE, dd MMM yyyy').format(DateTime.parse(iso));
+      return DateFormat('dd MMM yyyy').format(DateTime.parse(iso));
     } catch (_) {
       return iso;
     }
@@ -324,7 +324,7 @@ class _HolidayEditorState extends State<_HolidayEditor> {
               child: Text(
                 _date == null
                     ? 'Pick a date'
-                    : DateFormat('EEE, dd MMM yyyy').format(_date!),
+                    : DateFormat('dd MMM yyyy').format(_date!),
                 style: theme.textTheme.bodyLarge,
               ),
             ),

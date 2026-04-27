@@ -118,19 +118,26 @@ urlpatterns = [
     path('attendance/weekly', AttendanceWeeklyView.as_view(), name='attendance_weekly'),
     path('attendance/team', AttendanceTeamView.as_view(), name='attendance_team'),
     path('attendance/regularize', AttendanceRegularizeView.as_view(), name='attendance_regularize'),
+    path('attendance/update/<int:pk>', AttendanceRegularizeView.as_view(), name='attendance_update'),
     # Leaves
     path('leaves/balance', LeaveBalanceView.as_view(), name='leave_balance'),
     path('leaves/apply', LeaveApplyView.as_view(), name='leave_apply'),
+    path('leaves/update/<int:pk>', LeaveApplyView.as_view(), name='leave_update'),
     # Claims
     path('claims/submit', ClaimSubmitView.as_view(), name='claim_submit'),
+    path('claims/update/<int:pk>', ClaimSubmitView.as_view(), name='claim_update'),
     # Tickets
     path('tickets/raise', TicketRaiseView.as_view(), name='ticket_raise'),
+    path('tickets/update/<int:pk>', TicketRaiseView.as_view(), name='ticket_update'),
     # Shift Requests
     path('shifts/request', ShiftRequestView.as_view(), name='shift_request'),
+    path('shifts/update/<int:pk>', ShiftRequestView.as_view(), name='shift_update'),
     # Work Type Requests
     path('work-type/request', WorkTypeRequestView.as_view(), name='work_type_request'),
+    path('work-type/update/<int:pk>', WorkTypeRequestView.as_view(), name='work_type_update'),
     # Asset Requests
     path('assets/request', AssetRequestView.as_view(), name='asset_request'),
+    path('assets/update/<int:pk>', AssetRequestView.as_view(), name='asset_update'),
     # Requests
     path('requests', RequestsListView.as_view(), name='requests_list'),
     path('requests/<int:pk>', RequestDetailView.as_view(), name='request_detail'),

@@ -41,6 +41,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   final Map<int, int> _dayStatuses = {};
   List<Map<String, dynamic>> _dailyLog = [];
   bool _isLoading = true;
+  int _logPage = 0;
+  static const int _logPageSize = 5;
 
   bool? _lastPunchedIn;
   Timer? _biometricPoll;
@@ -91,7 +93,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Future<void> _loadAttendanceData() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _logPage = 0;
+    });
     try {
       final data = await ApiService.getAttendanceSummary(
         month: _currentMonth.month,
@@ -250,8 +255,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // --- Clock In Card ---
-                      _ClockInCard(provider: provider)
+                      // --- Attendance Carousel (Clock In + Working Hours + Break Hours) ---
+                      _AttendanceCarousel(
+                            provider: provider,
+                            todayLog: _dailyLog.isNotEmpty
+                                ? _dailyLog.first
+                                : null,
+                          )
                           .animate()
                           .fadeIn(duration: 420.ms)
                           .slideY(
@@ -1448,111 +1458,181 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       color: isDark ? Colors.white70 : Colors.black87,
     );
 
-    final rows = _dailyLog.take(15).toList();
+    final totalRows = _dailyLog.length;
+    final totalPages = (totalRows / _logPageSize).ceil().clamp(1, 999);
+    final start = _logPage * _logPageSize;
+    final end = (start + _logPageSize).clamp(0, totalRows);
+    final rows = _dailyLog.sublist(start, end);
 
     return NeuCard(
           padding: EdgeInsets.zero,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(18),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Table(
-                border: TableBorder(
-                  verticalInside: BorderSide(color: borderColor, width: 1),
-                  horizontalInside: BorderSide(color: borderColor, width: 0.5),
-                  top: BorderSide(color: borderColor, width: 0.5),
-                  bottom: BorderSide(color: borderColor, width: 0.5),
-                  left: BorderSide.none,
-                  right: BorderSide.none,
-                ),
-                defaultColumnWidth: const FixedColumnWidth(90),
-                columnWidths: const {
-                  0: FixedColumnWidth(100), // Date
-                },
-                children: [
-                  // Header row
-                  TableRow(
-                    decoration: BoxDecoration(color: headerBg),
+            child: Column(
+              children: [
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Table(
+                    border: TableBorder(
+                      verticalInside: BorderSide(color: borderColor, width: 1),
+                      horizontalInside: BorderSide(
+                        color: borderColor,
+                        width: 0.5,
+                      ),
+                      top: BorderSide(color: borderColor, width: 0.5),
+                      bottom: BorderSide(color: borderColor, width: 0.5),
+                      left: BorderSide.none,
+                      right: BorderSide.none,
+                    ),
+                    defaultColumnWidth: const FixedColumnWidth(90),
+                    columnWidths: const {
+                      0: FixedColumnWidth(100), // Date
+                    },
                     children: [
-                      _tableHeaderCell(
-                        'Date',
-                        Icons.calendar_today_outlined,
-                        headerStyle,
+                      // Header row
+                      TableRow(
+                        decoration: BoxDecoration(color: headerBg),
+                        children: [
+                          _tableHeaderCell(
+                            'Date',
+                            Icons.calendar_today_outlined,
+                            headerStyle,
+                          ),
+                          _tableHeaderCell(
+                            'Check-In',
+                            Icons.login_outlined,
+                            headerStyle,
+                          ),
+                          _tableHeaderCell(
+                            'Check-Out',
+                            Icons.logout_outlined,
+                            headerStyle,
+                          ),
+                          _tableHeaderCell(
+                            'At Work',
+                            Icons.timer_outlined,
+                            headerStyle,
+                          ),
+                          _tableHeaderCell(
+                            'Break',
+                            Icons.coffee_outlined,
+                            headerStyle,
+                          ),
+                          _tableHeaderCell(
+                            'Min Hour',
+                            Icons.hourglass_bottom_outlined,
+                            headerStyle,
+                          ),
+                          _tableHeaderCell(
+                            'Overtime',
+                            Icons.more_time_outlined,
+                            headerStyle,
+                          ),
+                          _tableHeaderCell(
+                            'Total',
+                            Icons.access_time_filled_outlined,
+                            headerStyle,
+                          ),
+                        ],
                       ),
-                      _tableHeaderCell(
-                        'Check-In',
-                        Icons.login_outlined,
-                        headerStyle,
-                      ),
-                      _tableHeaderCell(
-                        'Check-Out',
-                        Icons.logout_outlined,
-                        headerStyle,
-                      ),
-                      _tableHeaderCell(
-                        'At Work',
-                        Icons.timer_outlined,
-                        headerStyle,
-                      ),
-                      _tableHeaderCell(
-                        'Min Hour',
-                        Icons.hourglass_bottom_outlined,
-                        headerStyle,
-                      ),
-                      _tableHeaderCell(
-                        'Overtime',
-                        Icons.more_time_outlined,
-                        headerStyle,
-                      ),
-                      _tableHeaderCell(
-                        'Total',
-                        Icons.access_time_filled_outlined,
-                        headerStyle,
-                      ),
+                      // Data rows
+                      ...rows.map((d) {
+                        final dateStr = d['date'] as String? ?? '';
+                        final punchIn = d['punch_in'] as String? ?? '';
+                        final punchOut = d['punch_out'] as String?;
+                        final totalHours = d['total_hours'] as String? ?? '';
+                        final breakTime = d['break_time'] as String? ?? '00:00';
+                        final minHour = d['min_hour'] as String? ?? '00:00';
+                        final overtime = d['overtime'] as String? ?? '00:00';
+
+                        String fmtDate = dateStr;
+                        try {
+                          fmtDate = DateFormat(
+                            'dd MMM yyyy',
+                          ).format(DateTime.parse(dateStr));
+                        } catch (_) {}
+
+                        String fmtIn = _fmtTime(punchIn);
+                        String fmtOut = punchOut != null
+                            ? _fmtTime(punchOut)
+                            : '--';
+
+                        return TableRow(
+                          children: [
+                            _tableCell(fmtDate, cellStyle, bold: true),
+                            _tableCell(fmtIn, cellStyle),
+                            _tableCell(fmtOut, cellStyle),
+                            _tableCell(
+                              totalHours.isNotEmpty ? totalHours : '-',
+                              cellStyle,
+                            ),
+                            _tableCell(breakTime, cellStyle),
+                            _tableCell(minHour, cellStyle),
+                            _tableCell(overtime, cellStyle),
+                            _tableCell(
+                              totalHours.isNotEmpty ? totalHours : '-',
+                              cellStyle,
+                              bold: true,
+                            ),
+                          ],
+                        );
+                      }),
                     ],
                   ),
-                  // Data rows
-                  ...rows.map((d) {
-                    final dateStr = d['date'] as String? ?? '';
-                    final punchIn = d['punch_in'] as String? ?? '';
-                    final punchOut = d['punch_out'] as String?;
-                    final totalHours = d['total_hours'] as String? ?? '';
-                    final minHour = d['min_hour'] as String? ?? '00:00';
-                    final overtime = d['overtime'] as String? ?? '00:00';
-
-                    String fmtDate = dateStr;
-                    try {
-                      fmtDate = DateFormat(
-                        'dd/MM/yyyy',
-                      ).format(DateTime.parse(dateStr));
-                    } catch (_) {}
-
-                    String fmtIn = _fmtTime(punchIn);
-                    String fmtOut = punchOut != null
-                        ? _fmtTime(punchOut)
-                        : '--';
-
-                    return TableRow(
+                ),
+                // Pagination controls
+                if (totalRows > _logPageSize)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _tableCell(fmtDate, cellStyle, bold: true),
-                        _tableCell(fmtIn, cellStyle),
-                        _tableCell(fmtOut, cellStyle),
-                        _tableCell(
-                          totalHours.isNotEmpty ? totalHours : '-',
-                          cellStyle,
+                        Text(
+                          '${start + 1}–$end of $totalRows',
+                          style: cellStyle.copyWith(fontSize: 12),
                         ),
-                        _tableCell(minHour, cellStyle),
-                        _tableCell(overtime, cellStyle),
-                        _tableCell(
-                          totalHours.isNotEmpty ? totalHours : '-',
-                          cellStyle,
-                          bold: true,
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.chevron_left_rounded,
+                                size: 22,
+                              ),
+                              onPressed: _logPage > 0
+                                  ? () => setState(() => _logPage--)
+                                  : null,
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 36,
+                                minHeight: 36,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.chevron_right_rounded,
+                                size: 22,
+                              ),
+                              onPressed: end < totalRows
+                                  ? () => setState(() => _logPage++)
+                                  : null,
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 36,
+                                minHeight: 36,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
-                    );
-                  }),
-                ],
-              ),
+                    ),
+                  ),
+              ],
             ),
           ),
         )
@@ -1584,16 +1664,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Widget _tableHeaderCell(String text, IconData icon, TextStyle style) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: style.color?.withValues(alpha: 0.6)),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(text, style: style, overflow: TextOverflow.ellipsis),
-          ),
-        ],
-      ),
+      child: Text(text, style: style, overflow: TextOverflow.ellipsis),
     );
   }
 
@@ -1616,7 +1687,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           height: 10,
           decoration: BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.circular(3),
+            shape: BoxShape.circle,
           ),
         ),
         const SizedBox(width: 4),
@@ -1990,7 +2061,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               height: 10,
               decoration: BoxDecoration(
                 color: item.$2,
-                borderRadius: BorderRadius.circular(3),
+                shape: BoxShape.circle,
               ),
             ),
             const SizedBox(width: 5),
@@ -2002,6 +2073,395 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 }
 
+// =============================================================================
+// ATTENDANCE CAROUSEL — 3 swipable cards with page indicator
+// =============================================================================
+class _AttendanceCarousel extends StatefulWidget {
+  final AppProvider provider;
+  final Map<String, dynamic>? todayLog;
+  const _AttendanceCarousel({required this.provider, this.todayLog});
+
+  @override
+  State<_AttendanceCarousel> createState() => _AttendanceCarouselState();
+}
+
+class _AttendanceCarouselState extends State<_AttendanceCarousel> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+  Timer? _autoScroll;
+
+  @override
+  void initState() {
+    super.initState();
+    _startAutoScroll();
+  }
+
+  void _startAutoScroll() {
+    _autoScroll = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!mounted) return;
+      final next = (_currentPage + 1) % 3;
+      _pageController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoScroll?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 340,
+          child: PageView(
+            controller: _pageController,
+            onPageChanged: (i) => setState(() => _currentPage = i),
+            children: [
+              _ClockInCard(provider: widget.provider),
+              _WorkingHoursCard(
+                provider: widget.provider,
+                todayLog: widget.todayLog,
+              ),
+              _BreakHoursCard(
+                provider: widget.provider,
+                todayLog: widget.todayLog,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(3, (i) {
+            final isActive = i == _currentPage;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isActive
+                    ? AppColors.primary
+                    : (Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withValues(alpha: 0.2)
+                          : Colors.grey.shade300),
+              ),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+}
+
+// =============================================================================
+// CARD 2: WORKING HOURS (synced from DB)
+// =============================================================================
+class _WorkingHoursCard extends StatelessWidget {
+  final AppProvider provider;
+  final Map<String, dynamic>? todayLog;
+  const _WorkingHoursCard({required this.provider, this.todayLog});
+
+  String _formatDuration(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60);
+    return '${h}h ${m.toString().padLeft(2, '0')}m';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isPunchedIn = provider.isPunchedIn;
+    final punchTime = provider.punchInTime;
+
+    // Try to get total_hours from DB log
+    final dbHours = todayLog?['total_hours'] as String?;
+
+    return StreamBuilder<DateTime>(
+      stream: Stream.periodic(
+        const Duration(seconds: 1),
+        (_) => DateTime.now(),
+      ),
+      builder: (context, snapshot) {
+        final now = snapshot.data ?? DateTime.now();
+        String workedText;
+        double progress;
+
+        if (isPunchedIn && punchTime != null) {
+          final worked = now.difference(punchTime);
+          workedText = _formatDuration(worked);
+          progress = (worked.inMinutes / 540).clamp(0.0, 1.0); // 9h target
+        } else if (dbHours != null && dbHours.isNotEmpty) {
+          workedText = dbHours;
+          // Parse HH:MM:SS
+          final parts = dbHours.split(':');
+          final h = int.tryParse(parts[0]) ?? 0;
+          final m = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+          progress = ((h * 60 + m) / 540).clamp(0.0, 1.0);
+        } else {
+          workedText = '0h 00m';
+          progress = 0.0;
+        }
+
+        return NeuCard(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.work_history_rounded,
+                  color: AppColors.success,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Working Hours',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark
+                      ? AppColors.darkSubtext
+                      : AppColors.lightSubtext,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                workedText,
+                style: TextStyle(
+                  fontSize: 42,
+                  fontWeight: FontWeight.w900,
+                  color: isDark ? AppColors.darkText : AppColors.lightText,
+                  letterSpacing: -1,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Progress bar toward 9h target
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 8,
+                  backgroundColor: isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : Colors.grey.shade200,
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    AppColors.success,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${(progress * 100).toInt()}% of 9h target',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark
+                      ? AppColors.darkSubtext
+                      : AppColors.lightSubtext,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _MiniStat(
+                    label: 'Punch In',
+                    value: isPunchedIn && punchTime != null
+                        ? DateFormat('hh:mm a').format(punchTime)
+                        : '--:--',
+                    color: AppColors.success,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(width: 24),
+                  _MiniStat(
+                    label: 'Target',
+                    value: '9h 00m',
+                    color: AppColors.primary,
+                    isDark: isDark,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// =============================================================================
+// CARD 3: BREAK HOURS (synced from DB)
+// =============================================================================
+class _BreakHoursCard extends StatelessWidget {
+  final AppProvider provider;
+  final Map<String, dynamic>? todayLog;
+  const _BreakHoursCard({required this.provider, this.todayLog});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Get break time from DB
+    final dbBreak = todayLog?['break_time'] as String?;
+    String breakText = '0h 00m';
+    double breakMinutes = 0;
+
+    if (dbBreak != null && dbBreak.isNotEmpty && dbBreak != '00:00') {
+      final parts = dbBreak.split(':');
+      final h = int.tryParse(parts[0]) ?? 0;
+      final m = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+      breakText = '${h}h ${m.toString().padLeft(2, '0')}m';
+      breakMinutes = (h * 60 + m).toDouble();
+    }
+
+    final allowedBreak = 60.0; // 1h allowed
+    final progress = (breakMinutes / allowedBreak).clamp(0.0, 1.0);
+    final isOverBreak = breakMinutes > allowedBreak;
+
+    return NeuCard(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.orange.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.coffee_rounded,
+              color: AppColors.orange,
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Break Hours',
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            breakText,
+            style: TextStyle(
+              fontSize: 42,
+              fontWeight: FontWeight.w900,
+              color: isOverBreak
+                  ? AppColors.danger
+                  : (isDark ? AppColors.darkText : AppColors.lightText),
+              letterSpacing: -1,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              backgroundColor: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.grey.shade200,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isOverBreak ? AppColors.danger : AppColors.orange,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isOverBreak
+                ? 'Exceeded allowed break time'
+                : '${breakMinutes.toInt()}m of ${allowedBreak.toInt()}m allowed',
+            style: TextStyle(
+              fontSize: 12,
+              color: isOverBreak
+                  ? AppColors.danger
+                  : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _MiniStat(
+                label: 'Used',
+                value: breakText,
+                color: AppColors.orange,
+                isDark: isDark,
+              ),
+              const SizedBox(width: 24),
+              _MiniStat(
+                label: 'Allowed',
+                value: '1h 00m',
+                color: AppColors.primary,
+                isDark: isDark,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  final bool isDark;
+  const _MiniStat({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// =============================================================================
+// CARD 1: CLOCK IN/OUT (original)
+// =============================================================================
 class _ClockInCard extends StatelessWidget {
   final AppProvider provider;
   const _ClockInCard({required this.provider});

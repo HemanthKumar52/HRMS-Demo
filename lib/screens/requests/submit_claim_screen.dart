@@ -13,7 +13,8 @@ import '../../widgets/form_fields.dart';
 import '../../widgets/neu_card.dart';
 
 class SubmitClaimScreen extends StatefulWidget {
-  const SubmitClaimScreen({super.key});
+  final Map<String, dynamic>? editData;
+  const SubmitClaimScreen({super.key, this.editData});
 
   @override
   State<SubmitClaimScreen> createState() => _SubmitClaimScreenState();
@@ -30,6 +31,9 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
   final List<Map<String, dynamic>> _ccUsers = [];
   final ImagePicker _picker = ImagePicker();
 
+  bool get _isEditing => widget.editData != null;
+  String? get _editId => widget.editData?['id']?.toString();
+
   final List<String> _claimTypes = [
     'Travel Reimbursement',
     'Food & Beverage',
@@ -43,6 +47,22 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
   void initState() {
     super.initState();
     _selectedType = _claimTypes.first;
+    _prefillFromEditData();
+  }
+
+  void _prefillFromEditData() {
+    final data = widget.editData;
+    if (data == null) return;
+    _titleController.text = data['title']?.toString() ?? '';
+    _descriptionController.text = data['description']?.toString() ?? '';
+    final type = data['claim_type']?.toString() ?? '';
+    if (_claimTypes.contains(type)) {
+      _selectedType = type;
+    }
+    final dateStr = data['date']?.toString();
+    if (dateStr != null && dateStr.isNotEmpty) {
+      _date = DateTime.tryParse(dateStr);
+    }
   }
 
   @override
@@ -91,19 +111,26 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
     HapticFeedback.mediumImpact();
     setState(() => _isSubmitting = true);
     try {
-      await ApiService.submitClaim({
+      final payload = {
         'title': _titleController.text,
         'claim_type': _selectedType,
         'amount': 0,
         'date': (_date ?? DateTime.now()).toIso8601String().split('T')[0],
         'description': _descriptionController.text,
         'cc': _ccUsers.map((u) => u['user_id']).toList(),
-      });
+      };
+      if (_isEditing) {
+        await ApiService.updateClaim(int.parse(_editId!), payload);
+      } else {
+        await ApiService.submitClaim(payload);
+      }
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       await SuccessOverlay.show(
         context,
-        message: 'Claim submitted successfully',
+        message: _isEditing
+            ? 'Claim updated successfully'
+            : 'Claim submitted successfully',
       );
       // (Single notification only — SuccessOverlay above covers it.)
       if (mounted) Navigator.pop(context);
@@ -126,7 +153,7 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: adaptiveAppBar(
         context: context,
-        title: 'Submit Claim',
+        title: _isEditing ? 'Edit Claim Request' : 'Claim Request',
         showBackButton: true,
       ),
       body: SingleChildScrollView(
@@ -141,15 +168,7 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Create Reimbursement / Encashment',
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              formFieldGap,
-
-              const FormLabel('Type'),
+              const FormLabel('Type', required: true),
               formLabelGap,
               FormDropdown(
                 value: _selectedType,
@@ -176,7 +195,7 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
               ),
               formFieldGap,
 
-              const FormLabel('Title'),
+              const FormLabel('Title', required: true),
               formLabelGap,
               FormInput(
                 controller: _titleController,
@@ -186,11 +205,11 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
               ),
               formFieldGap,
 
-              const FormLabel('Description'),
+              const FormLabel('Reason', required: true),
               formLabelGap,
               FormInput(
                 controller: _descriptionController,
-                hint: 'Enter claim description...',
+                hint: 'Reason',
                 maxLines: 4,
               ),
               formFieldGap,

@@ -784,7 +784,7 @@ class _AttendanceTimerCardState extends State<_AttendanceTimerCard> {
                 children: [
                   Text('Attendance', style: theme.textTheme.titleMedium),
                   Text(
-                    DateFormat('EEEE, MMM d').format(DateTime.now()),
+                    DateFormat('dd MMM yyyy').format(DateTime.now()),
                     style: theme.textTheme.bodySmall,
                   ),
                 ],
@@ -886,6 +886,7 @@ class _AttendanceTimerCardState extends State<_AttendanceTimerCard> {
               height: 50,
               child: ElevatedButton.icon(
                 onPressed: () {
+                  HapticFeedback.heavyImpact();
                   if (!isPunchedIn) {
                     NativeAttendanceCheckIn.show(context);
                   } else {

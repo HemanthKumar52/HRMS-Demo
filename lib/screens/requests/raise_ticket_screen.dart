@@ -12,7 +12,8 @@ import '../../widgets/employee_cc_field.dart';
 import '../../widgets/form_fields.dart';
 
 class RaiseTicketScreen extends StatefulWidget {
-  const RaiseTicketScreen({super.key});
+  final Map<String, dynamic>? editData;
+  const RaiseTicketScreen({super.key, this.editData});
 
   @override
   State<RaiseTicketScreen> createState() => _RaiseTicketScreenState();
@@ -53,13 +54,40 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
     'Admin',
   ];
 
+  bool get _isEditing => widget.editData != null;
+  String? get _editId => widget.editData?['id']?.toString();
+
   @override
   void initState() {
     super.initState();
-    // Default to first option in each dropdown
     _ticketType = _ticketTypes.first;
     _priority = _priorities.first;
     _department = _departments.first;
+    _prefillFromEditData();
+  }
+
+  void _prefillFromEditData() {
+    final data = widget.editData;
+    if (data == null) return;
+    final md = data['metadata'] as Map<String, dynamic>? ?? {};
+    _titleController.text =
+        md['title']?.toString() ?? data['description']?.toString() ?? '';
+    _descriptionController.text =
+        data['description']?.toString() ?? md['description']?.toString() ?? '';
+    if (md['priority'] != null) {
+      final p = md['priority'].toString();
+      final match = _priorities.where(
+        (o) => o.toLowerCase() == p.toLowerCase(),
+      );
+      if (match.isNotEmpty) _priority = match.first;
+    }
+    if (md['ticket_type'] != null) {
+      final t = md['ticket_type'].toString();
+      final match = _ticketTypes.where(
+        (o) => o.toLowerCase() == t.toLowerCase(),
+      );
+      if (match.isNotEmpty) _ticketType = match.first;
+    }
   }
 
   @override
@@ -75,17 +103,25 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
     HapticFeedback.mediumImpact();
     setState(() => _isSubmitting = true);
     try {
-      await ApiService.raiseTicket({
+      final payload = {
         'title': _titleController.text,
         'description': _descriptionController.text,
         'priority': _priority.toLowerCase(),
         'ticket_type': _ticketType,
         'department': _department,
         'cc': _ccUsers.map((u) => u['user_id']).toList(),
-      });
+      };
+      if (_isEditing) {
+        await ApiService.updateTicket(int.parse(_editId!), payload);
+      } else {
+        await ApiService.raiseTicket(payload);
+      }
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      await SuccessOverlay.show(context, message: 'Ticket raised successfully');
+      await SuccessOverlay.show(
+        context,
+        message: _isEditing ? 'Ticket updated' : 'Ticket raised successfully',
+      );
       // (Single notification only — SuccessOverlay above covers it.)
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -106,7 +142,7 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: adaptiveAppBar(
         context: context,
-        title: 'Raise Ticket',
+        title: _isEditing ? 'Edit Ticket Request' : 'Ticket Request',
         showBackButton: true,
       ),
       body: SingleChildScrollView(
@@ -121,15 +157,7 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Create Ticket',
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              formFieldGap,
-
-              const FormLabel('Title'),
+              const FormLabel('Title', required: true),
               formLabelGap,
               FormInput(
                 controller: _titleController,
@@ -139,7 +167,7 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
               ),
               formFieldGap,
 
-              const FormLabel('Ticket Type'),
+              const FormLabel('Ticket Type', required: true),
               formLabelGap,
               FormDropdown(
                 value: _ticketType,
@@ -150,7 +178,7 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
               ),
               formFieldGap,
 
-              const FormLabel('Priority'),
+              const FormLabel('Priority', required: true),
               formLabelGap,
               FormDropdown(
                 value: _priority,
@@ -182,11 +210,11 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
               ),
               formFieldGap,
 
-              const FormLabel('Description'),
+              const FormLabel('Reason', required: true),
               formLabelGap,
               FormInput(
                 controller: _descriptionController,
-                hint: 'Describe your issue or request...',
+                hint: 'Reason',
                 maxLines: 4,
                 validator: (v) =>
                     (v == null || v.isEmpty) ? 'Description is required' : null,

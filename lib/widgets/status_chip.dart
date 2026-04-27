@@ -53,6 +53,7 @@ class StatusChip extends StatelessWidget {
               color: c,
               fontSize: 12,
               fontWeight: FontWeight.w600,
+              decoration: TextDecoration.none,
             ),
           ),
         ],

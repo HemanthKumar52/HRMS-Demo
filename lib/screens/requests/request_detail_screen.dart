@@ -15,6 +15,14 @@ import '../../widgets/neu_card.dart';
 import '../../utils/platform_adaptive.dart';
 import '../../widgets/request_action_dialog.dart';
 import '../../widgets/status_chip.dart';
+import 'apply_leave_screen.dart';
+import 'submit_claim_screen.dart';
+import 'raise_ticket_screen.dart';
+import 'shift_change_screen.dart';
+import 'work_type_request_screen.dart';
+import 'attendance_request_screen.dart';
+import 'asset_request_screen.dart';
+import '../../animations/motion.dart';
 
 /// Map a backend request type label to the per-type screen title.
 String _humanRequestTitle(String type) {
@@ -214,6 +222,39 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     }
   }
 
+  void _navigateToEditForm(BuildContext context, Map<String, dynamic> data) {
+    final type = (data['type'] as String?) ?? '';
+    Widget? screen;
+    switch (type) {
+      case 'Leave':
+        screen = ApplyLeaveScreen(editData: data);
+        break;
+      case 'Claims':
+        screen = SubmitClaimScreen(editData: data);
+        break;
+      case 'Tickets':
+        screen = RaiseTicketScreen(editData: data);
+        break;
+      case 'Shift Requests':
+        screen = ShiftChangeScreen(editData: data);
+        break;
+      case 'Work Type Requests':
+        screen = WorkTypeRequestScreen(editData: data);
+        break;
+      case 'Attendance Requests':
+        screen = AttendanceRequestScreen(editData: data);
+        break;
+      case 'Asset Requests':
+        screen = AssetRequestScreen(editData: data);
+        break;
+    }
+    if (screen != null) {
+      Navigator.push(context, Motion.pageRoute(screen)).then((_) {
+        if (mounted) Navigator.pop(context);
+      });
+    }
+  }
+
   Future<void> _handleAction({required bool approve}) async {
     final type = (_data['type'] as String? ?? 'Request');
     final reason = await RequestActionDialog.show(
@@ -308,12 +349,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             isApplePlatform
                 ? CupertinoButton(
                     padding: EdgeInsets.zero,
-                    onPressed: () {
-                      showSuccessSnackbar(
-                        context,
-                        'Edit request feature coming soon',
-                      );
-                    },
+                    onPressed: () => _navigateToEditForm(context, data),
                     child: const Icon(
                       CupertinoIcons.pencil,
                       color: AppColors.primary,
@@ -322,12 +358,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   )
                 : IconButton(
                     icon: const Icon(Icons.edit_rounded),
-                    onPressed: () {
-                      showSuccessSnackbar(
-                        context,
-                        'Edit request feature coming soon',
-                      );
-                    },
+                    onPressed: () => _navigateToEditForm(context, data),
                   ),
         ],
       ),
@@ -965,7 +996,10 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                           child: OutlinedButton.icon(
                             onPressed: _isProcessing
                                 ? null
-                                : () => _handleAction(approve: false),
+                                : () {
+                                    HapticFeedback.mediumImpact();
+                                    _handleAction(approve: false);
+                                  },
                             icon: const Icon(Icons.close_rounded, size: 18),
                             label: const Text(
                               'Reject',
@@ -993,7 +1027,10 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                           child: ElevatedButton.icon(
                             onPressed: _isProcessing
                                 ? null
-                                : () => _handleAction(approve: true),
+                                : () {
+                                    HapticFeedback.mediumImpact();
+                                    _handleAction(approve: true);
+                                  },
                             icon: _isProcessing
                                 ? const SizedBox(
                                     width: 18,

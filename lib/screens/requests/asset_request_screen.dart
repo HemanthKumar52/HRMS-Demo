@@ -10,7 +10,8 @@ import '../../utils/platform_adaptive.dart';
 import '../../widgets/form_fields.dart';
 
 class AssetRequestScreen extends StatefulWidget {
-  const AssetRequestScreen({super.key});
+  final Map<String, dynamic>? editData;
+  const AssetRequestScreen({super.key, this.editData});
 
   @override
   State<AssetRequestScreen> createState() => _AssetRequestScreenState();
@@ -21,6 +22,9 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
   final _descriptionController = TextEditingController();
   late String _selectedCategory;
   bool _isSubmitting = false;
+
+  bool get _isEditing => widget.editData != null;
+  String? get _editId => widget.editData?['id']?.toString();
 
   final List<String> _categories = [
     'Laptop',
@@ -38,6 +42,17 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
   void initState() {
     super.initState();
     _selectedCategory = _categories.first;
+    _prefillFromEditData();
+  }
+
+  void _prefillFromEditData() {
+    final data = widget.editData;
+    if (data == null) return;
+    final cat = data['asset_category']?.toString() ?? '';
+    if (_categories.contains(cat)) {
+      _selectedCategory = cat;
+    }
+    _descriptionController.text = data['description']?.toString() ?? '';
   }
 
   @override
@@ -51,13 +66,23 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
     HapticFeedback.mediumImpact();
     setState(() => _isSubmitting = true);
     try {
-      await ApiService.post('/assets/request', {
+      final payload = {
         'asset_category': _selectedCategory,
         'description': _descriptionController.text,
-      });
+      };
+      if (_isEditing) {
+        await ApiService.updateAssetRequest(int.parse(_editId!), payload);
+      } else {
+        await ApiService.post('/assets/request', payload);
+      }
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      await SuccessOverlay.show(context, message: 'Asset request submitted');
+      await SuccessOverlay.show(
+        context,
+        message: _isEditing
+            ? 'Asset request updated'
+            : 'Asset request submitted',
+      );
       // (Single notification only — SuccessOverlay above covers it.)
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -72,13 +97,11 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: adaptiveAppBar(
         context: context,
-        title: 'Asset Request',
+        title: _isEditing ? 'Edit Asset Request' : 'Asset Request',
         showBackButton: true,
       ),
       body: SingleChildScrollView(
@@ -93,15 +116,7 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Asset Request',
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              formFieldGap,
-
-              const FormLabel('Asset Category'),
+              const FormLabel('Asset Category', required: true),
               formLabelGap,
               FormDropdown(
                 value: _selectedCategory,
@@ -112,14 +127,14 @@ class _AssetRequestScreenState extends State<AssetRequestScreen> {
               ),
               formFieldGap,
 
-              const FormLabel('Description'),
+              const FormLabel('Reason', required: true),
               formLabelGap,
               FormInput(
                 controller: _descriptionController,
-                hint: 'Description',
+                hint: 'Reason',
                 maxLines: 4,
                 validator: (v) =>
-                    (v == null || v.isEmpty) ? 'Description is required' : null,
+                    (v == null || v.isEmpty) ? 'Reason is required' : null,
               ),
               formSectionGap,
 

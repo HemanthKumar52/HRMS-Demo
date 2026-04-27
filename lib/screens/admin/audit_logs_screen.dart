@@ -114,7 +114,7 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
         label = 'Yesterday';
       } else {
         try {
-          label = DateFormat('MMM dd, yyyy').format(DateTime.parse(dateStr));
+          label = DateFormat('dd MMM yyyy').format(DateTime.parse(dateStr));
         } catch (_) {
           label = dateStr;
         }
@@ -536,7 +536,7 @@ class _AuditDetailPage extends StatelessWidget {
     String formattedTime = ts;
     try {
       final dt = DateTime.parse(ts).toLocal();
-      formattedTime = DateFormat('EEEE, dd MMM yyyy · hh:mm:ss a').format(dt);
+      formattedTime = DateFormat('dd MMM yyyy · hh:mm:ss a').format(dt);
     } catch (_) {}
 
     return Scaffold(

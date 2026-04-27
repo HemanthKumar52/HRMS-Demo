@@ -10,7 +10,8 @@ import '../../utils/platform_adaptive.dart';
 import '../../widgets/form_fields.dart';
 
 class ShiftChangeScreen extends StatefulWidget {
-  const ShiftChangeScreen({super.key});
+  final Map<String, dynamic>? editData;
+  const ShiftChangeScreen({super.key, this.editData});
 
   @override
   State<ShiftChangeScreen> createState() => _ShiftChangeScreenState();
@@ -25,12 +26,34 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
   bool _permanentRequest = false;
   bool _isSubmitting = false;
 
+  bool get _isEditing => widget.editData != null;
+  String? get _editId => widget.editData?['id']?.toString();
+
   List<String> _shifts = [];
 
   @override
   void initState() {
     super.initState();
+    _prefillFromEditData();
     _loadData();
+  }
+
+  void _prefillFromEditData() {
+    final data = widget.editData;
+    if (data == null) return;
+
+    _requestingShift = data['requesting_shift']?.toString();
+    _descriptionController.text = data['description']?.toString() ?? '';
+
+    final dateStr = data['requested_date']?.toString();
+    if (dateStr != null && dateStr.isNotEmpty) {
+      _requestedDate = DateTime.tryParse(dateStr);
+    }
+
+    final tillStr = data['requested_till']?.toString();
+    if (tillStr != null && tillStr.isNotEmpty) {
+      _requestedTill = DateTime.tryParse(tillStr);
+    }
   }
 
   Future<void> _loadData() async {
@@ -42,7 +65,7 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
             .map<String>((s) => s['name']?.toString() ?? '')
             .where((s) => s.isNotEmpty)
             .toList();
-        if (_shifts.isNotEmpty) {
+        if (_shifts.isNotEmpty && _requestingShift == null) {
           _requestingShift = _shifts.first;
         }
       });
@@ -64,19 +87,30 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
     HapticFeedback.mediumImpact();
     setState(() => _isSubmitting = true);
     try {
-      await ApiService.post('/shifts/request', {
+      final payload = {
         'requesting_shift': _requestingShift ?? '',
         'requested_date': (_requestedDate ?? DateTime.now())
             .toIso8601String()
             .split('T')[0],
-        'requested_till': _requestedTill?.toIso8601String().split('T')[0],
+        'requested_till': _permanentRequest
+            ? null
+            : _requestedTill?.toIso8601String().split('T')[0],
         'description': _descriptionController.text,
-      });
+        'is_permanent': _permanentRequest,
+      };
+
+      if (_isEditing) {
+        await ApiService.updateShiftRequest(int.parse(_editId!), payload);
+      } else {
+        await ApiService.post('/shifts/request', payload);
+      }
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       await SuccessOverlay.show(
         context,
-        message: 'Shift change request submitted',
+        message: _isEditing
+            ? 'Shift change request updated'
+            : 'Shift change request submitted',
       );
       // (Single notification only — SuccessOverlay above covers it.)
       if (mounted) Navigator.pop(context);
@@ -99,7 +133,7 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: adaptiveAppBar(
         context: context,
-        title: 'Shift Change',
+        title: _isEditing ? 'Edit Shift Request' : 'Shift Request',
         showBackButton: true,
       ),
       body: SingleChildScrollView(
@@ -114,15 +148,7 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Create Shift Request',
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              formFieldGap,
-
-              const FormLabel('Requesting Shift'),
+              const FormLabel('Requesting Shift', required: true),
               formLabelGap,
               FormDropdown(
                 value: _requestingShift,
@@ -135,7 +161,7 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
               ),
               formFieldGap,
 
-              const FormLabel('Requested Date'),
+              const FormLabel('Requested Date', required: true),
               formLabelGap,
               FormDateField(
                 value: formatDate(_requestedDate),
@@ -174,11 +200,11 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
               ),
               formFieldGap,
 
-              const FormLabel('Description'),
+              const FormLabel('Reason'),
               formLabelGap,
               FormInput(
                 controller: _descriptionController,
-                hint: 'Description',
+                hint: 'Reason',
                 maxLines: 3,
               ),
               formFieldGap,
@@ -204,7 +230,7 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
       children: [
         Expanded(
           child: Text(
-            'Permanent Request',
+            'Make this as permanent',
             style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
           ),
         ),

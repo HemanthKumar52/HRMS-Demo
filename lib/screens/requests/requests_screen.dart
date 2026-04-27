@@ -109,17 +109,17 @@ class _RequestsScreenState extends State<RequestsScreen> {
   IconData _iconForType(String type) {
     switch (type) {
       case 'Leave':
-        return Icons.beach_access_rounded;
+        return Icons.event_busy;
       case 'Claims':
-        return Icons.receipt_long_rounded;
+        return Icons.receipt;
       case 'Tickets':
-        return Icons.confirmation_number_rounded;
+        return Icons.confirmation_num;
       case 'Shift Requests':
-        return Icons.swap_horiz_rounded;
+        return Icons.swap_horiz;
       case 'Work Type Requests':
-        return Icons.home_work_rounded;
+        return Icons.work;
       case 'Attendance Requests':
-        return Icons.fingerprint_rounded;
+        return Icons.access_time;
       case 'Asset Requests':
         return Icons.devices_rounded;
       default:
@@ -164,6 +164,27 @@ class _RequestsScreenState extends State<RequestsScreen> {
     }
   }
 
+  String _titleForType(String type) {
+    switch (type) {
+      case 'Leave':
+        return 'Leave Request';
+      case 'Claims':
+        return 'Claim Request';
+      case 'Tickets':
+        return 'Ticket Request';
+      case 'Shift Requests':
+        return 'Shift Request';
+      case 'Work Type Requests':
+        return 'Work Type Request';
+      case 'Attendance Requests':
+        return 'Attendance Request';
+      case 'Asset Requests':
+        return 'Asset Request';
+      default:
+        return type;
+    }
+  }
+
   Map<String, dynamic> _mapApiRequest(Map<String, dynamic> apiReq) {
     final type = apiReq['type'] as String? ?? '';
     final status = _normalizeStatus(apiReq['status'] as String? ?? '');
@@ -176,7 +197,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
       // shows it instead of the raw DB primary key.
       'request_id': apiReq['request_id'] ?? '',
       'type': type,
-      'title': apiReq['title'] ?? '',
+      'title': _titleForType(type),
       'status': status,
       'icon': _iconForType(type),
       'color': _colorForType(type),

@@ -12,7 +12,8 @@ import '../../widgets/employee_cc_field.dart';
 import '../../widgets/form_fields.dart';
 
 class AttendanceRequestScreen extends StatefulWidget {
-  const AttendanceRequestScreen({super.key});
+  final Map<String, dynamic>? editData;
+  const AttendanceRequestScreen({super.key, this.editData});
 
   @override
   State<AttendanceRequestScreen> createState() =>
@@ -44,10 +45,63 @@ class _AttendanceRequestScreenState extends State<AttendanceRequestScreen> {
 
   List<String> _shifts = [];
 
+  bool get _isEditing => widget.editData != null;
+  String? get _editId => widget.editData?['id']?.toString();
+
   @override
   void initState() {
     super.initState();
     _loadShifts();
+    _prefillFromEditData();
+  }
+
+  void _prefillFromEditData() {
+    final data = widget.editData;
+    if (data == null) return;
+
+    // Attendance date
+    final dateStr = data['attendance_date']?.toString();
+    if (dateStr != null && dateStr.isNotEmpty) {
+      _attendanceDate = DateTime.tryParse(dateStr);
+    }
+
+    // Attendance type
+    final type = data['attendance_type']?.toString();
+    if (type != null && _attendanceTypes.contains(type)) {
+      _attendanceType = type;
+    }
+
+    // Reason
+    final reason = data['reason']?.toString();
+    if (reason != null) {
+      _reasonController.text = reason;
+    }
+
+    // Shift
+    final shift = data['shift']?.toString();
+    if (shift != null && shift.isNotEmpty) {
+      _selectedShift = shift;
+    }
+
+    // Check-in time
+    final checkIn = data['requested_check_in']?.toString();
+    if (checkIn != null && checkIn.contains(':')) {
+      final parts = checkIn.split(':');
+      _requestedCheckIn = TimeOfDay(
+        hour: int.tryParse(parts[0]) ?? 0,
+        minute: int.tryParse(parts[1]) ?? 0,
+      );
+    }
+
+    // Check-out time
+    final checkOut = data['requested_check_out']?.toString();
+    if (checkOut != null && checkOut.contains(':')) {
+      final parts = checkOut.split(':');
+      _requestedCheckOut = TimeOfDay(
+        hour: int.tryParse(parts[0]) ?? 0,
+        minute: int.tryParse(parts[1]) ?? 0,
+      );
+    }
   }
 
   Future<void> _loadShifts() async {
@@ -118,12 +172,18 @@ class _AttendanceRequestScreenState extends State<AttendanceRequestScreen> {
       if (_attachmentName != null) body['attachment_name'] = _attachmentName;
       body['cc'] = _ccUsers.map((u) => u['user_id']).toList();
 
-      await ApiService.post('/attendance/regularize', body);
+      if (_isEditing) {
+        await ApiService.updateAttendanceRequest(int.parse(_editId!), body);
+      } else {
+        await ApiService.post('/attendance/regularize', body);
+      }
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       await SuccessOverlay.show(
         context,
-        message: 'Attendance request submitted',
+        message: _isEditing
+            ? 'Attendance request updated'
+            : 'Attendance request submitted',
       );
       // (Single notification only — SuccessOverlay above covers it.)
       if (mounted) Navigator.pop(context);
@@ -139,13 +199,11 @@ class _AttendanceRequestScreenState extends State<AttendanceRequestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: adaptiveAppBar(
         context: context,
-        title: 'Attendance Request',
+        title: _isEditing ? 'Edit Attendance Request' : 'Attendance Request',
         showBackButton: true,
       ),
       body: SingleChildScrollView(
@@ -160,15 +218,7 @@ class _AttendanceRequestScreenState extends State<AttendanceRequestScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'New Regularization',
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              formFieldGap,
-
-              const FormLabel('Date of Regularization'),
+              const FormLabel('Date of Regularization', required: true),
               formLabelGap,
               FormDateField(
                 value: formatDate(_attendanceDate),
@@ -184,7 +234,7 @@ class _AttendanceRequestScreenState extends State<AttendanceRequestScreen> {
               ),
               formFieldGap,
 
-              const FormLabel('Attendance Type'),
+              const FormLabel('Attendance Type', required: true),
               formLabelGap,
               FormDropdown(
                 value: _attendanceType,
@@ -263,7 +313,7 @@ class _AttendanceRequestScreenState extends State<AttendanceRequestScreen> {
                 formFieldGap,
               ],
 
-              const FormLabel('Reason / Justification'),
+              const FormLabel('Reason / Justification', required: true),
               formLabelGap,
               FormInput(
                 controller: _reasonController,

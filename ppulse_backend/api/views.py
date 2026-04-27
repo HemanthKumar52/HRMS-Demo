@@ -1650,6 +1650,81 @@ class LeaveApplyView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
+    def put(self, request, pk=None):
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        leave_request = LeaveRequest.objects.filter(id=pk, employee_id_id=employee.id).first()
+        if not leave_request:
+            return Response({'error': 'Leave request not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if leave_request.status != 'requested':
+            return Response(
+                {'error': 'Only pending leave requests can be edited'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = request.data
+
+        if 'leave_type' in data:
+            leave_type_val = data['leave_type']
+            leave_type = LeaveType.objects.filter(name__iexact=leave_type_val).first()
+            if not leave_type:
+                leave_type = (
+                    LeaveType.objects.filter(id=leave_type_val).first()
+                    if str(leave_type_val).isdigit()
+                    else None
+                )
+            if not leave_type:
+                return Response({'error': 'Invalid leave type'}, status=status.HTTP_400_BAD_REQUEST)
+            leave_request.leave_type_id_id = leave_type.id
+
+        if 'start_date' in data:
+            leave_request.start_date = data['start_date']
+        if 'end_date' in data:
+            leave_request.end_date = data['end_date']
+        if 'start_date_breakdown' in data:
+            leave_request.start_date_breakdown = data['start_date_breakdown']
+        if 'end_date_breakdown' in data:
+            leave_request.end_date_breakdown = data['end_date_breakdown']
+        if 'description' in data:
+            leave_request.description = data['description']
+
+        # Recalculate requested days
+        start = leave_request.start_date
+        end = leave_request.end_date or start
+        if hasattr(start, 'isoformat'):
+            pass
+        else:
+            from datetime import datetime as dt
+
+            start = dt.strptime(str(start), '%Y-%m-%d').date()
+            end = dt.strptime(str(end), '%Y-%m-%d').date()
+        leave_request.requested_days = (end - start).days + 1
+
+        leave_request.save()
+
+        lt = leave_request.leave_type_id
+        return Response(
+            {
+                'id': str(leave_request.id),
+                'request_id': get_request_id('LV', leave_request.id),
+                'type': 'Leave',
+                'title': f'{lt.name} Leave',
+                'status': leave_request.status,
+                'start_date': leave_request.start_date.isoformat()
+                if hasattr(leave_request.start_date, 'isoformat')
+                else str(leave_request.start_date),
+                'end_date': leave_request.end_date.isoformat()
+                if leave_request.end_date and hasattr(leave_request.end_date, 'isoformat')
+                else str(leave_request.end_date)
+                if leave_request.end_date
+                else None,
+                'description': leave_request.description,
+            },
+        )
+
 
 class ClaimSubmitView(APIView):
     def post(self, request):
@@ -1711,6 +1786,67 @@ class ClaimSubmitView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
+    def put(self, request, pk=None):
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        ticket = Ticket.objects.filter(id=pk, employee_id_id=employee.id).first()
+        if not ticket:
+            return Response({'error': 'Claim not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if ticket.status != 'open':
+            return Response(
+                {'error': 'Only open claims can be edited'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = request.data
+        title = data.get('title')
+        desc = data.get('description')
+        amount = data.get('amount')
+        claim_type = data.get('claim_type')
+
+        if title is not None:
+            ticket.title = f'[Claim] {title}'
+        if desc is not None or amount is not None or claim_type is not None:
+            # Rebuild the description field
+            current_desc = ticket.description or ''
+            # Parse existing values
+            existing_type = claim_type or ''
+            existing_amount = amount or 0
+            existing_desc = desc or ''
+            if not claim_type:
+                for line in current_desc.split('\n'):
+                    if line.startswith('Type: '):
+                        existing_type = line[6:]
+                        break
+            if amount is None:
+                for line in current_desc.split('\n'):
+                    if line.startswith('Amount: '):
+                        existing_amount = line[8:]
+                        break
+            if desc is None:
+                lines = current_desc.split('\n')
+                existing_desc = '\n'.join(lines[2:]) if len(lines) > 2 else ''
+            ticket.description = f'Type: {existing_type}\nAmount: {existing_amount}\n{existing_desc}'
+
+        ticket.save()
+
+        display_title = title or (
+            ticket.title.replace('[Claim] ', '') if ticket.title.startswith('[Claim] ') else ticket.title
+        )
+        return Response(
+            {
+                'id': str(ticket.id),
+                'request_id': get_request_id('CL', ticket.id),
+                'type': 'Claims',
+                'title': display_title,
+                'status': 'requested',
+                'amount': float(amount) if amount else 0,
+            },
+        )
+
 
 class TicketRaiseView(APIView):
     def post(self, request):
@@ -1754,6 +1890,42 @@ class TicketRaiseView(APIView):
                 'priority': ticket.priority,
             },
             status=status.HTTP_201_CREATED,
+        )
+
+    def put(self, request, pk=None):
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        ticket = Ticket.objects.filter(id=pk, employee_id_id=employee.id).first()
+        if not ticket:
+            return Response({'error': 'Ticket not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if ticket.status != 'open':
+            return Response(
+                {'error': 'Only open tickets can be edited'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = request.data
+        if 'title' in data:
+            ticket.title = data['title']
+        if 'description' in data:
+            ticket.description = data['description']
+        if 'priority' in data:
+            ticket.priority = data['priority']
+
+        ticket.save()
+
+        return Response(
+            {
+                'id': str(ticket.id),
+                'request_id': get_request_id('TK', ticket.id),
+                'type': 'Tickets',
+                'title': ticket.title,
+                'status': ticket.status,
+                'priority': ticket.priority,
+            },
         )
 
 
@@ -1809,6 +1981,60 @@ class ShiftRequestView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
+    def put(self, request, pk=None):
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        shift_request = ShiftRequestModel.objects.filter(id=pk, employee_id_id=employee.id).first()
+        if not shift_request:
+            return Response({'error': 'Shift request not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if shift_request.approved or shift_request.canceled:
+            return Response(
+                {'error': 'Only pending shift requests can be edited'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = request.data
+
+        if 'shift' in data or 'requesting_shift' in data:
+            shift_val = data.get('shift') or data.get('requesting_shift')
+            shift = Shift.objects.filter(employee_shift__iexact=shift_val).first()
+            if not shift:
+                try:
+                    shift = Shift.objects.filter(id=int(shift_val)).first()
+                except (ValueError, TypeError):
+                    pass
+            if not shift:
+                return Response({'error': 'Invalid shift type'}, status=status.HTTP_400_BAD_REQUEST)
+            shift_request.shift_id_id = shift.id
+
+        if 'requested_date' in data:
+            shift_request.requested_date = data['requested_date']
+        if 'requested_till' in data:
+            shift_request.requested_till = data['requested_till']
+        if 'description' in data:
+            shift_request.description = data['description']
+
+        shift_request.save()
+
+        shift = shift_request.shift_id
+        return Response(
+            {
+                'id': str(shift_request.id),
+                'request_id': get_request_id('SR', shift_request.id),
+                'type': 'Shift Requests',
+                'title': f'Shift Change to {shift.employee_shift}',
+                'status': shift_request.status,
+                'shift_details': {'name': shift.employee_shift, 'timing': shift.full_time},
+                'from_date': shift_request.requested_date.isoformat()
+                if shift_request.requested_date
+                else None,
+                'to_date': shift_request.requested_till.isoformat() if shift_request.requested_till else None,
+            },
+        )
+
 
 class WorkTypeRequestView(APIView):
     def post(self, request):
@@ -1860,6 +2086,58 @@ class WorkTypeRequestView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
+    def put(self, request, pk=None):
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        work_request = WorkTypeRequestModel.objects.filter(id=pk, employee_id_id=employee.id).first()
+        if not work_request:
+            return Response({'error': 'Work type request not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if work_request.approved or work_request.canceled:
+            return Response(
+                {'error': 'Only pending work type requests can be edited'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = request.data
+
+        if 'work_type' in data:
+            wt_val = data['work_type']
+            work_type = WorkType.objects.filter(work_type__iexact=wt_val).first()
+            if not work_type:
+                try:
+                    work_type = WorkType.objects.filter(id=int(wt_val)).first()
+                except (ValueError, TypeError):
+                    pass
+            if not work_type:
+                return Response({'error': 'Invalid work type'}, status=status.HTTP_400_BAD_REQUEST)
+            work_request.work_type_id_id = work_type.id
+
+        if 'requested_date' in data:
+            work_request.requested_date = data['requested_date']
+        if 'requested_till' in data:
+            work_request.requested_till = data['requested_till']
+        if 'description' in data:
+            work_request.description = data['description']
+
+        work_request.save()
+
+        wt = work_request.work_type_id
+        return Response(
+            {
+                'id': str(work_request.id),
+                'request_id': get_request_id('WR', work_request.id),
+                'type': 'Work Type Requests',
+                'title': f'Work Type Change to {wt.work_type}',
+                'status': work_request.status,
+                'work_type': wt.work_type,
+                'from_date': work_request.requested_date.isoformat() if work_request.requested_date else None,
+                'to_date': work_request.requested_till.isoformat() if work_request.requested_till else None,
+            },
+        )
+
 
 class AttendanceRegularizeView(APIView):
     def post(self, request):
@@ -1904,6 +2182,51 @@ class AttendanceRegularizeView(APIView):
                 'shift': att_request.shift_name,
             },
             status=status.HTTP_201_CREATED,
+        )
+
+    def put(self, request, pk=None):
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        att_request = AttendanceRequestModel.objects.filter(id=pk, employee_id=employee.id).first()
+        if not att_request:
+            return Response({'error': 'Attendance request not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if att_request.status != 'requested':
+            return Response(
+                {'error': 'Only pending attendance requests can be edited'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = request.data
+        if 'attendance_type' in data:
+            att_request.attendance_type = data['attendance_type']
+        if 'requested_date' in data:
+            att_request.requested_date = data['requested_date']
+        if 'from_time' in data:
+            att_request.from_time = data['from_time'] or None
+        if 'to_time' in data:
+            att_request.to_time = data['to_time'] or None
+        if 'reason' in data:
+            att_request.reason = data['reason']
+        if 'shift' in data:
+            att_request.shift_name = data['shift'] or None
+
+        att_request.save()
+
+        att_date = att_request.requested_date
+        return Response(
+            {
+                'id': str(att_request.id),
+                'request_id': get_request_id('AR', att_request.id),
+                'type': 'Attendance Requests',
+                'title': f'{att_request.attendance_type or "Attendance Regularization"} for {att_date}',
+                'status': att_request.status,
+                'attendance_date': att_date.isoformat() if hasattr(att_date, 'isoformat') else str(att_date),
+                'attendance_type': att_request.attendance_type,
+                'shift': att_request.shift_name,
+            },
         )
 
 
@@ -1958,6 +2281,79 @@ class AssetRequestView(APIView):
                 'asset_category': cat_name,
             },
             status=status.HTTP_201_CREATED,
+        )
+
+    def put(self, request, pk=None):
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        asset_request = AssetRequestModel.objects.filter(id=pk, requested_employee_id_id=employee.id).first()
+        if not asset_request:
+            return Response({'error': 'Asset request not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if asset_request.asset_request_status != 'Requested':
+            return Response(
+                {'error': 'Only pending asset requests can be edited'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = request.data
+        cat_name = data.get('asset_category')
+
+        if cat_name:
+            cat_id = asset_request.asset_category_id_id
+            try:
+                from django.db import connection
+
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        'SELECT id FROM asset_assetcategory WHERE asset_category_name = %s LIMIT 1',
+                        [cat_name],
+                    )
+                    row = cursor.fetchone()
+                    if row:
+                        cat_id = row[0]
+            except Exception:
+                pass
+            asset_request.asset_category_id_id = cat_id
+
+        desc = data.get('description')
+        if desc is not None or cat_name is not None:
+            display_cat = cat_name or ''
+            if not cat_name:
+                # Extract existing category from description
+                existing_desc = asset_request.description or ''
+                if existing_desc.startswith('[') and '] ' in existing_desc:
+                    display_cat = existing_desc[1 : existing_desc.index('] ')]
+            display_desc = desc if desc is not None else ''
+            if not desc and asset_request.description:
+                existing = asset_request.description
+                if existing.startswith('[') and '] ' in existing:
+                    display_desc = existing[existing.index('] ') + 2 :]
+                else:
+                    display_desc = existing
+            asset_request.description = f'[{display_cat}] {display_desc}' if display_cat else display_desc
+
+        asset_request.save()
+
+        # Determine display category
+        display_cat = cat_name or ''
+        if not display_cat and asset_request.description and asset_request.description.startswith('['):
+            try:
+                display_cat = asset_request.description[1 : asset_request.description.index('] ')]
+            except ValueError:
+                pass
+
+        return Response(
+            {
+                'id': str(asset_request.id),
+                'request_id': get_request_id('AS', asset_request.id),
+                'type': 'Asset Requests',
+                'title': f'{display_cat} Request',
+                'status': asset_request.status,
+                'asset_category': display_cat,
+            },
         )
 
 

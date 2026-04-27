@@ -119,15 +119,58 @@ The Widget Extension target is pre-configured. To enable signing:
 
 ## API Configuration
 
-The app connects to `localhost:8000` by default:
+### Production (Release APK)
+The release build automatically connects to the hosted backend:
+- **Backend**: `https://ppulsebackend.vercel.app/v1`
+- **Database**: Neon PostgreSQL (cloud-hosted)
+
+### Development (Debug builds)
+Debug builds connect to `localhost:8000`:
 - **iOS Simulator**: `http://127.0.0.1:8000/v1`
 - **Android Emulator**: `http://10.0.2.2:8000/v1` (Android's localhost alias)
 
-To change, edit `lib/services/api_service.dart`.
+Override with `--dart-define`:
+```bash
+flutter run --dart-define=API_HOST=ppulsebackend.vercel.app --dart-define=API_PORT=443
+```
+
+## Deployment
+
+### Backend (Vercel + Neon)
+The Django backend is deployed as a Vercel serverless function with Neon PostgreSQL:
+
+```bash
+cd ppulse_backend
+
+# Set env vars on Vercel
+vercel env add DATABASE_URL production   # Neon connection string
+vercel env add SECRET_KEY production     # Django secret key
+vercel env add DEBUG production          # "False"
+vercel env add ALLOWED_HOSTS production  # ".vercel.app,localhost"
+
+# Deploy
+npx vercel --prod
+```
+
+### Build Release APK
+```bash
+flutter build apk --release
+# Output: build/app/outputs/flutter-apk/app-release.apk
+```
+
+## Security Features
+
+- **Developer Mode Detection**: Release builds block the app if Android Developer Options, root, or jailbreak is detected. Shows a blocking screen until the user disables developer settings.
+- **Screenshot Prevention**: Payslip screens use `FLAG_SECURE` (Android) and screen recording detection (iOS) to prevent screenshots of sensitive salary data.
 
 ## Demo Credentials
 
 All passwords follow the pattern **`<username>23`** (e.g. username `admin` → password `admin23`).
+
+### Hosted Backend (Vercel)
+| Username | Password | Role |
+|----------|----------|------|
+| `admin` | `admin123` | Super Admin |
 
 ### Super Admin
 
@@ -159,6 +202,33 @@ All passwords follow the pattern **`<username>23`** (e.g. username `admin` → p
 | `arun` | `arun23` | Employee | Marketing |
 | `kavitha` | `kavitha23` | Employee | Sales |
 | `deepak` | `deepak23` | Employee | Operations |
+
+### Web-Cloned Users (from HRMS Web Portal)
+
+All web-cloned users use password **`Ppulse@123`**.
+
+| Username | Name | Password |
+|----------|------|----------|
+| `sarah.johnson@kaaspro.com` | Sarah Johnson | `Ppulse@123` |
+| `michael.brown@kaaspro.com` | Michael Brown | `Ppulse@123` |
+| `david.wilson@kaaspro.com` | David Wilson | `Ppulse@123` |
+| `emily.davis@kaaspro.com` | Emily Davis | `Ppulse@123` |
+| `james.miller@kaaspro.com` | James Miller | `Ppulse@123` |
+| `jessica.moore@kaaspro.com` | Jessica Moore | `Ppulse@123` |
+| `robert.taylor@kaaspro.com` | Robert Taylor | `Ppulse@123` |
+| `linda.anderson@kaaspro.com` | Linda Anderson | `Ppulse@123` |
+| `william.thomas@kaaspro.com` | William Thomas | `Ppulse@123` |
+| `jennifer.jackson@kaaspro.com` | Jennifer Jackson | `Ppulse@123` |
+| `christopher.white@kaaspro.com` | Christopher White | `Ppulse@123` |
+| `patricia.harris@kaaspro.com` | Patricia Harris | `Ppulse@123` |
+| `daniel.martin@kaaspro.com` | Daniel Martin | `Ppulse@123` |
+| `nancy.thompson@kaaspro.com` | Nancy Thompson | `Ppulse@123` |
+| `matthew.garcia@kaaspro.com` | Matthew Garcia | `Ppulse@123` |
+| `barbara.martinez@kaaspro.com` | Barbara Martinez | `Ppulse@123` |
+| `joseph.robinson@kaaspro.com` | Joseph Robinson | `Ppulse@123` |
+| `susan.clark@kaaspro.com` | Susan Clark | `Ppulse@123` |
+| `thomas.rodriguez@kaaspro.com` | Thomas Rodriguez | `Ppulse@123` |
+| `karen.lewis@kaaspro.com` | Karen Lewis | `Ppulse@123` |
 
 ## Project Structure
 

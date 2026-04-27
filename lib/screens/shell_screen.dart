@@ -2,12 +2,15 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:no_screenshot/no_screenshot.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
 import '../services/api_service.dart';
+import '../services/device_security_service.dart';
 import '../services/notification_service.dart';
 import '../theme/adaptive_colors.dart';
 import '../theme/app_theme.dart';
@@ -15,6 +18,7 @@ import '../utils/platform_adaptive.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/dynamic_island.dart';
 import '../widgets/feedback_popup.dart';
+import 'developer_mode_blocked_screen.dart';
 import 'attendance/attendance_screen.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'payslip/payslip_screen.dart';
@@ -32,6 +36,9 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   Timer? _pollTimer;
   int _lastKnownUnread = -1;
   Set<int> _seenNotifIds = {};
+  bool _isCheckingDeviceSecurity = false;
+  int _previousTabIndex = 0;
+  final _noScreenshot = NoScreenshot.instance;
 
   @override
   void initState() {
@@ -58,10 +65,40 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
       context.read<AppProvider>().fetchDashboardData();
+      _checkDeviceSecurityOnResume();
     }
     if (state == AppLifecycleState.inactive && mounted) {
       FeedbackManager.maybeShowFeedback(context);
     }
+  }
+
+  Future<void> _checkDeviceSecurityOnResume() async {
+    if (kDebugMode || _isCheckingDeviceSecurity) return;
+    _isCheckingDeviceSecurity = true;
+    try {
+      final compromised = await DeviceSecurityService.instance
+          .isDeviceCompromised();
+      if (compromised && mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const DeveloperModeBlockedScreen(),
+            fullscreenDialog: true,
+          ),
+        );
+      }
+    } finally {
+      _isCheckingDeviceSecurity = false;
+    }
+  }
+
+  void _syncScreenshotProtection(int tabIndex) {
+    if (tabIndex == 3 && _previousTabIndex != 3) {
+      _noScreenshot.screenshotOff();
+    } else if (tabIndex != 3 && _previousTabIndex == 3) {
+      _noScreenshot.screenshotOn();
+    }
+    _previousTabIndex = tabIndex;
   }
 
   Future<void> _checkForNewNotifications() async {
@@ -79,6 +116,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           final id = n['id'];
           final isRead = n['read'] == true;
           if (!isRead && id != null && !_seenNotifIds.contains(id)) {
+            HapticFeedback.lightImpact();
             NotificationService.instance.show(
               title: n['title'] as String? ?? 'New Notification',
               body: n['body'] as String? ?? '',
@@ -103,6 +141,9 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final provider = context.watch<AppProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Toggle screenshot protection when switching to/from Payslip tab.
+    _syncScreenshotProtection(provider.bottomNavIndex);
 
     const screens = <Widget>[
       DashboardScreen(),

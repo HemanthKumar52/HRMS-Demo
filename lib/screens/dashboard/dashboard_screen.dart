@@ -390,7 +390,7 @@ class DashboardScreen extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  'Days remaining',
+                                  'Days available',
                                   style: theme.textTheme.bodySmall,
                                 ),
                               ],
@@ -417,7 +417,7 @@ class DashboardScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  'Attendance',
+                                  'Monthly Attendance',
                                   style: theme.textTheme.bodySmall,
                                 ),
                                 const SizedBox(height: 4),
@@ -439,7 +439,7 @@ class DashboardScreen extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  'This month',
+                                  'Present',
                                   style: theme.textTheme.bodySmall,
                                 ),
                               ],
@@ -485,7 +485,7 @@ class DashboardScreen extends StatelessWidget {
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            'Leave Summary',
+                            'Leave Overview',
                             style: theme.textTheme.titleMedium,
                           ),
                           const Spacer(),
@@ -591,7 +591,7 @@ class DashboardScreen extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           child: Center(
                             child: Text(
-                              'No leave balance data',
+                              'No leave available',
                               style: TextStyle(
                                 color: isDark
                                     ? AppColors.darkSubtext
@@ -679,7 +679,7 @@ class DashboardScreen extends StatelessWidget {
                         const Padding(
                           padding: EdgeInsets.all(8.0),
                           child: Text(
-                            'No announcements',
+                            'No new announcements',
                             style: TextStyle(color: Colors.grey),
                           ),
                         ),
@@ -1622,7 +1622,7 @@ class _AttendanceTimerCardState extends State<_AttendanceTimerCard> {
               ),
               const SizedBox(height: 4),
               Text(
-                DateFormat('hh:mm:ss a, dd MMM yyyy').format(now),
+                DateFormat('dd MMM yyyy, hh:mm:ss a').format(now),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: isDark
                       ? AppColors.darkSubtext
@@ -1685,27 +1685,6 @@ class _AttendanceTimerCardState extends State<_AttendanceTimerCard> {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // Production chip
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.06)
-                      : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'Production : $workedText',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
 
               // Punch in time
               if (isPunchedIn && punchTime != null)

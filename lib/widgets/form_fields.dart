@@ -8,15 +8,36 @@ import 'neu_card.dart';
 
 class FormLabel extends StatelessWidget {
   final String label;
-  const FormLabel(this.label, {super.key});
+  final bool required;
+  const FormLabel(this.label, {super.key, this.required = false});
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: Theme.of(
-        context,
-      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+    if (!required) {
+      return Text(
+        label,
+        style: Theme.of(
+          context,
+        ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+      );
+    }
+    return Row(
+      children: [
+        Text(
+          label,
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const Text(
+          ' *',
+          style: TextStyle(
+            color: AppColors.danger,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -631,7 +652,7 @@ class FormActionButtons extends StatelessWidget {
                 child: isSubmitting
                     ? const CupertinoActivityIndicator(color: Colors.white)
                     : const Text(
-                        'Save',
+                        'Submit',
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
@@ -675,7 +696,12 @@ class FormActionButtons extends StatelessWidget {
           child: SizedBox(
             height: 50,
             child: ElevatedButton(
-              onPressed: isSubmitting ? null : onSubmit,
+              onPressed: isSubmitting
+                  ? null
+                  : () {
+                      HapticFeedback.mediumImpact();
+                      onSubmit?.call();
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: buttonColor ?? AppColors.primary,
                 foregroundColor: Colors.white,
@@ -758,7 +784,7 @@ class FormAttachmentToggle extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Add attachment?',
+                  'Attach supporting documents',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
               ),
@@ -785,7 +811,21 @@ class FormAttachmentToggle extends StatelessWidget {
 
 String formatDate(DateTime? date) {
   if (date == null) return 'Select Date';
-  return '${date.day.toString().padLeft(2, '0')}-${date.month.toString().padLeft(2, '0')}-${date.year}';
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
 }
 
 String formatTime(TimeOfDay? time) {

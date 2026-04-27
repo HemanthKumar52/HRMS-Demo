@@ -7,7 +7,19 @@
 [project]
 name = "ppulse_backend"
 version = "0.1.0"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=6.0",
+    "djangorestframework>=3.14",
+    "django-cors-headers>=4.0",
+    "djangorestframework-simplejwt>=5.3",
+    "psycopg2-binary>=2.9",
+    "python-dotenv>=1.0",
+    "Pillow>=10.0",
+    "dj-database-url>=2.1",
+    "whitenoise>=6.5",
+    "msal>=1.28",
+]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Ruff — fast Python linter + formatter (replaces flake8 + isort + most pylint)

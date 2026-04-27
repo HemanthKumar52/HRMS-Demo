@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:no_screenshot/no_screenshot.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -29,6 +30,7 @@ class PayslipViewerScreen extends StatefulWidget {
 }
 
 class _PayslipViewerScreenState extends State<PayslipViewerScreen> {
+  final _noScreenshot = NoScreenshot.instance;
   WebViewController? _webController;
   bool _isLoading = true;
   bool _isDownloading = false;
@@ -38,7 +40,14 @@ class _PayslipViewerScreenState extends State<PayslipViewerScreen> {
   @override
   void initState() {
     super.initState();
+    _noScreenshot.screenshotOff();
     _loadPayslip();
+  }
+
+  @override
+  void dispose() {
+    _noScreenshot.screenshotOn();
+    super.dispose();
   }
 
   Future<int?> _resolvePayslipId() async {

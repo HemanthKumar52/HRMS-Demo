@@ -14,7 +14,8 @@ import '../../widgets/employee_cc_field.dart';
 import '../../widgets/form_fields.dart';
 
 class ApplyLeaveScreen extends StatefulWidget {
-  const ApplyLeaveScreen({super.key});
+  final Map<String, dynamic>? editData;
+  const ApplyLeaveScreen({super.key, this.editData});
 
   @override
   State<ApplyLeaveScreen> createState() => _ApplyLeaveScreenState();
@@ -41,12 +42,46 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
     'Second Half',
   ];
 
+  bool get _isEditing => widget.editData != null;
+  String? get _editId => widget.editData?['id']?.toString();
+
   @override
   void initState() {
     super.initState();
     _startBreakdown = _breakdownOptions.first;
     _endBreakdown = _breakdownOptions.first;
     _loadLeaveTypes();
+    _prefillFromEditData();
+  }
+
+  void _prefillFromEditData() {
+    final data = widget.editData;
+    if (data == null) return;
+    final md = data['metadata'] as Map<String, dynamic>? ?? {};
+    _descriptionController.text = data['description'] as String? ?? '';
+    if (md['leave_type'] != null) {
+      _selectedLeaveType = md['leave_type'].toString();
+    }
+    if (md['start_date'] != null) {
+      _startDate = DateTime.tryParse(md['start_date'].toString());
+    }
+    if (md['end_date'] != null) {
+      _endDate = DateTime.tryParse(md['end_date'].toString());
+    }
+    if (md['start_breakdown'] != null) {
+      final bd = md['start_breakdown'].toString().replaceAll('_', ' ');
+      final match = _breakdownOptions.where(
+        (o) => o.toLowerCase() == bd.toLowerCase(),
+      );
+      if (match.isNotEmpty) _startBreakdown = match.first;
+    }
+    if (md['end_breakdown'] != null) {
+      final bd = md['end_breakdown'].toString().replaceAll('_', ' ');
+      final match = _breakdownOptions.where(
+        (o) => o.toLowerCase() == bd.toLowerCase(),
+      );
+      if (match.isNotEmpty) _endBreakdown = match.first;
+    }
   }
 
   Future<void> _loadLeaveTypes() async {
@@ -90,7 +125,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
     HapticFeedback.mediumImpact();
     setState(() => _isSubmitting = true);
     try {
-      await ApiService.applyLeave({
+      final payload = {
         'leave_type': _selectedLeaveType!,
         'start_date': _startDate!.toIso8601String().split('T')[0],
         'end_date': _endDate!.toIso8601String().split('T')[0],
@@ -98,7 +133,12 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
         'end_breakdown': _endBreakdown.toLowerCase().replaceAll(' ', '_'),
         'description': _descriptionController.text,
         'cc': _ccUsers.map((u) => u['user_id']).toList(),
-      });
+      };
+      if (_isEditing) {
+        await ApiService.updateLeave(int.parse(_editId!), payload);
+      } else {
+        await ApiService.applyLeave(payload);
+      }
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       // (Single notification only — SuccessOverlay below covers it.)
@@ -126,7 +166,12 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
         debugPrint('NOTIF_REFRESH ERROR after leave: $e');
       }
       if (!mounted) return;
-      await SuccessOverlay.show(context, message: 'Leave request submitted');
+      await SuccessOverlay.show(
+        context,
+        message: _isEditing
+            ? 'Leave request updated'
+            : 'Leave request submitted',
+      );
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
@@ -146,7 +191,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: adaptiveAppBar(
         context: context,
-        title: 'Leave',
+        title: _isEditing ? 'Edit Leave Request' : 'Leave Request',
         showBackButton: true,
       ),
       body: SingleChildScrollView(
@@ -161,15 +206,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Create Leave Request',
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              formFieldGap,
-
-              const FormLabel('Leave Type'),
+              const FormLabel('Leave Type', required: true),
               formLabelGap,
               FormDropdown(
                 value: _selectedLeaveType,
@@ -182,7 +219,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
               ),
               formFieldGap,
 
-              const FormLabel('Start Date'),
+              const FormLabel('Start Date', required: true),
               formLabelGap,
               FormDateField(
                 value: formatDate(_startDate),
@@ -212,7 +249,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
               ),
               formFieldGap,
 
-              const FormLabel('End Date'),
+              const FormLabel('End Date', required: true),
               formLabelGap,
               FormDateField(
                 value: formatDate(_endDate),
@@ -239,11 +276,11 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
               ),
               formFieldGap,
 
-              const FormLabel('Description'),
+              const FormLabel('Reason'),
               formLabelGap,
               FormInput(
                 controller: _descriptionController,
-                hint: 'Description',
+                hint: 'Reason',
                 maxLines: 4,
               ),
               formFieldGap,

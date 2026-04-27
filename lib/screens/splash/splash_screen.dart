@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -8,7 +9,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../animations/motion.dart';
 import '../../providers/app_provider.dart';
 import '../../services/api_service.dart';
+import '../../services/device_security_service.dart';
 import '../auth/login_screen.dart';
+import '../developer_mode_blocked_screen.dart';
 import '../shell_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -74,6 +77,24 @@ class _SplashScreenState extends State<SplashScreen>
       } catch (e) {
         await prefs.remove('auth_token');
         isValidSession = false;
+      }
+    }
+
+    if (!mounted) return;
+
+    // Check device security (developer mode, root, jailbreak) in release builds.
+    if (!kDebugMode) {
+      final compromised = await DeviceSecurityService.instance
+          .isDeviceCompromised();
+      if (compromised && mounted) {
+        final safe = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const DeveloperModeBlockedScreen(),
+            fullscreenDialog: true,
+          ),
+        );
+        if (safe != true || !mounted) return;
       }
     }
 

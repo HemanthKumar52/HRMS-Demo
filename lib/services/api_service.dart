@@ -17,10 +17,21 @@ class ApiService {
     defaultValue: '8000',
   );
 
+  /// Production backend hosted on Vercel.
+  static const String _prodHost = 'ppulsebackend.vercel.app';
+
   static String get baseUrl {
+    // Explicit override via --dart-define always wins.
     if (_apiHostOverride.isNotEmpty) {
-      return 'http://$_apiHostOverride:$_apiPortOverride/v1';
+      final scheme = _apiPortOverride == '443' ? 'https' : 'http';
+      final port = _apiPortOverride == '443' ? '' : ':$_apiPortOverride';
+      return '$scheme://$_apiHostOverride$port/v1';
     }
+    // Release builds → hosted backend.
+    if (kReleaseMode) {
+      return 'https://$_prodHost/v1';
+    }
+    // Debug builds → local backend.
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       return 'http://10.0.2.2:$_apiPortOverride/v1';
     }
@@ -36,7 +47,12 @@ class ApiService {
 
   static String get webBaseUrl {
     if (_apiHostOverride.isNotEmpty) {
-      return 'http://$_apiHostOverride:$_webPortOverride/api';
+      final scheme = _apiPortOverride == '443' ? 'https' : 'http';
+      final port = _webPortOverride == '443' ? '' : ':$_webPortOverride';
+      return '$scheme://$_apiHostOverride$port/api';
+    }
+    if (kReleaseMode) {
+      return 'https://$_prodHost/api';
     }
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       return 'http://10.0.2.2:$_webPortOverride/api';
@@ -405,6 +421,13 @@ class ApiService {
     return await post('/leaves/apply', data);
   }
 
+  static Future<Map<String, dynamic>> updateLeave(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    return await put('/leaves/update/$id', data);
+  }
+
   static Future<List<dynamic>> getLeaveTypes() async {
     final response = await get('/leave-types');
     return response['leave_types'] ?? [];
@@ -425,6 +448,13 @@ class ApiService {
     return await post('/claims/submit', data);
   }
 
+  static Future<Map<String, dynamic>> updateClaim(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    return await put('/claims/update/$id', data);
+  }
+
   // ═══════════════════════════════════════════════════════
   // TICKETS
   // ═══════════════════════════════════════════════════════
@@ -440,6 +470,13 @@ class ApiService {
     return await post('/tickets/raise', data);
   }
 
+  static Future<Map<String, dynamic>> updateTicket(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    return await put('/tickets/update/$id', data);
+  }
+
   // ═══════════════════════════════════════════════════════
   // SHIFT REQUESTS
   // ═══════════════════════════════════════════════════════
@@ -448,6 +485,13 @@ class ApiService {
     Map<String, dynamic> data,
   ) async {
     return await post('/shifts/request', data);
+  }
+
+  static Future<Map<String, dynamic>> updateShiftRequest(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    return await put('/shifts/update/$id', data);
   }
 
   static Future<List<dynamic>> getShifts() async {
@@ -465,6 +509,13 @@ class ApiService {
     return await post('/work-type/request', data);
   }
 
+  static Future<Map<String, dynamic>> updateWorkTypeRequest(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    return await put('/work-type/update/$id', data);
+  }
+
   static Future<List<dynamic>> getWorkTypes() async {
     final response = await get('/work-types');
     return response['work_types'] ?? [];
@@ -478,6 +529,24 @@ class ApiService {
     Map<String, dynamic> data,
   ) async {
     return await post('/assets/request', data);
+  }
+
+  static Future<Map<String, dynamic>> updateAssetRequest(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    return await put('/assets/update/$id', data);
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // ATTENDANCE REQUESTS
+  // ═══════════════════════════════════════════════════════
+
+  static Future<Map<String, dynamic>> updateAttendanceRequest(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    return await put('/attendance/update/$id', data);
   }
 
   // ═══════════════════════════════════════════════════════

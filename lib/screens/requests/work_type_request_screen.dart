@@ -11,7 +11,8 @@ import '../../widgets/employee_cc_field.dart';
 import '../../widgets/form_fields.dart';
 
 class WorkTypeRequestScreen extends StatefulWidget {
-  const WorkTypeRequestScreen({super.key});
+  final Map<String, dynamic>? editData;
+  const WorkTypeRequestScreen({super.key, this.editData});
 
   @override
   State<WorkTypeRequestScreen> createState() => _WorkTypeRequestScreenState();
@@ -29,10 +30,32 @@ class _WorkTypeRequestScreenState extends State<WorkTypeRequestScreen> {
 
   List<String> _workTypes = [];
 
+  bool get _isEditing => widget.editData != null;
+  String? get _editId => widget.editData?['id']?.toString();
+
   @override
   void initState() {
     super.initState();
+    _prefillFromEditData();
     _loadData();
+  }
+
+  void _prefillFromEditData() {
+    final data = widget.editData;
+    if (data == null) return;
+    _requestingWorkType = data['work_type']?.toString();
+    final dateStr = data['requested_date']?.toString();
+    if (dateStr != null && dateStr.isNotEmpty) {
+      _requestedDate = DateTime.tryParse(dateStr);
+    }
+    final tillStr = data['requested_till']?.toString();
+    if (tillStr != null && tillStr.isNotEmpty) {
+      _requestedTill = DateTime.tryParse(tillStr);
+    }
+    final desc = data['description']?.toString();
+    if (desc != null && desc.isNotEmpty) {
+      _descriptionController.text = desc;
+    }
   }
 
   Future<void> _loadData() async {
@@ -44,7 +67,7 @@ class _WorkTypeRequestScreenState extends State<WorkTypeRequestScreen> {
             .map<String>((w) => w['name']?.toString() ?? '')
             .where((s) => s.isNotEmpty)
             .toList();
-        if (_workTypes.isNotEmpty) {
+        if (_workTypes.isNotEmpty && _requestingWorkType == null) {
           _requestingWorkType = _workTypes.first;
         }
       });
@@ -66,20 +89,30 @@ class _WorkTypeRequestScreenState extends State<WorkTypeRequestScreen> {
     HapticFeedback.mediumImpact();
     setState(() => _isSubmitting = true);
     try {
-      await ApiService.post('/work-type/request', {
+      final payload = {
         'work_type': _requestingWorkType ?? '',
         'requested_date': (_requestedDate ?? DateTime.now())
             .toIso8601String()
             .split('T')[0],
-        'requested_till': _requestedTill?.toIso8601String().split('T')[0],
+        'requested_till': _permanentRequest
+            ? null
+            : _requestedTill?.toIso8601String().split('T')[0],
         'description': _descriptionController.text,
         'cc': _ccUsers.map((u) => u['user_id']).toList(),
-      });
+        'is_permanent': _permanentRequest,
+      };
+      if (_isEditing) {
+        await ApiService.updateWorkTypeRequest(int.parse(_editId!), payload);
+      } else {
+        await ApiService.post('/work-type/request', payload);
+      }
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       await SuccessOverlay.show(
         context,
-        message: 'Work type request submitted',
+        message: _isEditing
+            ? 'Work type request updated'
+            : 'Work type request submitted',
       );
       // (Single notification only — SuccessOverlay above covers it.)
       if (mounted) Navigator.pop(context);
@@ -101,7 +134,7 @@ class _WorkTypeRequestScreenState extends State<WorkTypeRequestScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: adaptiveAppBar(
         context: context,
-        title: 'Work Type Request',
+        title: _isEditing ? 'Edit Work Type Request' : 'Work Type Request',
         showBackButton: true,
       ),
       body: SingleChildScrollView(
@@ -116,15 +149,7 @@ class _WorkTypeRequestScreenState extends State<WorkTypeRequestScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Work Type Request',
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              formFieldGap,
-
-              const FormLabel('Requesting Work Type'),
+              const FormLabel('Requesting Work Type', required: true),
               formLabelGap,
               FormDropdown(
                 value: _requestingWorkType,
@@ -137,7 +162,7 @@ class _WorkTypeRequestScreenState extends State<WorkTypeRequestScreen> {
               ),
               formFieldGap,
 
-              const FormLabel('Requested Date'),
+              const FormLabel('Requested Date', required: true),
               formLabelGap,
               FormDateField(
                 value: formatDate(_requestedDate),
@@ -176,11 +201,11 @@ class _WorkTypeRequestScreenState extends State<WorkTypeRequestScreen> {
               ),
               formFieldGap,
 
-              const FormLabel('Description'),
+              const FormLabel('Reason'),
               formLabelGap,
               FormInput(
                 controller: _descriptionController,
-                hint: 'Description',
+                hint: 'Reason',
                 maxLines: 3,
               ),
               formFieldGap,
@@ -190,7 +215,7 @@ class _WorkTypeRequestScreenState extends State<WorkTypeRequestScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Permanent Request',
+                      'Make this as permanent',
                       style: textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),

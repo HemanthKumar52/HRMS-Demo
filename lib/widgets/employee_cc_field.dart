@@ -132,25 +132,24 @@ class _EmployeeCcFieldState extends State<EmployeeCcField> {
       children: [
         Text(
           widget.label,
-          style: theme.textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w700,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.05)
-                : Colors.grey.withValues(alpha: 0.08),
+            color: isDark ? AppColors.darkCard : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: _focus.hasFocus
                   ? AppColors.primary.withValues(alpha: 0.5)
-                  : Colors.transparent,
-              width: 1.5,
+                  : (isDark
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : Colors.grey.withValues(alpha: 0.2)),
             ),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Wrap(
             spacing: 6,
             runSpacing: 6,
@@ -181,8 +180,7 @@ class _EmployeeCcFieldState extends State<EmployeeCcField> {
                   visualDensity: VisualDensity.compact,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-              SizedBox(
-                width: 200,
+              Expanded(
                 child: TextField(
                   controller: _ctrl,
                   focusNode: _focus,

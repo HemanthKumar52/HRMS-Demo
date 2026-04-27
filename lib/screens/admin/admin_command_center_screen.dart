@@ -128,8 +128,8 @@ class _AdminCommandCenterScreenState extends State<AdminCommandCenterScreen> {
 
     void _openApprovals(BuildContext ctx, int tab) {
       Navigator.of(ctx).push(
-        MaterialPageRoute<void>(
-          builder: (_) => ApprovalsScreen(initialTab: tab),
+        adaptivePageRoute<void>(
+          child: ApprovalsScreen(initialTab: tab),
         ),
       );
     }
