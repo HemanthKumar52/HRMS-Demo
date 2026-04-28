@@ -13,6 +13,7 @@ import 'dart:convert';
 import '../../animations/motion.dart';
 import '../../animations/shake_animation.dart';
 import '../../providers/app_provider.dart';
+import '../../services/api_service.dart';
 import '../../services/punch_metadata_service.dart';
 import '../../utils/platform_adaptive.dart';
 import '../shell_screen.dart';
@@ -42,26 +43,12 @@ class _LoginScreenState extends State<LoginScreen>
   late AnimationController _pulseController;
   late ShakeController _shakeController;
 
-  // Honor `--dart-define=API_HOST=…` so a real phone on the LAN can hit the
-  // dev backend. Falls back to the emulator/sim default when not set.
-  static const String _apiHostOverride = String.fromEnvironment(
-    'API_HOST',
-    defaultValue: '',
-  );
-  static const String _apiPortOverride = String.fromEnvironment(
-    'API_PORT',
-    defaultValue: '8000',
-  );
-
-  String get _apiHost {
-    if (_apiHostOverride.isNotEmpty) return _apiHostOverride;
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return '10.0.2.2';
-    }
-    return '127.0.0.1';
+  /// Use the same base URL as ApiService (without the /v1 suffix).
+  String get _baseUrl {
+    final url = ApiService.baseUrl;
+    // Strip trailing /v1 to get the root URL for auth endpoints.
+    return url.endsWith('/v1') ? url.substring(0, url.length - 3) : url;
   }
-
-  String get _baseUrl => 'http://$_apiHost:$_apiPortOverride';
 
   @override
   void initState() {

@@ -304,7 +304,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                   children: [
                                     _buildPunchItem(
                                       icon: Icons.login_rounded,
-                                      label: 'Punch In',
+                                      label: 'Clock In',
                                       value: punchInTime,
                                       color: AppColors.success,
                                       tt: tt,
@@ -312,7 +312,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                     const SizedBox(width: 16),
                                     _buildPunchItem(
                                       icon: Icons.logout_rounded,
-                                      label: 'Punch Out',
+                                      label: 'Clock Out',
                                       value: punchOutTime,
                                       color: AppColors.danger,
                                       tt: tt,
@@ -1209,173 +1209,177 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 16),
-                                ClipRect(
-                                  child: SizedBox(
-                                    height: 200,
-                                    child: BarChart(
-                                      BarChartData(
-                                        alignment:
-                                            BarChartAlignment.spaceAround,
-                                        maxY: (_workingDaysCount + 2)
-                                            .toDouble()
-                                            .clamp(5, 30),
-                                        barTouchData: BarTouchData(
-                                          enabled: true,
-                                        ),
-                                        titlesData: FlTitlesData(
-                                          show: true,
-                                          bottomTitles: AxisTitles(
-                                            axisNameWidget: Text(
-                                              'Status',
-                                              style: tt.bodySmall?.copyWith(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w600,
-                                                color: isDark
-                                                    ? Colors.white54
-                                                    : Colors.grey.shade600,
-                                              ),
-                                            ),
-                                            axisNameSize: 22,
-                                            sideTitles: SideTitles(
-                                              showTitles: true,
-                                              getTitlesWidget: (value, meta) {
-                                                final labels = [
-                                                  'Working',
-                                                  'Absent',
-                                                  'Leave',
-                                                ];
-                                                if (value.toInt() >=
-                                                    labels.length)
-                                                  return const SizedBox.shrink();
-                                                return Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        top: 8,
-                                                      ),
-                                                  child: Text(
-                                                    labels[value.toInt()],
-                                                    style: tt.bodySmall
-                                                        ?.copyWith(
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                          fontSize: 11,
-                                                          color: isDark
-                                                              ? Colors.white70
-                                                              : Colors.black87,
-                                                        ),
-                                                  ),
-                                                );
-                                              },
-                                              reservedSize: 28,
+                                SizedBox(
+                                  height: 240,
+                                  child: BarChart(
+                                    BarChartData(
+                                      alignment: BarChartAlignment.spaceAround,
+                                      maxY: (_workingDaysCount + 2)
+                                          .toDouble()
+                                          .clamp(5, 30),
+                                      barTouchData: BarTouchData(
+                                        enabled: true,
+                                      ),
+                                      titlesData: FlTitlesData(
+                                        show: true,
+                                        bottomTitles: AxisTitles(
+                                          axisNameWidget: Text(
+                                            'Status',
+                                            style: tt.bodySmall?.copyWith(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color: isDark
+                                                  ? Colors.white54
+                                                  : Colors.grey.shade600,
                                             ),
                                           ),
-                                          leftTitles: AxisTitles(
-                                            axisNameWidget: Text(
-                                              'Days',
-                                              style: tt.bodySmall?.copyWith(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w600,
-                                                color: isDark
-                                                    ? Colors.white54
-                                                    : Colors.grey.shade600,
-                                              ),
+                                          axisNameSize: 22,
+                                          sideTitles: SideTitles(
+                                            showTitles: true,
+                                            getTitlesWidget: (value, meta) {
+                                              final labels = [
+                                                'Working',
+                                                'Absent',
+                                                'Leave',
+                                              ];
+                                              if (value.toInt() >=
+                                                  labels.length)
+                                                return const SizedBox.shrink();
+                                              return Padding(
+                                                padding: const EdgeInsets.only(
+                                                  top: 8,
+                                                ),
+                                                child: Text(
+                                                  labels[value.toInt()],
+                                                  style: tt.bodySmall?.copyWith(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 11,
+                                                    color: isDark
+                                                        ? Colors.white70
+                                                        : Colors.black87,
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                            reservedSize: 28,
+                                          ),
+                                        ),
+                                        leftTitles: AxisTitles(
+                                          axisNameWidget: Text(
+                                            'Days',
+                                            style: tt.bodySmall?.copyWith(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color: isDark
+                                                  ? Colors.white54
+                                                  : Colors.grey.shade600,
                                             ),
-                                            axisNameSize: 22,
-                                            sideTitles: SideTitles(
-                                              showTitles: true,
-                                              reservedSize: 28,
-                                              interval: 5,
-                                              getTitlesWidget: (value, meta) {
-                                                if (value % 5 != 0)
-                                                  return const SizedBox.shrink();
-                                                return Text(
+                                          ),
+                                          axisNameSize: 18,
+                                          sideTitles: SideTitles(
+                                            showTitles: true,
+                                            reservedSize: 32,
+                                            interval:
+                                                (_workingDaysCount + 2)
+                                                        .toDouble()
+                                                        .clamp(5, 30) >
+                                                    10
+                                                ? 5
+                                                : 1,
+                                            getTitlesWidget: (value, meta) {
+                                              if (value == meta.max)
+                                                return const SizedBox.shrink();
+                                              return Padding(
+                                                padding: const EdgeInsets.only(
+                                                  right: 4,
+                                                ),
+                                                child: Text(
                                                   '${value.toInt()}',
                                                   style: tt.bodySmall?.copyWith(
                                                     fontSize: 10,
                                                   ),
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                          topTitles: const AxisTitles(
-                                            sideTitles: SideTitles(
-                                              showTitles: false,
-                                            ),
-                                          ),
-                                          rightTitles: const AxisTitles(
-                                            sideTitles: SideTitles(
-                                              showTitles: false,
-                                            ),
+                                                ),
+                                              );
+                                            },
                                           ),
                                         ),
-                                        gridData: FlGridData(
-                                          show: true,
-                                          drawVerticalLine: false,
-                                          horizontalInterval: 1,
-                                          getDrawingHorizontalLine: (value) =>
-                                              FlLine(
-                                                color: isDark
-                                                    ? Colors.white.withValues(
-                                                        alpha: 0.06,
-                                                      )
-                                                    : Colors.black.withValues(
-                                                        alpha: 0.06,
-                                                      ),
-                                                strokeWidth: 1,
-                                              ),
+                                        topTitles: const AxisTitles(
+                                          sideTitles: SideTitles(
+                                            showTitles: false,
+                                          ),
                                         ),
-                                        borderData: FlBorderData(show: false),
-                                        barGroups: [
-                                          BarChartGroupData(
-                                            x: 0,
-                                            barRods: [
-                                              BarChartRodData(
-                                                toY: _workingDaysCount
-                                                    .toDouble(),
-                                                width: 24,
-                                                borderRadius:
-                                                    const BorderRadius.vertical(
-                                                      top: Radius.circular(4),
-                                                    ),
-                                                color: AppColors.success,
-                                              ),
-                                            ],
+                                        rightTitles: const AxisTitles(
+                                          sideTitles: SideTitles(
+                                            showTitles: false,
                                           ),
-                                          BarChartGroupData(
-                                            x: 1,
-                                            barRods: [
-                                              BarChartRodData(
-                                                toY: _absentCount.toDouble(),
-                                                width: 24,
-                                                borderRadius:
-                                                    const BorderRadius.vertical(
-                                                      top: Radius.circular(4),
-                                                    ),
-                                                color: AppColors.danger,
-                                              ),
-                                            ],
-                                          ),
-                                          BarChartGroupData(
-                                            x: 2,
-                                            barRods: [
-                                              BarChartRodData(
-                                                toY: _leaveCount.toDouble(),
-                                                width: 24,
-                                                borderRadius:
-                                                    const BorderRadius.vertical(
-                                                      top: Radius.circular(4),
-                                                    ),
-                                                color: AppColors.orange,
-                                              ),
-                                            ],
-                                          ),
-                                        ],
+                                        ),
                                       ),
-                                      duration: const Duration(
-                                        milliseconds: 800,
+                                      gridData: FlGridData(
+                                        show: true,
+                                        drawVerticalLine: false,
+                                        horizontalInterval: 1,
+                                        getDrawingHorizontalLine: (value) =>
+                                            FlLine(
+                                              color: isDark
+                                                  ? Colors.white.withValues(
+                                                      alpha: 0.06,
+                                                    )
+                                                  : Colors.black.withValues(
+                                                      alpha: 0.06,
+                                                    ),
+                                              strokeWidth: 1,
+                                            ),
                                       ),
-                                      curve: Curves.easeInOutCubic,
+                                      borderData: FlBorderData(show: false),
+                                      barGroups: [
+                                        BarChartGroupData(
+                                          x: 0,
+                                          barRods: [
+                                            BarChartRodData(
+                                              toY: _workingDaysCount.toDouble(),
+                                              width: 24,
+                                              borderRadius:
+                                                  const BorderRadius.vertical(
+                                                    top: Radius.circular(4),
+                                                  ),
+                                              color: AppColors.success,
+                                            ),
+                                          ],
+                                        ),
+                                        BarChartGroupData(
+                                          x: 1,
+                                          barRods: [
+                                            BarChartRodData(
+                                              toY: _absentCount.toDouble(),
+                                              width: 24,
+                                              borderRadius:
+                                                  const BorderRadius.vertical(
+                                                    top: Radius.circular(4),
+                                                  ),
+                                              color: AppColors.danger,
+                                            ),
+                                          ],
+                                        ),
+                                        BarChartGroupData(
+                                          x: 2,
+                                          barRods: [
+                                            BarChartRodData(
+                                              toY: _leaveCount.toDouble(),
+                                              width: 24,
+                                              borderRadius:
+                                                  const BorderRadius.vertical(
+                                                    top: Radius.circular(4),
+                                                  ),
+                                              color: AppColors.orange,
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
+                                    duration: const Duration(
+                                      milliseconds: 800,
+                                    ),
+                                    curve: Curves.easeInOutCubic,
                                   ),
                                 ),
                               ],
@@ -1899,7 +1903,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                   : null,
                             ),
                           ),
-                          // Punch In dot
+                          // Clock In dot
                           Positioned(
                             left: barLeft - 5,
                             top: 9,
@@ -1916,7 +1920,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               ),
                             ),
                           ),
-                          // Punch Out dot
+                          // Clock Out dot
                           Positioned(
                             left: barLeft + barWidth - 5,
                             top: 9,
@@ -2280,7 +2284,7 @@ class _WorkingHoursCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _MiniStat(
-                    label: 'Punch In',
+                    label: 'Clock In',
                     value: isPunchedIn && punchTime != null
                         ? DateFormat('hh:mm a').format(punchTime)
                         : '--:--',
@@ -2555,7 +2559,7 @@ class _ClockInCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Use device to punch out',
+                        'Use device to clock out',
                         style: TextStyle(
                           fontSize: 10,
                           color: isDark

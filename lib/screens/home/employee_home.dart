@@ -561,8 +561,8 @@ class EmployeeHome extends StatelessWidget {
                           color: AppColors.primary,
                           title: 'Attendance Today',
                           subtitle: provider.isPunchedIn
-                              ? 'Punched in at ${provider.punchInTime?.hour ?? 0}:${provider.punchInTime?.minute.toString().padLeft(2, '0') ?? '00'}'
-                              : 'Not punched in yet',
+                              ? 'Clocked in at ${provider.punchInTime?.hour ?? 0}:${provider.punchInTime?.minute.toString().padLeft(2, '0') ?? '00'}'
+                              : 'Not clocked in yet',
                           time: provider.isPunchedIn ? 'Today' : 'N/A',
                         ),
                       if (provider.recentAttendance.isNotEmpty)
@@ -895,7 +895,7 @@ class _AttendanceTimerCardState extends State<_AttendanceTimerCard> {
                 },
                 icon: Icon(isPunchedIn ? Icons.logout : Icons.login),
                 label: Text(
-                  isPunchedIn ? 'Punch Out' : 'Punch In',
+                  isPunchedIn ? 'Clock Out' : 'Clock In',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,

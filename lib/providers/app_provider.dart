@@ -369,7 +369,7 @@ class AppProvider extends ChangeNotifier {
       _attendanceSource = metadata['source'] as String?;
       _canPunchViaMobile = true;
       triggerDynamicIsland(
-        'Punched In Successfully',
+        'Clocked In Successfully',
         Icons.login,
         const Color(0xFF34D399),
       );
@@ -389,7 +389,7 @@ class AppProvider extends ChangeNotifier {
         );
       } else if (msg.contains('BIOMETRIC_PUNCH_ACTIVE')) {
         triggerDynamicIsland(
-          'Already Punched In via Biometric',
+          'Already Clocked In via Biometric',
           Icons.fingerprint,
           Colors.orange,
         );
@@ -404,7 +404,7 @@ class AppProvider extends ChangeNotifier {
         );
         notifyListeners();
       } else {
-        triggerDynamicIsland('Punch In Failed', Icons.error, Colors.red);
+        triggerDynamicIsland('Clock In Failed', Icons.error, Colors.red);
       }
     }
   }
@@ -428,7 +428,7 @@ class AppProvider extends ChangeNotifier {
       _attendanceSource = metadata['source'] as String?;
       _canPunchViaMobile = true;
       triggerDynamicIsland(
-        'Punched In Successfully',
+        'Clocked In Successfully',
         Icons.login,
         const Color(0xFF34D399),
       );
@@ -474,7 +474,7 @@ class AppProvider extends ChangeNotifier {
         return 'FACE_VERIFICATION_FAILED';
       } else if (msg.contains('BIOMETRIC_PUNCH_ACTIVE')) {
         triggerDynamicIsland(
-          'Already Punched In via Biometric',
+          'Already Clocked In via Biometric',
           Icons.fingerprint,
           Colors.orange,
         );
@@ -490,7 +490,7 @@ class AppProvider extends ChangeNotifier {
         notifyListeners();
         return 'ALREADY_PUNCHED_IN';
       }
-      triggerDynamicIsland('Punch In Failed', Icons.error, Colors.red);
+      triggerDynamicIsland('Clock In Failed', Icons.error, Colors.red);
       return 'UNKNOWN_ERROR';
     }
   }
@@ -507,7 +507,7 @@ class AppProvider extends ChangeNotifier {
       _attendanceSource = null;
       _canPunchViaMobile = true;
       triggerDynamicIsland(
-        'Punched Out Successfully',
+        'Clocked Out Successfully',
         Icons.logout,
         const Color(0xFFFF8C42),
       );
@@ -518,7 +518,7 @@ class AppProvider extends ChangeNotifier {
       final msg = e.toString();
       if (msg.contains('BIOMETRIC_PUNCH_ACTIVE')) {
         triggerDynamicIsland(
-          'Use Biometric Device to Punch Out',
+          'Use Biometric Device to Clock Out',
           Icons.fingerprint,
           Colors.orange,
         );
@@ -529,7 +529,7 @@ class AppProvider extends ChangeNotifier {
         triggerDynamicIsland('Not Clocked In Yet', Icons.info, Colors.orange);
         notifyListeners();
       } else {
-        triggerDynamicIsland('Punch Out Failed', Icons.error, Colors.red);
+        triggerDynamicIsland('Clock Out Failed', Icons.error, Colors.red);
       }
     }
   }

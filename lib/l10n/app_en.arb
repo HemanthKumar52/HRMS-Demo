@@ -9,8 +9,8 @@
   "attendance": "Attendance",
   "payslip": "Payslip",
 
-  "punchIn": "Punch In",
-  "punchOut": "Punch Out",
+  "punchIn": "Clock In",
+  "punchOut": "Clock Out",
   "checkedInViaBiometric": "Checked in via Biometric",
   "useBiometricToCheckOut": "Please use the biometric device to check out",
 

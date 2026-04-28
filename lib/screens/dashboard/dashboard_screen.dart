@@ -529,60 +529,47 @@ class DashboardScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       if (provider.leaveBalances.isNotEmpty)
-                        LayoutBuilder(
-                          builder: (context, constraints) {
-                            const spacing = 10.0;
-                            const cols = 3;
-                            final itemWidth =
-                                (constraints.maxWidth - spacing * (cols - 1)) /
-                                cols;
-                            return Wrap(
-                              spacing: spacing,
-                              runSpacing: spacing,
-                              children: [
-                                for (
-                                  int i = 0;
-                                  i < provider.leaveBalances.length;
-                                  i++
-                                )
-                                  SizedBox(
-                                    width: itemWidth,
-                                    child: _LeaveTypeChip(
-                                      label:
-                                          (provider.leaveBalances[i]['label'] ??
-                                                  'Leave')
-                                              .toString(),
-                                      used:
-                                          ((provider.leaveBalances[i]['used'] ??
-                                                      0)
-                                                  as num)
-                                              .toInt(),
-                                      total:
-                                          ((provider.leaveBalances[i]['total'] ??
-                                                      1)
-                                                  as num)
-                                              .toInt()
-                                              .clamp(1, 999),
-                                      isUnpaid:
-                                          provider
-                                              .leaveBalances[i]['is_unpaid'] ==
-                                          true,
-                                      color:
-                                          provider.leaveBalances[i]['is_unpaid'] ==
-                                              true
-                                          ? AppColors.danger
-                                          : [
-                                              AppColors.primary,
-                                              AppColors.orange,
-                                              AppColors.success,
-                                              AppColors.secondary,
-                                              AppColors.pink,
-                                              AppColors.warning,
-                                            ][i % 6],
-                                      isDark: isDark,
-                                    ),
-                                  ),
-                              ],
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                mainAxisSpacing: 10,
+                                crossAxisSpacing: 10,
+                                childAspectRatio: 0.95,
+                              ),
+                          itemCount: provider.leaveBalances.length,
+                          itemBuilder: (context, i) {
+                            return _LeaveTypeChip(
+                              label:
+                                  (provider.leaveBalances[i]['label'] ??
+                                          'Leave')
+                                      .toString(),
+                              used:
+                                  ((provider.leaveBalances[i]['used'] ?? 0)
+                                          as num)
+                                      .toInt(),
+                              total:
+                                  ((provider.leaveBalances[i]['total'] ?? 1)
+                                          as num)
+                                      .toInt()
+                                      .clamp(1, 999),
+                              isUnpaid:
+                                  provider.leaveBalances[i]['is_unpaid'] ==
+                                  true,
+                              color:
+                                  provider.leaveBalances[i]['is_unpaid'] == true
+                                  ? AppColors.danger
+                                  : [
+                                      AppColors.primary,
+                                      AppColors.orange,
+                                      AppColors.success,
+                                      AppColors.secondary,
+                                      AppColors.pink,
+                                      AppColors.warning,
+                                    ][i % 6],
+                              isDark: isDark,
                             );
                           },
                         )
@@ -716,7 +703,7 @@ class DashboardScreen extends StatelessWidget {
                         _ActivityItem(
                           icon: Icons.login_rounded,
                           color: AppColors.primary,
-                          title: 'Punched In',
+                          title: 'Clocked In',
                           subtitle:
                               'Punched in at ${provider.punchInTime!.hour}:${provider.punchInTime!.minute.toString().padLeft(2, '0')} today',
                           time: 'Today',
@@ -1689,7 +1676,7 @@ class _AttendanceTimerCardState extends State<_AttendanceTimerCard> {
               // Punch in time
               if (isPunchedIn && punchTime != null)
                 Text(
-                  'Punch In at ${DateFormat('hh:mm a').format(punchTime)}',
+                  'Clock In at ${DateFormat('hh:mm a').format(punchTime)}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: isDark
                         ? AppColors.darkSubtext
@@ -1698,7 +1685,7 @@ class _AttendanceTimerCardState extends State<_AttendanceTimerCard> {
                 ),
               if (!isPunchedIn)
                 Text(
-                  'Not punched in yet',
+                  'Not clocked in yet',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: isDark
                         ? AppColors.darkSubtext
@@ -1845,6 +1832,9 @@ class _LeaveTypeChip extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w500,

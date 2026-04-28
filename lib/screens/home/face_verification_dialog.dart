@@ -224,7 +224,7 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
       case 'LOCATION_REQUIRED':
         return 'Enable location permission in Settings — required for check-in.';
       case 'GEOFENCE_OFFICE':
-        return "You're at the office — please punch in via biometric.";
+        return "You're at the office — please clock in via biometric.";
       case 'WFH_OUT_OF_ZONE':
         return 'You are not within an authorized WFH location.';
       case 'FACE_MISMATCH':
@@ -232,9 +232,9 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
       case 'FACE_VERIFICATION_FAILED':
         return 'Unknown user — verification failed.';
       case 'BIOMETRIC_PUNCH_ACTIVE':
-        return 'Already punched in via biometric device.';
+        return 'Already clocked in via biometric device.';
       default:
-        return 'Punch in failed. Please try again.';
+        return 'Clock in failed. Please try again.';
     }
   }
 

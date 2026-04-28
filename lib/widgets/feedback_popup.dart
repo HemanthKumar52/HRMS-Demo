@@ -16,10 +16,13 @@ class FeedbackManager {
   FeedbackManager._();
   static const _version = '1.0.0';
   static const _dismissKey = 'feedback_dismissed_date';
+  static bool _isShowing = false;
 
   /// Call this when the app goes to background or user logs out.
   /// Shows the feedback bottom sheet if conditions are met.
   static Future<void> maybeShowFeedback(BuildContext context) async {
+    if (_isShowing) return;
+    _isShowing = true;
     try {
       // 1. Check if already submitted for this version.
       final hasIt = await ApiService.hasFeedback(_version);
@@ -42,6 +45,8 @@ class FeedbackManager {
       );
     } catch (_) {
       // Network error or not logged in — silently skip.
+    } finally {
+      _isShowing = false;
     }
   }
 

@@ -149,49 +149,62 @@ class _EmployeeCcFieldState extends State<EmployeeCcField> {
                         : Colors.grey.withValues(alpha: 0.2)),
             ),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              for (final u in widget.selected)
-                Chip(
-                  label: Text(
-                    (u['name'] ?? u['email'] ?? '?').toString(),
-                    style: const TextStyle(fontSize: 12),
+              if (widget.selected.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, bottom: 4),
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final u in widget.selected)
+                        Chip(
+                          label: Text(
+                            (u['name'] ?? u['email'] ?? '?').toString(),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          avatar: CircleAvatar(
+                            backgroundColor: AppColors.primary.withValues(
+                              alpha: 0.20,
+                            ),
+                            child: Text(
+                              ((u['name'] ?? '?').toString().isNotEmpty
+                                      ? (u['name'] ?? '?').toString()[0]
+                                      : '?')
+                                  .toUpperCase(),
+                              style: const TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                          deleteIcon: const Icon(Icons.close_rounded, size: 16),
+                          onDeleted: () => _remove(u),
+                          visualDensity: VisualDensity.compact,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                        ),
+                    ],
                   ),
-                  avatar: CircleAvatar(
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.20),
-                    child: Text(
-                      ((u['name'] ?? '?').toString().isNotEmpty
-                              ? (u['name'] ?? '?').toString()[0]
-                              : '?')
-                          .toUpperCase(),
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
-                  deleteIcon: const Icon(Icons.close_rounded, size: 16),
-                  onDeleted: () => _remove(u),
-                  visualDensity: VisualDensity.compact,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-              Expanded(
-                child: TextField(
-                  controller: _ctrl,
-                  focusNode: _focus,
-                  onChanged: _onChanged,
-                  decoration: InputDecoration(
-                    hintText: widget.selected.isEmpty
-                        ? widget.hint
-                        : 'Add another…',
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+              TextField(
+                controller: _ctrl,
+                focusNode: _focus,
+                onChanged: _onChanged,
+                decoration: InputDecoration(
+                  hintText: widget.selected.isEmpty
+                      ? widget.hint
+                      : 'Add another…',
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 10,
+                    horizontal: 4,
                   ),
                 ),
               ),
@@ -199,10 +212,10 @@ class _EmployeeCcFieldState extends State<EmployeeCcField> {
           ),
         ),
         // Suggestions dropdown.
-        if (_showSuggestions)
+        if (_showSuggestions && (_loading || _suggestions.isNotEmpty))
           Container(
             margin: const EdgeInsets.only(top: 6),
-            constraints: const BoxConstraints(maxHeight: 220),
+            constraints: const BoxConstraints(maxHeight: 180),
             decoration: BoxDecoration(
               color: theme.cardColor,
               borderRadius: BorderRadius.circular(12),
