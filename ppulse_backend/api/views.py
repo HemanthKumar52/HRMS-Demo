@@ -1510,7 +1510,8 @@ class AttendanceTeamView(APIView):
             work_type = ''
             department = ''
             if wi:
-                work_type = wi.work_type or ''
+                wt = WorkType.objects.filter(id=wi.work_type_id_id).first() if wi.work_type_id_id else None
+                work_type = wt.work_type if wt else ''
                 if wi.department_id_id:
                     dept = Department.objects.filter(id=wi.department_id_id).first()
                     department = dept.department if dept else ''
@@ -6272,3 +6273,251 @@ class PayslipWebDetailProxyView(_WebPayslipProxyMixin, APIView):
                 {'error': f'Web backend unreachable: {e!s}'},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
+
+
+# =============================================================================
+# TEAM MANAGEMENT — My Team + Employee Activity Logs
+# =============================================================================
+
+
+class TeamMembersView(APIView):
+    """GET /team/members — manager sees direct reports, admin sees all."""
+
+    def get(self, request):
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        today = date.today()
+        is_admin = request.user.is_staff or request.user.is_superuser
+
+        if is_admin:
+            team_emps = Employee.objects.filter(is_active=True).exclude(id=employee.id)
+        else:
+            team_ids = list(
+                EmployeeWorkInformation.objects.filter(
+                    reporting_manager_id_id=employee.id,
+                ).values_list('employee_id_id', flat=True)
+            )
+            team_emps = Employee.objects.filter(id__in=team_ids, is_active=True)
+
+        members = []
+        for emp in team_emps:
+            wi = EmployeeWorkInformation.objects.filter(employee_id_id=emp.id).first()
+            dept = ''
+            designation = ''
+            manager_name = None
+            if wi:
+                d = Department.objects.filter(id=wi.department_id_id).first()
+                dept = d.department if d else ''
+                jp = JobPosition.objects.filter(id=wi.job_position_id_id).first()
+                designation = jp.job_position if jp else ''
+                if wi.reporting_manager_id_id:
+                    mgr = Employee.objects.filter(id=wi.reporting_manager_id_id).first()
+                    manager_name = mgr.name if mgr else None
+
+            att = Attendance.objects.filter(
+                employee_id_id=emp.id,
+                attendance_date=today,
+            ).first()
+            on_leave = LeaveRequest.objects.filter(
+                employee_id_id=emp.id,
+                status='approved',
+                start_date__lte=today,
+                end_date__gte=today,
+            ).exists()
+
+            if att and att.attendance_clock_in:
+                today_status = 'present'
+            elif on_leave:
+                today_status = 'on_leave'
+            else:
+                today_status = 'absent'
+
+            user = User.objects.filter(id=emp.employee_user_id_id).first()
+            last_login = None
+            if user:
+                from .models import LoginRecord as LR
+
+                lr = LR.objects.filter(user_id=user.id, success=True).order_by('-created_at').first()
+                if lr:
+                    last_login = lr.created_at.isoformat()
+
+            members.append(
+                {
+                    'id': emp.id,
+                    'name': emp.name,
+                    'badge_id': emp.badge_id or str(emp.id),
+                    'department': dept,
+                    'designation': designation,
+                    'email': emp.email or '',
+                    'phone': emp.phone or '',
+                    'today_status': today_status,
+                    'last_login': last_login,
+                    'reporting_manager': manager_name,
+                }
+            )
+
+        return Response({'members': members})
+
+
+class TeamMemberActivityView(APIView):
+    """GET /team/members/<id>/activity — attendance, requests, login history."""
+
+    def get(self, request, pk):
+        actor = get_employee_from_user(request.user)
+        if not actor:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        target_emp = Employee.objects.filter(id=pk).first()
+        if not target_emp:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        is_admin = request.user.is_staff or request.user.is_superuser
+        if not is_admin:
+            team_ids = list(
+                EmployeeWorkInformation.objects.filter(
+                    reporting_manager_id_id=actor.id,
+                ).values_list('employee_id_id', flat=True)
+            )
+            if pk not in team_ids:
+                return Response({'error': 'Access denied'}, status=status.HTTP_403_FORBIDDEN)
+
+        wi = EmployeeWorkInformation.objects.filter(employee_id_id=target_emp.id).first()
+        dept = ''
+        designation = ''
+        if wi:
+            d = Department.objects.filter(id=wi.department_id_id).first()
+            dept = d.department if d else ''
+            jp = JobPosition.objects.filter(id=wi.job_position_id_id).first()
+            designation = jp.job_position if jp else ''
+
+        emp_info = {
+            'id': target_emp.id,
+            'name': target_emp.name,
+            'badge_id': target_emp.badge_id or str(target_emp.id),
+            'department': dept,
+            'designation': designation,
+            'email': target_emp.email or '',
+            'phone': target_emp.phone or '',
+        }
+
+        cutoff = date.today() - timedelta(days=60)
+        attendances = Attendance.objects.filter(
+            employee_id_id=target_emp.id,
+            attendance_date__gte=cutoff,
+        ).order_by('-attendance_date')
+
+        att_list = []
+        for a in attendances:
+            att_list.append(
+                {
+                    'date': a.attendance_date.isoformat() if a.attendance_date else None,
+                    'punch_in': a.attendance_clock_in.isoformat() if a.attendance_clock_in else None,
+                    'punch_out': a.attendance_clock_out.isoformat() if a.attendance_clock_out else None,
+                    'worked_hours': a.attendance_worked_hour or '',
+                    'punch_in_lat': a.punch_in_lat,
+                    'punch_in_lng': a.punch_in_lng,
+                    'punch_in_location': a.punch_in_location or '',
+                    'punch_out_lat': a.punch_out_lat,
+                    'punch_out_lng': a.punch_out_lng,
+                    'punch_out_location': a.punch_out_location or '',
+                    'source': a.punch_in_source or '',
+                    'device': a.punch_in_device or '',
+                }
+            )
+
+        def _iso(v):
+            return v.isoformat() if v and hasattr(v, 'isoformat') else str(v) if v else None
+
+        req_list = []
+        for lr in LeaveRequest.objects.filter(employee_id_id=target_emp.id).order_by('-created_at')[:50]:
+            req_list.append(
+                {
+                    'type': 'Leave',
+                    'title': 'Leave Request',
+                    'status': lr.status or 'requested',
+                    'created_at': _iso(lr.created_at or lr.start_date),
+                    'request_id': get_request_id('LE', lr.id),
+                }
+            )
+        for t in Ticket.objects.filter(employee_id_id=target_emp.id).order_by('-id')[:30]:
+            req_list.append(
+                {
+                    'type': 'Ticket',
+                    'title': t.title or 'Ticket',
+                    'status': t.status or 'open',
+                    'created_at': _iso(t.raised_on),
+                    'request_id': get_request_id('TI', t.id),
+                }
+            )
+        for sr in ShiftRequestModel.objects.filter(employee_id_id=target_emp.id).order_by('-id')[:20]:
+            req_list.append(
+                {
+                    'type': 'Shift',
+                    'title': 'Shift Request',
+                    'status': sr.status,
+                    'created_at': _iso(sr.requested_date),
+                    'request_id': get_request_id('SH', sr.id),
+                }
+            )
+        for wr in WorkTypeRequestModel.objects.filter(employee_id_id=target_emp.id).order_by('-id')[:20]:
+            req_list.append(
+                {
+                    'type': 'Work Type',
+                    'title': 'Work Type Request',
+                    'status': wr.status,
+                    'created_at': _iso(wr.requested_date),
+                    'request_id': get_request_id('WO', wr.id),
+                }
+            )
+        for ar in AttendanceRequestModel.objects.filter(employee_id=target_emp.id).order_by('-id')[:20]:
+            req_list.append(
+                {
+                    'type': 'Attendance',
+                    'title': 'Attendance Request',
+                    'status': ar.status or 'requested',
+                    'created_at': _iso(ar.requested_date),
+                    'request_id': get_request_id('AT', ar.id),
+                }
+            )
+        for asr in AssetRequestModel.objects.filter(requested_employee_id_id=target_emp.id).order_by('-id')[
+            :20
+        ]:
+            req_list.append(
+                {
+                    'type': 'Asset',
+                    'title': 'Asset Request',
+                    'status': asr.status,
+                    'created_at': _iso(asr.asset_request_date),
+                    'request_id': get_request_id('AS', asr.id),
+                }
+            )
+        req_list.sort(key=lambda r: r.get('created_at') or '', reverse=True)
+
+        user = User.objects.filter(id=target_emp.employee_user_id_id).first()
+        login_list = []
+        if user:
+            from .models import LoginRecord
+
+            for lr in LoginRecord.objects.filter(user_id=user.id).order_by('-created_at')[:50]:
+                login_list.append(
+                    {
+                        'timestamp': lr.created_at.isoformat(),
+                        'lat': lr.latitude,
+                        'lng': lr.longitude,
+                        'location_name': lr.location_name or '',
+                        'device_info': lr.device_info or '',
+                        'ip_address': lr.ip_address or '',
+                        'success': lr.success,
+                    }
+                )
+
+        return Response(
+            {
+                'employee': emp_info,
+                'attendance': att_list,
+                'requests': req_list,
+                'login_history': login_list,
+            }
+        )

@@ -283,75 +283,113 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
     return _buildChartCard(
       isDark: isDark,
-      height: 220,
-      child: BarChart(
-        BarChartData(
-          alignment: BarChartAlignment.spaceAround,
-          maxY: maxY,
-          barTouchData: BarTouchData(
-            touchTooltipData: BarTouchTooltipData(
-              tooltipRoundedRadius: 8,
-              getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                return BarTooltipItem(
-                  '${rod.toY.toInt()}',
-                  const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                );
-              },
-            ),
-          ),
-          titlesData: FlTitlesData(
-            show: true,
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 30,
-                getTitlesWidget: (value, meta) {
-                  const titles = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-                  if (value.toInt() >= titles.length)
-                    return const SizedBox.shrink();
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      titles[value.toInt()],
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: isDark
-                            ? AppColors.darkSubtext
-                            : AppColors.lightSubtext,
-                      ),
+      height: 250,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 12, right: 8),
+        child: BarChart(
+          BarChartData(
+            alignment: BarChartAlignment.spaceAround,
+            maxY: maxY,
+            barTouchData: BarTouchData(
+              touchTooltipData: BarTouchTooltipData(
+                tooltipRoundedRadius: 8,
+                getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                  return BarTooltipItem(
+                    '${rod.toY.toInt()}',
+                    const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
                     ),
                   );
                 },
               ),
             ),
-            leftTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
+            titlesData: FlTitlesData(
+              show: true,
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 30,
+                  getTitlesWidget: (value, meta) {
+                    final titles = _selectedPeriod == 0
+                        ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+                        : _selectedPeriod == 1
+                        ? ['Wk1', 'Wk2', 'Wk3', 'Wk4']
+                        : ['M1', 'M2', 'M3'];
+                    if (value.toInt() >= titles.length)
+                      return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        titles[value.toInt()],
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: isDark
+                              ? AppColors.darkSubtext
+                              : AppColors.lightSubtext,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 36,
+                  interval: maxY > 20 ? 10 : 5,
+                  getTitlesWidget: (value, meta) {
+                    if (value == meta.max) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Text(
+                        '${value.toInt()}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark
+                              ? AppColors.darkSubtext
+                              : AppColors.lightSubtext,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
             ),
-            topTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            rightTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
+            borderData: FlBorderData(show: false),
+            gridData: const FlGridData(show: false),
+            barGroups: _selectedPeriod == 0
+                ? [
+                    _makeBarGroup(0, totalEmp * 0.90),
+                    _makeBarGroup(1, totalEmp * 0.85),
+                    _makeBarGroup(2, totalEmp * 0.93),
+                    _makeBarGroup(3, totalEmp * 0.88),
+                    _makeBarGroup(4, totalEmp * 0.95),
+                  ]
+                : _selectedPeriod == 1
+                ? [
+                    _makeBarGroup(0, totalEmp * 0.88),
+                    _makeBarGroup(1, totalEmp * 0.92),
+                    _makeBarGroup(2, totalEmp * 0.95),
+                    _makeBarGroup(3, totalEmp),
+                  ]
+                : [
+                    _makeBarGroup(0, totalEmp * 0.90),
+                    _makeBarGroup(1, totalEmp * 0.93),
+                    _makeBarGroup(2, totalEmp * 0.96),
+                  ],
           ),
-          borderData: FlBorderData(show: false),
-          gridData: const FlGridData(show: false),
-          barGroups: [
-            _makeBarGroup(0, totalEmp * 0.85),
-            _makeBarGroup(1, totalEmp * 0.90),
-            _makeBarGroup(2, totalEmp * 0.93),
-            _makeBarGroup(3, totalEmp * 0.88),
-            _makeBarGroup(4, totalEmp * 0.95),
-            _makeBarGroup(5, totalEmp),
-          ],
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeInOutCubic,
         ),
-        duration: const Duration(milliseconds: 800),
-        curve: Curves.easeInOutCubic,
       ),
     );
   }
@@ -377,108 +415,157 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Widget _buildAttendanceTrendChart(bool isDark) {
     return _buildChartCard(
       isDark: isDark,
-      height: 220,
-      child: LineChart(
-        LineChartData(
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            horizontalInterval: 5,
-            getDrawingHorizontalLine: (value) => FlLine(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.06)
-                  : Colors.grey.withValues(alpha: 0.12),
-              strokeWidth: 1,
+      height: 250,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 12, right: 8),
+        child: LineChart(
+          LineChartData(
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              horizontalInterval: 5,
+              getDrawingHorizontalLine: (value) => FlLine(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.grey.withValues(alpha: 0.12),
+                strokeWidth: 1,
+              ),
             ),
-          ),
-          titlesData: FlTitlesData(
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                interval: 1,
-                reservedSize: 30,
-                getTitlesWidget: (value, meta) {
-                  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-                  final idx = value.toInt();
-                  if (idx < 0 || idx >= days.length)
-                    return const SizedBox.shrink();
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      days[idx],
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: isDark
-                            ? AppColors.darkSubtext
-                            : AppColors.lightSubtext,
+            titlesData: FlTitlesData(
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  interval: 1,
+                  reservedSize: 30,
+                  getTitlesWidget: (value, meta) {
+                    final labels = _selectedPeriod == 0
+                        ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+                        : _selectedPeriod == 1
+                        ? ['Wk1', 'Wk2', 'Wk3', 'Wk4']
+                        : ['M1', 'M2', 'M3'];
+                    final idx = value.toInt();
+                    if (idx < 0 || idx >= labels.length)
+                      return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        labels[idx],
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: isDark
+                              ? AppColors.darkSubtext
+                              : AppColors.lightSubtext,
+                        ),
                       ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            leftTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            topTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            rightTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-          ),
-          borderData: FlBorderData(show: false),
-          minX: 0,
-          maxX: 4,
-          minY: 85,
-          maxY: 100,
-          lineBarsData: [
-            LineChartBarData(
-              spots: const [
-                FlSpot(0, 95),
-                FlSpot(1, 92),
-                FlSpot(2, 97),
-                FlSpot(3, 94),
-                FlSpot(4, 96),
-              ],
-              isCurved: true,
-              color: AppColors.success,
-              barWidth: 3,
-              isStrokeCapRound: true,
-              dotData: FlDotData(
-                show: true,
-                getDotPainter: (spot, percent, barData, index) =>
-                    FlDotCirclePainter(
-                      radius: 5,
-                      color: AppColors.success,
-                      strokeWidth: 2,
-                      strokeColor: isDark ? AppColors.darkCard : Colors.white,
-                    ),
-              ),
-              belowBarData: BarAreaData(
-                show: true,
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.success.withValues(alpha: 0.2),
-                    AppColors.success.withValues(alpha: 0.02),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                    );
+                  },
                 ),
               ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 36,
+                  interval: 5,
+                  getTitlesWidget: (value, meta) {
+                    if (value == meta.max) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Text(
+                        '${value.toInt()}%',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isDark
+                              ? AppColors.darkSubtext
+                              : AppColors.lightSubtext,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
             ),
-          ],
+            borderData: FlBorderData(show: false),
+            minX: 0,
+            maxX: _selectedPeriod == 0
+                ? 4
+                : _selectedPeriod == 1
+                ? 3
+                : 2,
+            minY: 85,
+            maxY: 100,
+            lineBarsData: [
+              LineChartBarData(
+                spots: _selectedPeriod == 0
+                    ? const [
+                        FlSpot(0, 95),
+                        FlSpot(1, 92),
+                        FlSpot(2, 97),
+                        FlSpot(3, 94),
+                        FlSpot(4, 96),
+                      ]
+                    : _selectedPeriod == 1
+                    ? const [
+                        FlSpot(0, 93),
+                        FlSpot(1, 95),
+                        FlSpot(2, 91),
+                        FlSpot(3, 94),
+                      ]
+                    : const [
+                        FlSpot(0, 92),
+                        FlSpot(1, 94),
+                        FlSpot(2, 95),
+                      ],
+                isCurved: true,
+                color: AppColors.success,
+                barWidth: 3,
+                isStrokeCapRound: true,
+                dotData: FlDotData(
+                  show: true,
+                  getDotPainter: (spot, percent, barData, index) =>
+                      FlDotCirclePainter(
+                        radius: 5,
+                        color: AppColors.success,
+                        strokeWidth: 2,
+                        strokeColor: isDark ? AppColors.darkCard : Colors.white,
+                      ),
+                ),
+                belowBarData: BarAreaData(
+                  show: true,
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.success.withValues(alpha: 0.2),
+                      AppColors.success.withValues(alpha: 0.02),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeInOutCubic,
         ),
-        duration: const Duration(milliseconds: 800),
-        curve: Curves.easeInOutCubic,
       ),
     );
   }
 
   Widget _buildDepartmentPieChart(bool isDark) {
     final hasDepts = _departments.isNotEmpty;
-    final totalEmp = _totalEmployees > 0 ? _totalEmployees : 16;
+    final deptTotal = hasDepts
+        ? _departments.fold<int>(
+            0,
+            (sum, d) => sum + ((d['count'] ?? 0) as num).toInt(),
+          )
+        : _totalEmployees;
+    final totalEmp = deptTotal > 0 ? deptTotal : _totalEmployees;
 
     return _buildChartCard(
       isDark: isDark,
@@ -531,7 +618,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         color: AppColors.pink,
                       ),
                     ],
-              centerLabel: '$totalEmp\nEmployees',
+              centerLabel: 'Employees',
             ),
     );
   }

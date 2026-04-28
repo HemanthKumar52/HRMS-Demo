@@ -15,7 +15,7 @@ class AttendanceController {
       final now = DateTime.now();
       provider.setPunchState(true, now);
       provider.triggerDynamicIsland(
-        'Punched In Successfully',
+        'Checked In Successfully',
         Icons.login,
         const Color(0xFF34D399),
       );
@@ -30,13 +30,13 @@ class AttendanceController {
           msg.contains('Already clocked in')) {
         provider.setPunchState(true, provider.punchInTime ?? DateTime.now());
         provider.triggerDynamicIsland(
-          'Already Clocked In',
+          'Already Checked In',
           Icons.check_circle,
           const Color(0xFF34D399),
         );
       } else {
         provider.triggerDynamicIsland(
-          'Punch In Failed',
+          'Check In Failed',
           Icons.error,
           Colors.red,
         );
@@ -53,7 +53,7 @@ class AttendanceController {
       await ApiService.punchOut();
       provider.setPunchState(false, null);
       provider.triggerDynamicIsland(
-        'Punched Out Successfully',
+        'Checked Out Successfully',
         Icons.logout,
         const Color(0xFFFF8C42),
       );
@@ -65,13 +65,13 @@ class AttendanceController {
           msg.contains('without punching in')) {
         provider.setPunchState(false, null);
         provider.triggerDynamicIsland(
-          'Not Clocked In Yet',
+          'Not Checked In Yet',
           Icons.info,
           Colors.orange,
         );
       } else {
         provider.triggerDynamicIsland(
-          'Punch Out Failed',
+          'Check Out Failed',
           Icons.error,
           Colors.red,
         );

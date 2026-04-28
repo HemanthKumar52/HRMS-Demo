@@ -87,6 +87,8 @@ from .views import (
     SettingsView,
     ShiftRequestView,
     ShiftsListView,
+    TeamMemberActivityView,
+    TeamMembersView,
     TicketRaiseView,
     UserMeView,
     WorkTypeRequestView,
@@ -177,6 +179,9 @@ urlpatterns = [
     # App Feedback
     path('feedback/check', FeedbackCheckView.as_view(), name='feedback_check'),
     path('feedback/submit', FeedbackSubmitView.as_view(), name='feedback_submit'),
+    # Team Management
+    path('team/members', TeamMembersView.as_view(), name='team_members'),
+    path('team/members/<int:pk>/activity', TeamMemberActivityView.as_view(), name='team_member_activity'),
     # Manager Stats & Org Chart
     path('dashboard/manager-stats', ManagerStatsView.as_view(), name='manager_stats'),
     path('org-chart', OrgChartView.as_view(), name='org_chart'),

@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:io' show Platform;
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geocoding/geocoding.dart' as gc;
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 
 /// Captures location and device info silently for punch in/out.
 /// All capture happens in background — never shown in UI.
@@ -45,20 +47,25 @@ class PunchMetadataService {
   }
 
   Future<String?> _reverseGeocode(double lat, double lng) async {
+    // Try Nominatim (OpenStreetMap) first — gives precise street-level addresses.
+    try {
+      final nominatim = await _nominatimReverse(lat, lng);
+      if (nominatim != null && nominatim.isNotEmpty) return nominatim;
+    } catch (_) {}
+
+    // Fallback to device's native geocoder.
     try {
       final placemarks = await gc
           .placemarkFromCoordinates(lat, lng)
-          .timeout(
-            const Duration(seconds: 6),
-          );
+          .timeout(const Duration(seconds: 6));
       if (placemarks.isEmpty) return null;
       final p = placemarks.first;
-      // Compose a friendly label like "Thoraipakkam, Chennai, Tamil Nadu, IN".
       final parts = <String>[
+        if ((p.street ?? '').isNotEmpty && p.street != p.locality) p.street!,
         if ((p.subLocality ?? '').isNotEmpty) p.subLocality!,
         if ((p.locality ?? '').isNotEmpty) p.locality!,
         if ((p.administrativeArea ?? '').isNotEmpty) p.administrativeArea!,
-        if ((p.isoCountryCode ?? '').isNotEmpty) p.isoCountryCode!,
+        if ((p.country ?? '').isNotEmpty) p.country!,
       ];
       final label = parts.where((s) => s.trim().isNotEmpty).toSet().join(', ');
       return label.isEmpty ? null : label;
@@ -66,6 +73,50 @@ class PunchMetadataService {
       debugPrint('PUNCH_META: reverse geocode failed - $e');
       return null;
     }
+  }
+
+  /// Nominatim reverse geocoding — free, no API key, street-level precision.
+  Future<String?> _nominatimReverse(double lat, double lng) async {
+    final url = Uri.parse(
+      'https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lng&format=json&addressdetails=1&zoom=18',
+    );
+    final response = await http
+        .get(
+          url,
+          headers: {
+            'User-Agent': 'ppulse-hrms/1.0',
+            'Accept-Language': 'en',
+          },
+        )
+        .timeout(const Duration(seconds: 5));
+
+    if (response.statusCode != 200) return null;
+    final data = jsonDecode(response.body);
+    final addr = data['address'] as Map<String, dynamic>?;
+    if (addr == null) return null;
+
+    // Build precise address: road, neighbourhood, suburb, city, state, country
+    final parts = <String>[
+      if (addr['road'] != null) addr['road'],
+      if (addr['neighbourhood'] != null)
+        addr['neighbourhood']
+      else if (addr['suburb'] != null)
+        addr['suburb'],
+      if (addr['city'] != null)
+        addr['city']
+      else if (addr['town'] != null)
+        addr['town']
+      else if (addr['village'] != null)
+        addr['village'],
+      if (addr['state'] != null) addr['state'],
+      if (addr['country'] != null) addr['country'],
+    ];
+    final label = parts
+        .whereType<String>()
+        .where((s) => s.isNotEmpty)
+        .toSet()
+        .join(', ');
+    return label.isEmpty ? null : label;
   }
 
   String _getSource() {

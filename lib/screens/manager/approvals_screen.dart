@@ -1195,7 +1195,7 @@ class _RegularizationCard extends StatelessWidget {
                   child: Column(
                     children: [
                       Text(
-                        'Punch In',
+                        'Check In',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -1221,7 +1221,7 @@ class _RegularizationCard extends StatelessWidget {
                   child: Column(
                     children: [
                       Text(
-                        'Punch Out',
+                        'Check Out',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,

@@ -8,6 +8,8 @@ import '../../providers/app_provider.dart';
 import '../auth/login_screen.dart';
 import 'profile_screen.dart';
 import '../directory/directory_screen.dart';
+import '../manager/analytics_screen.dart';
+import '../manager/my_team_screen.dart';
 import '../settings/settings_screen.dart';
 import '../dashboard/org_chart_screen.dart';
 import '../../animations/motion.dart';
@@ -173,6 +175,20 @@ class _ProfileSheet extends StatelessWidget {
                   );
                 },
               ),
+              if (provider.role == UserRole.manager ||
+                  provider.role == UserRole.hr ||
+                  provider.role == UserRole.admin)
+                _MenuItem(
+                  icon: Icons.group_outlined,
+                  label: 'My Team',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      Motion.pageRoute(const MyTeamScreen()),
+                    );
+                  },
+                ),
               _MenuItem(
                 icon: Icons.people_outline_rounded,
                 label: 'Directory',
@@ -184,8 +200,28 @@ class _ProfileSheet extends StatelessWidget {
                   );
                 },
               ),
-              // Organization Chart removed — already exposed via the
-              // dashboard "Management" grid for manager/HR/admin roles.
+              _MenuItem(
+                icon: Icons.analytics_outlined,
+                label: 'Analytics',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    Motion.pageRoute(const AnalyticsScreen()),
+                  );
+                },
+              ),
+              _MenuItem(
+                icon: Icons.account_tree_outlined,
+                label: 'Org Chart',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    Motion.pageRoute(const OrgChartScreen()),
+                  );
+                },
+              ),
               _MenuItem(
                 icon: Icons.settings_outlined,
                 label: 'Settings',

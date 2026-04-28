@@ -264,19 +264,9 @@ class DashboardScreen extends StatelessWidget {
               _PerformanceSection(isDark: isDark, role: role),
             ],
 
-            // ── 6. Management Quick Actions (Directory / Analytics / OrgChart) ──
-            if (isManagerOrHr) ...[
-              Text('Management', style: theme.textTheme.titleMedium)
-                  .animate()
-                  .fadeIn(duration: 420.ms, delay: 600.ms)
-                  .slideY(
-                    begin: 0.12,
-                    end: 0,
-                    duration: 420.ms,
-                    delay: 600.ms,
-                    curve: Curves.easeOutCubic,
-                  ),
-              const SizedBox(height: 12),
+            // ── 6. Admin Panel (admin only) ──
+            if (role == UserRole.admin) ...[
+              const SizedBox(height: 8),
               GridView.count(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -286,42 +276,14 @@ class DashboardScreen extends StatelessWidget {
                     crossAxisSpacing: 12,
                     children: [
                       _QuickAction(
-                        icon: Icons.people_outline,
-                        label: 'Directory',
-                        color: AppColors.primary,
+                        icon: Icons.shield_moon_outlined,
+                        label: 'Admin Panel',
+                        color: AppColors.danger,
                         onTap: () => Navigator.push(
                           context,
-                          Motion.pageRoute(const DirectoryScreen()),
+                          Motion.pageRoute(const AdminPanelScreen()),
                         ),
                       ),
-                      _QuickAction(
-                        icon: Icons.analytics_outlined,
-                        label: 'Analytics',
-                        color: AppColors.secondary,
-                        onTap: () => Navigator.push(
-                          context,
-                          Motion.pageRoute(const AnalyticsScreen()),
-                        ),
-                      ),
-                      _QuickAction(
-                        icon: Icons.account_tree_outlined,
-                        label: 'Org Chart',
-                        color: AppColors.success,
-                        onTap: () => Navigator.push(
-                          context,
-                          Motion.pageRoute(const OrgChartScreen()),
-                        ),
-                      ),
-                      if (role == UserRole.admin)
-                        _QuickAction(
-                          icon: Icons.shield_moon_outlined,
-                          label: 'Admin Panel',
-                          color: AppColors.danger,
-                          onTap: () => Navigator.push(
-                            context,
-                            Motion.pageRoute(const AdminPanelScreen()),
-                          ),
-                        ),
                     ],
                   )
                   .animate()
@@ -537,7 +499,7 @@ class DashboardScreen extends StatelessWidget {
                                 crossAxisCount: 3,
                                 mainAxisSpacing: 10,
                                 crossAxisSpacing: 10,
-                                childAspectRatio: 0.95,
+                                childAspectRatio: 1.15,
                               ),
                           itemCount: provider.leaveBalances.length,
                           itemBuilder: (context, i) {
@@ -703,9 +665,9 @@ class DashboardScreen extends StatelessWidget {
                         _ActivityItem(
                           icon: Icons.login_rounded,
                           color: AppColors.primary,
-                          title: 'Clocked In',
+                          title: 'Checked In',
                           subtitle:
-                              'Punched in at ${provider.punchInTime!.hour}:${provider.punchInTime!.minute.toString().padLeft(2, '0')} today',
+                              'Clocked in at ${provider.punchInTime!.hour}:${provider.punchInTime!.minute.toString().padLeft(2, '0')} today',
                           time: 'Today',
                         ),
                       if (provider.recentActivity.isNotEmpty)
@@ -785,12 +747,12 @@ class _ManagerInsightsSection extends StatelessWidget {
 
   // The seven backend keys → display label + colour. Fallback to 0 when missing.
   static const _items = <_InsightSpec>[
-    _InsightSpec('leave_requests', 'Leave Requests', AppColors.warning),
-    _InsightSpec('claims', 'Claims', AppColors.primary),
-    _InsightSpec('tickets', 'Tickets', AppColors.secondary),
-    _InsightSpec('shift_requests', 'Shift Requests', AppColors.pink),
-    _InsightSpec('work_type_requests', 'Work Type Requests', AppColors.success),
     _InsightSpec('attendance_requests', 'Regularization', AppColors.orange),
+    _InsightSpec('leave_requests', 'Leave Requests', AppColors.warning),
+    _InsightSpec('tickets', 'Tickets', AppColors.secondary),
+    _InsightSpec('work_type_requests', 'Work Type Requests', AppColors.success),
+    _InsightSpec('shift_requests', 'Shift Requests', AppColors.pink),
+    _InsightSpec('claims', 'Claims', AppColors.primary),
     _InsightSpec('asset_requests', 'Asset Requests', AppColors.danger),
   ];
 
@@ -955,165 +917,180 @@ class _TeamAttendanceCard extends StatelessWidget {
 
     return NeuCard(
       padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.pastelGreen,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.groups_rounded,
-                  color: AppColors.success,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text('My Team', style: theme.textTheme.titleMedium),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '$size member${size == 1 ? '' : 's'}',
-                  style: const TextStyle(
+      child: SizedBox(
+        height: 320,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.pastelGreen,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.groups_rounded,
                     color: AppColors.success,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
+                    size: 20,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
+                const SizedBox(width: 12),
+                Text('My Team', style: theme.textTheme.titleMedium),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '$size member${size == 1 ? '' : 's'}',
+                    style: const TextStyle(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
 
-          // Today's snapshot — present / WFH / leave / absent.
-          Row(
-            children: [
-              _TeamStatMini(
-                label: 'Present',
-                value: '$present',
-                color: AppColors.success,
-                isDark: isDark,
-              ),
-              const SizedBox(width: 10),
-              _TeamStatMini(
-                label: 'WFH',
-                value: '$wfh',
-                color: AppColors.primary,
-                isDark: isDark,
-              ),
-              const SizedBox(width: 10),
-              _TeamStatMini(
-                label: 'Leave',
-                value: '$onLeave',
-                color: AppColors.warning,
-                isDark: isDark,
-              ),
-              const SizedBox(width: 10),
-              _TeamStatMini(
-                label: 'Absent',
-                value: '$absent',
-                color: AppColors.danger,
-                isDark: isDark,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: pct),
-              duration: const Duration(milliseconds: 1200),
-              curve: Curves.easeOutCubic,
-              builder: (context, value, _) => LinearProgressIndicator(
-                value: value,
-                minHeight: 8,
-                backgroundColor: isDark
-                    ? Colors.white.withValues(alpha: 0.08)
-                    : const Color(0xFFD0D4DC),
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.success,
+            // Today's snapshot — present / WFH / leave / absent.
+            Row(
+              children: [
+                _TeamStatMini(
+                  label: 'Present',
+                  value: '$present',
+                  color: AppColors.success,
+                  isDark: isDark,
+                ),
+                const SizedBox(width: 10),
+                _TeamStatMini(
+                  label: 'WFH',
+                  value: '$wfh',
+                  color: AppColors.primary,
+                  isDark: isDark,
+                ),
+                const SizedBox(width: 10),
+                _TeamStatMini(
+                  label: 'Leave',
+                  value: '$onLeave',
+                  color: AppColors.warning,
+                  isDark: isDark,
+                ),
+                const SizedBox(width: 10),
+                _TeamStatMini(
+                  label: 'Absent',
+                  value: '$absent',
+                  color: AppColors.danger,
+                  isDark: isDark,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: pct),
+                        duration: const Duration(milliseconds: 1200),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, value, _) => LinearProgressIndicator(
+                          value: value,
+                          minHeight: 8,
+                          backgroundColor: isDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : const Color(0xFFD0D4DC),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.success,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      size == 0
+                          ? 'No direct reports assigned to you'
+                          : '${(pct * 100).round()}% of your team is present today',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark
+                            ? AppColors.darkSubtext
+                            : AppColors.lightSubtext,
+                      ),
+                    ),
+
+                    // Department split.
+                    if (departments.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      Divider(
+                        color: theme.dividerColor.withValues(alpha: 0.4),
+                        height: 1,
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Departments',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final d in departments)
+                            _TeamSplitChip(
+                              label: (d['name'] ?? '').toString(),
+                              count: ((d['count'] ?? 0) as num).toInt(),
+                              color: AppColors.primary,
+                              isDark: isDark,
+                            ),
+                        ],
+                      ),
+                    ],
+
+                    // Work-type split (Office / Remote / Hybrid …).
+                    if (workTypes.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      Text(
+                        'Work Types',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final w in workTypes)
+                            _TeamSplitChip(
+                              label: (w['name'] ?? '').toString(),
+                              count: ((w['count'] ?? 0) as num).toInt(),
+                              color: AppColors.secondary,
+                              isDark: isDark,
+                            ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            size == 0
-                ? 'No direct reports assigned to you'
-                : '${(pct * 100).round()}% of your team is present today',
-            style: TextStyle(
-              fontSize: 13,
-              color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
-            ),
-          ),
-
-          // Department split.
-          if (departments.isNotEmpty) ...[
-            const SizedBox(height: 18),
-            Divider(
-              color: theme.dividerColor.withValues(alpha: 0.4),
-              height: 1,
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'Departments',
-              style: theme.textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final d in departments)
-                  _TeamSplitChip(
-                    label: (d['name'] ?? '').toString(),
-                    count: ((d['count'] ?? 0) as num).toInt(),
-                    color: AppColors.primary,
-                    isDark: isDark,
-                  ),
-              ],
-            ),
           ],
-
-          // Work-type split (Office / Remote / Hybrid …).
-          if (workTypes.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Text(
-              'Work Types',
-              style: theme.textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final w in workTypes)
-                  _TeamSplitChip(
-                    label: (w['name'] ?? '').toString(),
-                    count: ((w['count'] ?? 0) as num).toInt(),
-                    color: AppColors.secondary,
-                    isDark: isDark,
-                  ),
-              ],
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -1676,7 +1653,7 @@ class _AttendanceTimerCardState extends State<_AttendanceTimerCard> {
               // Punch in time
               if (isPunchedIn && punchTime != null)
                 Text(
-                  'Clock In at ${DateFormat('hh:mm a').format(punchTime)}',
+                  'Check In at ${DateFormat('hh:mm a').format(punchTime)}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: isDark
                         ? AppColors.darkSubtext
@@ -1685,7 +1662,7 @@ class _AttendanceTimerCardState extends State<_AttendanceTimerCard> {
                 ),
               if (!isPunchedIn)
                 Text(
-                  'Not clocked in yet',
+                  'Not checked in yet',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: isDark
                         ? AppColors.darkSubtext
@@ -1741,7 +1718,7 @@ class _AttendanceTimerCardState extends State<_AttendanceTimerCard> {
                       widget.provider.setBottomNavIndex(2);
                     },
                     child: Text(
-                      isPunchedIn ? 'Punch Out' : 'Punch In',
+                      isPunchedIn ? 'Check Out' : 'Check In',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -1769,7 +1746,7 @@ class _AttendanceTimerCardState extends State<_AttendanceTimerCard> {
                       elevation: 0,
                     ),
                     child: Text(
-                      isPunchedIn ? 'Punch Out' : 'Punch In',
+                      isPunchedIn ? 'Check Out' : 'Check In',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,

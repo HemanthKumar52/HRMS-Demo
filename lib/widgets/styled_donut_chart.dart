@@ -14,8 +14,7 @@ class DonutSegment {
   });
 }
 
-/// A styled donut chart matching the web app design:
-/// rounded segment caps, gaps between segments, center label, bottom legend.
+/// A styled donut chart with tap-to-select segments.
 class StyledDonutChart extends StatefulWidget {
   final List<DonutSegment> segments;
   final String? centerLabel;
@@ -46,6 +45,7 @@ class _StyledDonutChartState extends State<StyledDonutChart>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
+  int? _selectedIndex;
 
   @override
   void initState() {
@@ -67,62 +67,143 @@ class _StyledDonutChartState extends State<StyledDonutChart>
     super.dispose();
   }
 
+  void _onTapSegment(Offset localPosition, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (math.min(size.width, size.height) - widget.strokeWidth) / 2;
+    final dx = localPosition.dx - center.dx;
+    final dy = localPosition.dy - center.dy;
+    final dist = math.sqrt(dx * dx + dy * dy);
+
+    // Only register taps on the donut ring
+    if (dist < radius - widget.strokeWidth / 2 ||
+        dist > radius + widget.strokeWidth / 2) {
+      setState(() => _selectedIndex = null);
+      return;
+    }
+
+    // Calculate angle (0 = top, clockwise)
+    var angle = math.atan2(dx, -dy) * 180 / math.pi;
+    if (angle < 0) angle += 360;
+
+    final total = widget.segments.fold<double>(0, (s, e) => s + e.value);
+    if (total <= 0) return;
+
+    final totalGap = widget.gapDegrees * widget.segments.length;
+    final available = 360.0 - totalGap;
+    double cumulative = 0;
+
+    for (int i = 0; i < widget.segments.length; i++) {
+      final sweep = (widget.segments[i].value / total) * available;
+      final start = cumulative + widget.gapDegrees / 2;
+      if (angle >= start && angle < start + sweep) {
+        setState(() => _selectedIndex = _selectedIndex == i ? null : i);
+        return;
+      }
+      cumulative += sweep + widget.gapDegrees;
+    }
+    setState(() => _selectedIndex = null);
+  }
+
   @override
   Widget build(BuildContext context) {
     final total = widget.segments.fold<double>(0, (s, e) => s + e.value);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textTheme = Theme.of(context).textTheme;
 
+    final selected = _selectedIndex != null
+        ? widget.segments[_selectedIndex!]
+        : null;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Center(
-          child: SizedBox(
-            width: widget.size,
-            height: widget.size,
-            child: AnimatedBuilder(
-              animation: _animation,
-              builder: (context, _) {
-                return CustomPaint(
-                  painter: _DonutPainter(
-                    segments: widget.segments,
-                    total: total,
-                    progress: _animation.value,
-                    strokeWidth: widget.strokeWidth,
-                    gapDegrees: widget.gapDegrees,
-                    trackColor: isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : Colors.black.withValues(alpha: 0.06),
-                  ),
-                  child: Center(
-                    child: widget.centerBuilder != null
-                        ? widget.centerBuilder!(total)
-                        : Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                total.toInt().toString(),
-                                style: textTheme.headlineMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  color: isDark ? Colors.white : Colors.black87,
-                                ),
-                              ),
-                              if (widget.centerLabel != null)
-                                Text(
-                                  widget.centerLabel!,
-                                  style: textTheme.bodySmall?.copyWith(
-                                    color: isDark
-                                        ? Colors.white54
-                                        : Colors.black45,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                            ],
-                          ),
-                  ),
-                );
-              },
+          child: GestureDetector(
+            onTapUp: (details) => _onTapSegment(
+              details.localPosition,
+              Size(widget.size, widget.size),
+            ),
+            child: SizedBox(
+              width: widget.size,
+              height: widget.size,
+              child: AnimatedBuilder(
+                animation: _animation,
+                builder: (context, _) {
+                  return CustomPaint(
+                    painter: _DonutPainter(
+                      segments: widget.segments,
+                      total: total,
+                      progress: _animation.value,
+                      strokeWidth: widget.strokeWidth,
+                      gapDegrees: widget.gapDegrees,
+                      selectedIndex: _selectedIndex,
+                      trackColor: isDark
+                          ? Colors.white.withValues(alpha: 0.06)
+                          : Colors.black.withValues(alpha: 0.06),
+                    ),
+                    child: Center(
+                      child: widget.centerBuilder != null
+                          ? widget.centerBuilder!(total)
+                          : AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 200),
+                              child: selected != null
+                                  ? Column(
+                                      key: ValueKey(_selectedIndex),
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          '${selected.value.toInt()}',
+                                          style: textTheme.headlineMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w800,
+                                                color: selected.color,
+                                              ),
+                                        ),
+                                        Text(
+                                          selected.label,
+                                          textAlign: TextAlign.center,
+                                          style: textTheme.bodySmall?.copyWith(
+                                            color: isDark
+                                                ? Colors.white70
+                                                : Colors.black54,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Column(
+                                      key: const ValueKey('total'),
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          total.toInt().toString(),
+                                          style: textTheme.headlineMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w800,
+                                                color: isDark
+                                                    ? Colors.white
+                                                    : Colors.black87,
+                                              ),
+                                        ),
+                                        if (widget.centerLabel != null)
+                                          Text(
+                                            widget.centerLabel!,
+                                            style: textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: isDark
+                                                      ? Colors.white54
+                                                      : Colors.black45,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                          ),
+                                      ],
+                                    ),
+                            ),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -132,27 +213,41 @@ class _StyledDonutChartState extends State<StyledDonutChart>
             spacing: 20,
             runSpacing: 10,
             alignment: WrapAlignment.center,
-            children: widget.segments.map((seg) {
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: seg.color,
-                      shape: BoxShape.circle,
-                    ),
+            children: widget.segments.asMap().entries.map((entry) {
+              final i = entry.key;
+              final seg = entry.value;
+              final isActive = _selectedIndex == i;
+              return GestureDetector(
+                onTap: () => setState(
+                  () => _selectedIndex = _selectedIndex == i ? null : i,
+                ),
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 200),
+                  opacity: _selectedIndex == null || isActive ? 1.0 : 0.4,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: seg.color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${seg.label} (${seg.value.toInt()})',
+                        style: textTheme.bodySmall?.copyWith(
+                          fontWeight: isActive
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: isDark ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    seg.label,
-                    style: textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w500,
-                      color: isDark ? Colors.white70 : Colors.black54,
-                    ),
-                  ),
-                ],
+                ),
               );
             }).toList(),
           ),
@@ -169,6 +264,7 @@ class _DonutPainter extends CustomPainter {
   final double strokeWidth;
   final double gapDegrees;
   final Color trackColor;
+  final int? selectedIndex;
 
   _DonutPainter({
     required this.segments,
@@ -177,6 +273,7 @@ class _DonutPainter extends CustomPainter {
     required this.strokeWidth,
     required this.gapDegrees,
     required this.trackColor,
+    this.selectedIndex,
   });
 
   @override
@@ -197,7 +294,7 @@ class _DonutPainter extends CustomPainter {
     final totalGap = gapDegrees * segments.length;
     final availableDegrees = 360.0 - totalGap;
 
-    double startAngle = -90.0; // Start from top
+    double startAngle = -90.0;
 
     for (int i = 0; i < segments.length; i++) {
       final segment = segments[i];
@@ -209,14 +306,19 @@ class _DonutPainter extends CustomPainter {
         continue;
       }
 
+      final isSelected = selectedIndex == i;
+      final dimmed = selectedIndex != null && !isSelected;
+
       final paint = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
+        ..strokeWidth = isSelected ? strokeWidth + 6 : strokeWidth
         ..strokeCap = StrokeCap.round
-        ..color = segment.color;
+        ..color = dimmed
+            ? segment.color.withValues(alpha: 0.25)
+            : segment.color;
 
       canvas.drawArc(
-        rect,
+        isSelected ? Rect.fromCircle(center: center, radius: radius) : rect,
         _degToRad(startAngle + gapDegrees / 2),
         _degToRad(animatedSweep),
         false,
@@ -233,5 +335,6 @@ class _DonutPainter extends CustomPainter {
   bool shouldRepaint(covariant _DonutPainter old) =>
       old.progress != progress ||
       old.segments != segments ||
-      old.total != total;
+      old.total != total ||
+      old.selectedIndex != selectedIndex;
 }

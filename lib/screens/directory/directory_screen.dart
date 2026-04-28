@@ -1,11 +1,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../animations/skeleton_loading.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
+import 'employee_detail_screen.dart';
 
 class DirectoryScreen extends StatefulWidget {
   const DirectoryScreen({super.key});
@@ -63,11 +65,15 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
       if (!mounted) return;
       setState(() {
         _employees = data.map<_Employee>((e) {
+          final id = (e['id'] is int)
+              ? e['id'] as int
+              : int.tryParse(e['id']?.toString() ?? '0') ?? 0;
           final name = e['name'] ?? '';
           final designation = e['designation'] ?? '';
           final department = e['department'] ?? '';
           final email = e['email'] ?? '';
           return _Employee(
+            id: id,
             name: name,
             designation: designation,
             role: department,
@@ -104,7 +110,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     return Scaffold(
       appBar: adaptiveAppBar(
         context: context,
-        title: 'My Team',
+        title: 'Directory',
         showBackButton: true,
       ),
       body: Column(
@@ -159,9 +165,9 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
           // Employee list
           Expanded(
             child: _isLoading
-                ? Padding(
+                ? SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: SkeletonList(itemCount: 6, showCircle: true),
+                    child: SkeletonList(itemCount: 5, showCircle: true),
                   )
                 : _filtered.isEmpty
                 ? Center(
@@ -189,108 +195,149 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final emp = _filtered[index];
-                      return NeuCard(
-                            padding: const EdgeInsets.all(14),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 24,
-                                  backgroundColor: emp.color.withValues(
-                                    alpha: 0.15,
-                                  ),
-                                  child: Text(
-                                    emp.initials,
-                                    style: theme.textTheme.titleMedium
-                                        ?.copyWith(
-                                          color: emp.color,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                      return GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => EmployeeDetailScreen(
+                                employeeId: emp.id,
+                                name: emp.name,
+                                initials: emp.initials,
+                                color: emp.color,
+                              ),
+                            ),
+                          );
+                        },
+                        child:
+                            NeuCard(
+                                  padding: const EdgeInsets.all(14),
+                                  child: Row(
                                     children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              emp.name,
-                                              style: theme.textTheme.bodyLarge
-                                                  ?.copyWith(
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                            ),
-                                          ),
-                                          // Designation badge — right top corner
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 3,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: isDark
-                                                  ? Colors.white.withValues(
-                                                      alpha: 0.08,
-                                                    )
-                                                  : Colors.grey.withValues(
-                                                      alpha: 0.1,
-                                                    ),
-                                              borderRadius:
-                                                  BorderRadius.circular(6),
-                                            ),
-                                            child: Text(
-                                              emp.designation,
-                                              style: theme.textTheme.bodySmall
-                                                  ?.copyWith(
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: _roleColor(
-                                            emp.role,
-                                          ).withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
+                                      CircleAvatar(
+                                        radius: 24,
+                                        backgroundColor: emp.color.withValues(
+                                          alpha: 0.15,
                                         ),
                                         child: Text(
-                                          emp.role,
-                                          style: theme.textTheme.bodySmall
+                                          emp.initials,
+                                          style: theme.textTheme.titleMedium
                                               ?.copyWith(
-                                                fontSize: 10,
-                                                color: _roleColor(emp.role),
-                                                fontWeight: FontWeight.w600,
+                                                color: emp.color,
+                                                fontWeight: FontWeight.w700,
                                               ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    emp.name,
+                                                    style: theme
+                                                        .textTheme
+                                                        .bodyLarge
+                                                        ?.copyWith(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                  ),
+                                                ),
+                                                // Designation badge — right top corner
+                                                if (emp.designation.isNotEmpty)
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 8,
+                                                          vertical: 3,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: isDark
+                                                          ? Colors.white
+                                                                .withValues(
+                                                                  alpha: 0.08,
+                                                                )
+                                                          : Colors.grey
+                                                                .withValues(
+                                                                  alpha: 0.1,
+                                                                ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            6,
+                                                          ),
+                                                    ),
+                                                    child: Text(
+                                                      emp.designation,
+                                                      style: theme
+                                                          .textTheme
+                                                          .bodySmall
+                                                          ?.copyWith(
+                                                            fontSize: 10,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                            if (emp.role.isNotEmpty) ...[
+                                              const SizedBox(height: 6),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 2,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: _roleColor(
+                                                    emp.role,
+                                                  ).withValues(alpha: 0.1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                        6,
+                                                      ),
+                                                ),
+                                                child: Text(
+                                                  emp.role,
+                                                  style: theme
+                                                      .textTheme
+                                                      .bodySmall
+                                                      ?.copyWith(
+                                                        fontSize: 10,
+                                                        color: _roleColor(
+                                                          emp.role,
+                                                        ),
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
+                                )
+                                .animate()
+                                .fadeIn(
+                                  duration: 350.ms,
+                                  delay: (index * 60).ms,
+                                )
+                                .slideX(
+                                  begin: 0.05,
+                                  end: 0,
+                                  duration: 350.ms,
+                                  delay: (index * 60).ms,
+                                  curve: Curves.easeOutCubic,
                                 ),
-                              ],
-                            ),
-                          )
-                          .animate()
-                          .fadeIn(duration: 350.ms, delay: (index * 60).ms)
-                          .slideX(
-                            begin: 0.05,
-                            end: 0,
-                            duration: 350.ms,
-                            delay: (index * 60).ms,
-                            curve: Curves.easeOutCubic,
-                          );
+                      );
                     },
                   ),
           ),
@@ -320,6 +367,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
 }
 
 class _Employee {
+  final int id;
   final String name;
   final String designation;
   final String role;
@@ -328,6 +376,7 @@ class _Employee {
   final Color color;
 
   const _Employee({
+    required this.id,
     required this.name,
     required this.designation,
     required this.role,

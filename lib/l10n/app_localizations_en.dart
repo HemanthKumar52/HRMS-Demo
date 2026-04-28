@@ -27,10 +27,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get payslip => 'Payslip';
 
   @override
-  String get punchIn => 'Clock In';
+  String get punchIn => 'Check In';
 
   @override
-  String get punchOut => 'Clock Out';
+  String get punchOut => 'Check Out';
 
   @override
   String get checkedInViaBiometric => 'Checked in via Biometric';

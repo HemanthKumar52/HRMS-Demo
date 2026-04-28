@@ -214,7 +214,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         ? DateFormat('hh:mm a').format(punchTime)
         : '--:--';
     final punchOutTime = '--:--';
-    final currentStatus = isPunchedIn ? 'Checked In' : 'Not Clocked In';
+    final currentStatus = isPunchedIn ? 'Checked In' : 'Not Checked In';
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -304,7 +304,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                   children: [
                                     _buildPunchItem(
                                       icon: Icons.login_rounded,
-                                      label: 'Clock In',
+                                      label: 'Check In',
                                       value: punchInTime,
                                       color: AppColors.success,
                                       tt: tt,
@@ -312,7 +312,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                     const SizedBox(width: 16),
                                     _buildPunchItem(
                                       icon: Icons.logout_rounded,
-                                      label: 'Clock Out',
+                                      label: 'Check Out',
                                       value: punchOutTime,
                                       color: AppColors.danger,
                                       tt: tt,
@@ -1214,9 +1214,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                   child: BarChart(
                                     BarChartData(
                                       alignment: BarChartAlignment.spaceAround,
-                                      maxY: (_workingDaysCount + 2)
-                                          .toDouble()
-                                          .clamp(5, 30),
+                                      maxY:
+                                          ([
+                                                    _workingDaysCount,
+                                                    _absentCount,
+                                                    _leaveCount,
+                                                  ].reduce(
+                                                    (a, b) => a > b ? a : b,
+                                                  ) +
+                                                  3)
+                                              .toDouble()
+                                              .clamp(5, 35),
                                       barTouchData: BarTouchData(
                                         enabled: true,
                                       ),
@@ -1279,15 +1287,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                           sideTitles: SideTitles(
                                             showTitles: true,
                                             reservedSize: 32,
-                                            interval:
-                                                (_workingDaysCount + 2)
-                                                        .toDouble()
-                                                        .clamp(5, 30) >
-                                                    10
-                                                ? 5
-                                                : 1,
+                                            interval: 5,
                                             getTitlesWidget: (value, meta) {
-                                              if (value == meta.max)
+                                              if (value == meta.max ||
+                                                  value % 5 != 0)
                                                 return const SizedBox.shrink();
                                               return Padding(
                                                 padding: const EdgeInsets.only(
@@ -2101,7 +2104,7 @@ class _AttendanceCarouselState extends State<_AttendanceCarousel> {
   }
 
   void _startAutoScroll() {
-    _autoScroll = Timer.periodic(const Duration(seconds: 3), (_) {
+    _autoScroll = Timer.periodic(const Duration(seconds: 7), (_) {
       if (!mounted) return;
       final next = (_currentPage + 1) % 3;
       _pageController.animateToPage(
@@ -2284,7 +2287,7 @@ class _WorkingHoursCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _MiniStat(
-                    label: 'Clock In',
+                    label: 'Check In',
                     value: isPunchedIn && punchTime != null
                         ? DateFormat('hh:mm a').format(punchTime)
                         : '--:--',
@@ -2510,7 +2513,7 @@ class _ClockInCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                isPunchedIn ? 'Working' : 'Not Clocked In',
+                isPunchedIn ? 'Working' : 'Not Checked In',
                 style: TextStyle(
                   fontSize: 14,
                   color: isDark
@@ -2559,7 +2562,7 @@ class _ClockInCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Use device to clock out',
+                        'Use device to check out',
                         style: TextStyle(
                           fontSize: 10,
                           color: isDark
@@ -2621,7 +2624,7 @@ class _ClockInCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          isPunchedIn ? 'CLOCK OUT' : 'CLOCK IN',
+                          isPunchedIn ? 'CHECK OUT' : 'CHECK IN',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 13,

@@ -195,7 +195,7 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
         HapticFeedback.lightImpact();
         setState(() {
           _stage = _Stage.verified;
-          _statusMessage = 'Punch recorded successfully';
+          _statusMessage = 'Check in recorded successfully';
         });
         await Future<void>.delayed(const Duration(milliseconds: 900));
         if (!mounted) return;
@@ -224,7 +224,7 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
       case 'LOCATION_REQUIRED':
         return 'Enable location permission in Settings — required for check-in.';
       case 'GEOFENCE_OFFICE':
-        return "You're at the office — please clock in via biometric.";
+        return "You're at the office — please check in via biometric.";
       case 'WFH_OUT_OF_ZONE':
         return 'You are not within an authorized WFH location.';
       case 'FACE_MISMATCH':
@@ -232,7 +232,7 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
       case 'FACE_VERIFICATION_FAILED':
         return 'Unknown user — verification failed.';
       case 'BIOMETRIC_PUNCH_ACTIVE':
-        return 'Already clocked in via biometric device.';
+        return 'Already checked in via biometric device.';
       default:
         return 'Clock in failed. Please try again.';
     }

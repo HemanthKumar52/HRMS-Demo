@@ -368,6 +368,18 @@ class ApiService {
     return await get('/attendance/team');
   }
 
+  // TEAM MANAGEMENT
+  static Future<List<dynamic>> getTeamMembers() async {
+    final response = await get('/team/members');
+    return response['members'] ?? [];
+  }
+
+  static Future<Map<String, dynamic>> getTeamMemberActivity(
+    int employeeId,
+  ) async {
+    return await get('/team/members/$employeeId/activity');
+  }
+
   static Future<Map<String, dynamic>> punchIn([
     Map<String, dynamic>? metadata,
   ]) async {

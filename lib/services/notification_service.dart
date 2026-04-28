@@ -189,14 +189,14 @@ class NotificationService {
   // ── Convenience methods ────────────────────────────────────────────────
 
   Future<void> showPunchIn() => show(
-    title: 'Punched In',
-    body: 'You have successfully punched in. Have a productive day!',
+    title: 'Checked In',
+    body: 'You have successfully checked in. Have a productive day!',
     payload: 'punch_in',
   );
 
   Future<void> showPunchOut() => show(
-    title: 'Punched Out',
-    body: 'You have successfully punched out. See you tomorrow!',
+    title: 'Checked Out',
+    body: 'You have successfully checked out. See you tomorrow!',
     payload: 'punch_out',
   );
 

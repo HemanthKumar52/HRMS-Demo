@@ -151,13 +151,13 @@ abstract class AppLocalizations {
   /// No description provided for @punchIn.
   ///
   /// In en, this message translates to:
-  /// **'Clock In'**
+  /// **'Check In'**
   String get punchIn;
 
   /// No description provided for @punchOut.
   ///
   /// In en, this message translates to:
-  /// **'Clock Out'**
+  /// **'Check Out'**
   String get punchOut;
 
   /// No description provided for @checkedInViaBiometric.

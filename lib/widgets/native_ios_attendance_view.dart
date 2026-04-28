@@ -197,9 +197,9 @@ class _IOSNativeCheckInSheetState extends State<_IOSNativeCheckInSheet> {
       case 'FACE_VERIFICATION_FAILED':
         return 'Unknown user — verification failed.';
       case 'BIOMETRIC_PUNCH_ACTIVE':
-        return 'Already punched in via biometric.';
+        return 'Already checked in via biometric.';
       default:
-        return 'Punch in failed. Please try again.';
+        return 'Check in failed. Please try again.';
     }
   }
 

@@ -133,7 +133,7 @@ class LiveActivityService {
       } else if (Platform.isAndroid) {
         await _notifications.show(
           id: _attendanceNotifId,
-          title: 'Punched In - $userName',
+          title: 'Checked In - $userName',
           body: 'Working since ${_formatTime(punchTime)}',
           notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
@@ -183,7 +183,7 @@ class LiveActivityService {
           final m = totalWorked.inMinutes.remainder(60);
           await _notifications.show(
             id: _attendanceNotifId,
-            title: 'Punched Out',
+            title: 'Checked Out',
             body: 'Total worked: ${h}h ${m.toString().padLeft(2, '0')}m',
             notificationDetails: const NotificationDetails(
               android: AndroidNotificationDetails(
