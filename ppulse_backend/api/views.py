@@ -5956,6 +5956,66 @@ class OrgChartView(APIView):
         return Response({'org_chart': roots})
 
 
+class FixReportingManagersView(APIView):
+    """One-time fix: assign reporting managers to employees that don't have one."""
+
+    def post(self, request):
+        try:
+            employee = get_employee_from_user(request.user)
+            role = _user_role(request.user, employee)
+            if role != 'admin':
+                return Response({'error': 'admin only'}, status=403)
+
+            all_emps = list(Employee.objects.filter(is_active=True))
+
+            # Find admin (current user or superuser)
+            admin_emp = employee
+            vikram = next((e for e in all_emps if 'Vikram' in (e.name or '')), None)
+            suresh = next((e for e in all_emps if 'Suresh' in (e.name or '')), None)
+
+            fixed = 0
+            skip_ids = {admin_emp.id}
+
+            # Vikram and Suresh report to Admin
+            for mgr in [vikram, suresh]:
+                if mgr:
+                    skip_ids.add(mgr.id)
+                    wi = EmployeeWorkInformation.objects.filter(employee_id_id=mgr.id).first()
+                    if wi and not wi.reporting_manager_id_id:
+                        wi.reporting_manager_id_id = admin_emp.id
+                        wi.save()
+                        fixed += 1
+
+            # Group remaining unassigned employees
+            unassigned = []
+            for emp in all_emps:
+                if emp.id in skip_ids:
+                    continue
+                wi = EmployeeWorkInformation.objects.filter(employee_id_id=emp.id).first()
+                if wi and not wi.reporting_manager_id_id:
+                    unassigned.append((emp, wi))
+
+            # Assign in groups of 3
+            target_mgr = vikram or admin_emp
+            alt_mgr = suresh or admin_emp
+            for i, (_emp, wi) in enumerate(unassigned):
+                group = i // 3
+                pos = i % 3
+                if pos == 0:
+                    wi.reporting_manager_id_id = (target_mgr if group % 2 == 0 else alt_mgr).id
+                    wi.save()
+                    fixed += 1
+                else:
+                    head_emp, _ = unassigned[(i // 3) * 3]
+                    wi.reporting_manager_id_id = head_emp.id
+                    wi.save()
+                    fixed += 1
+
+            return Response({'fixed': fixed, 'message': f'Assigned reporting managers to {fixed} employees'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
 class SettingsView(APIView):
     def get(self, request):
         employee = get_employee_from_user(request.user)

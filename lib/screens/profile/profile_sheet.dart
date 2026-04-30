@@ -200,28 +200,21 @@ class _ProfileSheet extends StatelessWidget {
                   );
                 },
               ),
-              _MenuItem(
-                icon: Icons.analytics_outlined,
-                label: 'Analytics',
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    Motion.pageRoute(const AnalyticsScreen()),
-                  );
-                },
-              ),
-              _MenuItem(
-                icon: Icons.account_tree_outlined,
-                label: 'Org Chart',
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    Motion.pageRoute(const OrgChartScreen()),
-                  );
-                },
-              ),
+              if (provider.role == UserRole.manager ||
+                  provider.role == UserRole.hr ||
+                  provider.role == UserRole.admin)
+                _MenuItem(
+                  icon: Icons.analytics_outlined,
+                  label: 'Analytics',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      Motion.pageRoute(const AnalyticsScreen()),
+                    );
+                  },
+                ),
+              // Org Chart removed — accessible from dashboard
               _MenuItem(
                 icon: Icons.settings_outlined,
                 label: 'Settings',

@@ -38,13 +38,6 @@ class AdminSettingsScreen extends StatelessWidget {
                 title: 'Office Geofences',
                 onTap: () => _open(context, const AdminGeofencesScreen()),
               ),
-              _SettingsTile(
-                icon: Icons.fingerprint,
-                iconColor: AppColors.primary,
-                title: 'Biometric Devices',
-                onTap: () =>
-                    _open(context, const AdminBiometricDevicesScreen()),
-              ),
             ],
           ),
 
@@ -56,12 +49,6 @@ class AdminSettingsScreen extends StatelessWidget {
             isDark: isDark,
             bgColor: bgColor,
             children: [
-              _SettingsTile(
-                icon: Icons.storage_rounded,
-                iconColor: AppColors.primary,
-                title: 'System Stats',
-                onTap: () => _open(context, const AdminSystemStatsScreen()),
-              ),
               _SettingsTile(
                 icon: Icons.map_outlined,
                 iconColor: AppColors.success,
@@ -96,13 +83,6 @@ class AdminSettingsScreen extends StatelessWidget {
                 iconColor: AppColors.danger,
                 title: 'IP Allowlist',
                 onTap: () => _open(context, const AdminAllowedIpsScreen()),
-              ),
-              _SettingsTile(
-                icon: Icons.history_rounded,
-                iconColor: AppColors.primary,
-                title: 'Login Records',
-                onTap: () => _open(context, const AdminLoginRecordsScreen()),
-                isLast: true,
               ),
             ],
           ),

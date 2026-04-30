@@ -59,6 +59,7 @@ from .views import (
     EmployeesSearchView,
     FeedbackCheckView,
     FeedbackSubmitView,
+    FixReportingManagersView,
     ForgotPasswordView,
     LeaveApplyView,
     LeaveBalanceView,
@@ -185,6 +186,7 @@ urlpatterns = [
     # Manager Stats & Org Chart
     path('dashboard/manager-stats', ManagerStatsView.as_view(), name='manager_stats'),
     path('org-chart', OrgChartView.as_view(), name='org_chart'),
+    path('admin/fix-reporting-managers', FixReportingManagersView.as_view(), name='fix_reporting_managers'),
     # Settings
     path('settings', SettingsView.as_view(), name='settings'),
     # Admin (super-admin only)

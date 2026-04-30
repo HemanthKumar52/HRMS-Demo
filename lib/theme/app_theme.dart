@@ -155,7 +155,7 @@ class AppTheme {
         secondary: AppColors.secondary,
         surface: AppColors.lightBg,
       ),
-      textTheme: GoogleFonts.interTextTheme(
+      textTheme: GoogleFonts.dmSansTextTheme(
         const TextTheme(
           headlineLarge: TextStyle(
             fontSize: 28,
@@ -218,7 +218,7 @@ class AppTheme {
         secondary: AppColors.secondary,
         surface: AppColors.darkCard,
       ),
-      textTheme: GoogleFonts.interTextTheme(
+      textTheme: GoogleFonts.dmSansTextTheme(
         const TextTheme(
           headlineLarge: TextStyle(
             fontSize: 28,

@@ -139,13 +139,17 @@ String? _attachmentPath(Map<String, dynamic> data) {
 }
 
 /// Build a human-readable duration string from the request's metadata.
-/// Returns null if no date info is available.
+/// Returns null if no date info is available or if the type has no duration.
 String? _buildDuration(Map<String, dynamic> data) {
+  final type = data['type']?.toString() ?? '';
+  // Asset requests and tickets don't have a date range / duration.
+  if (type == 'Asset Requests' || type == 'Tickets') return null;
+
   final md = data['metadata'] as Map<String, dynamic>? ?? {};
   final fmt = DateFormat('dd MMM yyyy');
 
   // Leave, Work Type, Shift — have start_date / end_date
-  final startRaw = md['start_date'] ?? md['date'];
+  final startRaw = md['start_date'];
   final endRaw = md['end_date'];
 
   if (startRaw != null) {
@@ -170,9 +174,22 @@ String? _buildDuration(Map<String, dynamic> data) {
     }
   }
 
-  // Attendance Requests — from_time / to_time
+  // Attendance Requests — date + from_time / to_time
+  final attDate = md['date'];
   final from = md['from_time'];
   final to = md['to_time'];
+  if (attDate != null) {
+    try {
+      final d = DateTime.parse(attDate.toString());
+      final dateStr = fmt.format(d);
+      if (from != null || to != null) {
+        return '$dateStr (${from ?? '--:--'} – ${to ?? '--:--'})';
+      }
+      return dateStr;
+    } catch (_) {
+      return attDate.toString();
+    }
+  }
   if (from != null || to != null) {
     return '${from ?? '--:--'} – ${to ?? '--:--'}';
   }

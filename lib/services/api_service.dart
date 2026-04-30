@@ -17,7 +17,8 @@ class ApiService {
     defaultValue: '8000',
   );
 
-  /// Production backend hosted on Vercel.
+  /// Unified backend — web + mobile API merged into one Django server.
+  /// Release: deployed web backend. Debug: local Django server.
   static const String _prodHost = 'ppulsebackend.vercel.app';
 
   static String get baseUrl {
@@ -31,33 +32,27 @@ class ApiService {
     if (kReleaseMode) {
       return 'https://$_prodHost/v1';
     }
-    // Debug builds → local backend.
+    // Debug builds → local unified Django server (port 8001).
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:$_apiPortOverride/v1';
+      return 'http://10.0.2.2:8001/v1';
     }
-    return 'http://127.0.0.1:$_apiPortOverride/v1';
+    return 'http://127.0.0.1:8001/v1';
   }
 
-  /// Web backend URL for payroll APIs.
-  /// In production: same server. In dev: separate port (8001).
-  static const String _webPortOverride = String.fromEnvironment(
-    'WEB_PORT',
-    defaultValue: '8001',
-  );
-
+  /// Web backend URL — now same server as mobile API (unified).
   static String get webBaseUrl {
     if (_apiHostOverride.isNotEmpty) {
       final scheme = _apiPortOverride == '443' ? 'https' : 'http';
-      final port = _webPortOverride == '443' ? '' : ':$_webPortOverride';
+      final port = _apiPortOverride == '443' ? '' : ':$_apiPortOverride';
       return '$scheme://$_apiHostOverride$port/api';
     }
     if (kReleaseMode) {
       return 'https://$_prodHost/api';
     }
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:$_webPortOverride/api';
+      return 'http://10.0.2.2:8001/api';
     }
-    return 'http://127.0.0.1:$_webPortOverride/api';
+    return 'http://127.0.0.1:8001/api';
   }
 
   /// JWT token for the web backend (separate from mobile backend token).

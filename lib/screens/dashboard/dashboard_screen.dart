@@ -84,9 +84,9 @@ class DashboardScreen extends StatelessWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   crossAxisCount: gridCols,
-                  childAspectRatio: 1.1,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
+                  childAspectRatio: 1.35,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
                   children: [
                     _QuickAction(
                       icon: isApplePlatform
@@ -264,39 +264,7 @@ class DashboardScreen extends StatelessWidget {
               _PerformanceSection(isDark: isDark, role: role),
             ],
 
-            // ── 6. Admin Panel (admin only) ──
-            if (role == UserRole.admin) ...[
-              const SizedBox(height: 8),
-              GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 3,
-                    childAspectRatio: 1.1,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    children: [
-                      _QuickAction(
-                        icon: Icons.shield_moon_outlined,
-                        label: 'Admin Panel',
-                        color: AppColors.danger,
-                        onTap: () => Navigator.push(
-                          context,
-                          Motion.pageRoute(const AdminPanelScreen()),
-                        ),
-                      ),
-                    ],
-                  )
-                  .animate()
-                  .fadeIn(duration: 420.ms, delay: 620.ms)
-                  .slideY(
-                    begin: 0.12,
-                    end: 0,
-                    duration: 420.ms,
-                    delay: 620.ms,
-                    curve: Curves.easeOutCubic,
-                  ),
-              const SizedBox(height: 16),
-            ],
+            // (Admin Panel removed from dashboard — accessible via profile menu)
 
             // ── 6. Leave Balance ──────────────────────────────────────────
             Builder(
@@ -1966,29 +1934,31 @@ class _QuickAction extends StatelessWidget {
   Widget build(BuildContext context) {
     return NeuCard(
       onTap: onTap,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: color, size: 22),
+            child: Icon(icon, color: color, size: 20),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             label,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.w500,
               color: Theme.of(context).brightness == Brightness.dark
                   ? AppColors.darkText
                   : AppColors.lightText,
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -2074,13 +2044,22 @@ class _TeamStatMini extends StatelessWidget {
     required this.isDark,
   });
 
+  /// Returns a darker shade for light mode so text is readable on pastel bg.
+  Color _textColor(bool dark) {
+    if (dark) return color;
+    // Darken light colors (green, yellow) for readability
+    final hsl = HSLColor.fromColor(color);
+    return hsl.withLightness((hsl.lightness * 0.55).clamp(0.0, 1.0)).toColor();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final tc = _textColor(isDark);
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: isDark ? 0.15 : 0.08),
+          color: color.withValues(alpha: isDark ? 0.15 : 0.10),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -2090,7 +2069,7 @@ class _TeamStatMini extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
-                color: color,
+                color: tc,
               ),
             ),
             const SizedBox(height: 2),
@@ -2099,7 +2078,7 @@ class _TeamStatMini extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
-                color: color,
+                color: tc,
               ),
             ),
           ],
