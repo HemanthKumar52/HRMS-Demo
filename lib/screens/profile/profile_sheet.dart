@@ -8,6 +8,7 @@ import '../../providers/app_provider.dart';
 import '../auth/login_screen.dart';
 import 'profile_screen.dart';
 import '../directory/directory_screen.dart';
+import '../manager/analytics_screen.dart';
 import '../manager/my_team_screen.dart';
 import '../settings/settings_screen.dart';
 import '../dashboard/org_chart_screen.dart';
@@ -199,7 +200,18 @@ class _ProfileSheet extends StatelessWidget {
                   );
                 },
               ),
-              // Analytics removed per manager feedback
+              if (provider.role == UserRole.admin)
+                _MenuItem(
+                  icon: Icons.analytics_outlined,
+                  label: 'Analytics',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      Motion.pageRoute(const AnalyticsScreen()),
+                    );
+                  },
+                ),
               // Org Chart removed — accessible from dashboard
               _MenuItem(
                 icon: Icons.settings_outlined,
