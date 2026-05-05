@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
 
+import '../../providers/app_provider.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../widgets/attendance_detail_popup.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/status_chip.dart';
 
@@ -285,118 +288,197 @@ class _EmployeeActivityScreenState extends State<EmployeeActivityScreen>
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
-      itemCount: records.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final r = Map<String, dynamic>.from(records[index]);
+    final provider = context.watch<AppProvider>();
 
-        return NeuCard(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      children: [
+        // IP toggle header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              // Date + source badge
-              Row(
-                children: [
-                  Icon(
-                    Icons.calendar_today_rounded,
-                    size: 16,
-                    color: isDark ? Colors.white54 : Colors.grey,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    r['date'] ?? '',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const Spacer(),
-                  if ((r['worked_hours'] ?? '').toString().isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.success.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'Worked: ${r['worked_hours']}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.success,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              // Check-in / Check-out times
-              Row(
-                children: [
-                  _timeChip('In', r['punch_in'], AppColors.success, isDark),
-                  const SizedBox(width: 16),
-                  _timeChip('Out', r['punch_out'], AppColors.danger, isDark),
-                  const Spacer(),
-                  if ((r['source'] ?? '').toString().isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.secondary.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        (r['source'] ?? '')
-                            .toString()
-                            .replaceAll('_', ' ')
-                            .toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.secondary,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              // Check-in location
-              if ((r['punch_in_location'] ?? '').toString().isNotEmpty) ...[
-                const SizedBox(height: 8),
-                _locationRow(
-                  Icons.login_rounded,
-                  'In',
-                  r['punch_in_location'],
-                  AppColors.success,
-                  isDark,
+              Text(
+                'Show IP',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? Colors.white54 : Colors.grey.shade600,
                 ),
-              ],
-              // Check-out location
-              if ((r['punch_out_location'] ?? '').toString().isNotEmpty) ...[
-                const SizedBox(height: 4),
-                _locationRow(
-                  Icons.logout_rounded,
-                  'Out',
-                  r['punch_out_location'],
-                  AppColors.danger,
-                  isDark,
-                ),
-              ],
-              // Device info
-              if ((r['device'] ?? '').toString().isNotEmpty) ...[
-                const SizedBox(height: 6),
-                _infoRow(Icons.phone_android, r['device'], isDark),
-              ],
+              ),
+              Switch.adaptive(
+                value: provider.showIpInAttendance,
+                onChanged: (_) => provider.toggleShowIp(),
+                activeColor: AppColors.primary,
+              ),
             ],
           ),
-        ).animate().fadeIn(duration: 300.ms, delay: (index * 40).ms);
-      },
+        ),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
+            itemCount: records.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final r = Map<String, dynamic>.from(records[index]);
+              final showIp = context.watch<AppProvider>().showIpInAttendance;
+
+              return GestureDetector(
+                onTap: () => AttendanceDetailPopup.show(
+                  context,
+                  record: r,
+                  showIp: showIp,
+                ),
+                child: NeuCard(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Date + source badge
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_rounded,
+                            size: 16,
+                            color: isDark ? Colors.white54 : Colors.grey,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            r['date'] ?? '',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const Spacer(),
+                          if ((r['worked_hours'] ?? '').toString().isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.success.withValues(
+                                  alpha: 0.12,
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'Worked: ${r['worked_hours']}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.success,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      // Check-in / Check-out times
+                      Row(
+                        children: [
+                          _timeChip(
+                            'In',
+                            r['punch_in'],
+                            AppColors.success,
+                            isDark,
+                          ),
+                          const SizedBox(width: 16),
+                          _timeChip(
+                            'Out',
+                            r['punch_out'],
+                            AppColors.danger,
+                            isDark,
+                          ),
+                          const Spacer(),
+                          if ((r['source'] ?? '').toString().isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondary.withValues(
+                                  alpha: 0.12,
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                (r['source'] ?? '')
+                                    .toString()
+                                    .replaceAll('_', ' ')
+                                    .toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.secondary,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      // Check-in location
+                      if ((r['punch_in_location'] ?? '')
+                          .toString()
+                          .isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        _locationRow(
+                          Icons.login_rounded,
+                          'In',
+                          r['punch_in_location'],
+                          AppColors.success,
+                          isDark,
+                        ),
+                      ],
+                      // Check-out location
+                      if ((r['punch_out_location'] ?? '')
+                          .toString()
+                          .isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        _locationRow(
+                          Icons.logout_rounded,
+                          'Out',
+                          r['punch_out_location'],
+                          AppColors.danger,
+                          isDark,
+                        ),
+                      ],
+                      // Device info
+                      if ((r['device'] ?? '').toString().isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _infoRow(Icons.phone_android, r['device'], isDark),
+                      ],
+                      // Tap hint
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Icon(
+                            Icons.touch_app_outlined,
+                            size: 14,
+                            color: isDark
+                                ? Colors.white24
+                                : Colors.grey.shade400,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Tap for details',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark
+                                  ? Colors.white24
+                                  : Colors.grey.shade400,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ).animate().fadeIn(duration: 300.ms, delay: (index * 40).ms);
+            },
+          ),
+        ),
+      ],
     );
   }
 

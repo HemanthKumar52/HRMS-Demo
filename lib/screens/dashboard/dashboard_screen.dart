@@ -21,7 +21,6 @@ import '../requests/shift_change_screen.dart';
 import '../requests/work_type_request_screen.dart';
 import '../requests/attendance_request_screen.dart';
 import '../admin/admin_panel_screen.dart';
-import '../manager/analytics_screen.dart';
 import '../manager/team_attendance_screen.dart';
 import '../directory/directory_screen.dart';
 import 'org_chart_screen.dart';
@@ -259,10 +258,7 @@ class DashboardScreen extends StatelessWidget {
               const SizedBox(height: 16),
             ],
 
-            // ── 5b. Team Performance (right after the team card) ─────────
-            if (isManagerOrHr) ...[
-              _PerformanceSection(isDark: isDark, role: role),
-            ],
+            // Analytics section removed per manager feedback
 
             // (Admin Panel removed from dashboard — accessible via profile menu)
 

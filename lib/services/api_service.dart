@@ -397,6 +397,21 @@ class ApiService {
     return await post('/attendance/face-punch-in', body);
   }
 
+  /// Check if current user has an enrolled face.
+  static Future<bool> isFaceEnrolled() async {
+    try {
+      final data = await get('/face/enroll');
+      return data['enrolled'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Self-enroll face from a base64 image.
+  static Future<Map<String, dynamic>> enrollFaceSelf(String imageBase64) async {
+    return await post('/face/enroll', {'image': imageBase64});
+  }
+
   static Future<Map<String, dynamic>> punchOut([
     Map<String, dynamic>? metadata,
   ]) async {

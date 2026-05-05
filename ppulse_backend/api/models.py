@@ -279,6 +279,10 @@ class Attendance(models.Model):
     punch_in_device = models.CharField(max_length=255, blank=True, null=True)
     punch_out_device = models.CharField(max_length=255, blank=True, null=True)
 
+    # ── IP address capture ──────────────────────────────────
+    punch_in_ip = models.CharField(max_length=64, blank=True, null=True)
+    punch_out_ip = models.CharField(max_length=64, blank=True, null=True)
+
     class Meta:
         managed = True
         db_table = 'attendance_attendance'

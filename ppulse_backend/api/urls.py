@@ -57,6 +57,7 @@ from .views import (
     EmployeeDetailView,
     EmployeesListView,
     EmployeesSearchView,
+    FaceEnrollSelfView,
     FeedbackCheckView,
     FeedbackSubmitView,
     FixReportingManagersView,
@@ -115,6 +116,7 @@ urlpatterns = [
     # Attendance
     path('attendance/punch-in', AttendancePunchInView.as_view(), name='punch_in'),
     path('attendance/face-punch-in', AttendanceFaceVerifyPunchInView.as_view(), name='face_punch_in'),
+    path('face/enroll', FaceEnrollSelfView.as_view(), name='face_enroll_self'),
     path('attendance/punch-out', AttendancePunchOutView.as_view(), name='punch_out'),
     path('attendance/today', AttendanceTodayView.as_view(), name='attendance_today'),
     path('attendance/monthly', AttendanceMonthlyView.as_view(), name='attendance_monthly'),

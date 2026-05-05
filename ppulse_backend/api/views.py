@@ -837,6 +837,7 @@ class AttendancePunchInView(APIView):
             'punch_in_lng': data.get('longitude'),
             'punch_in_location': data.get('location_name', ''),
             'punch_in_device': data.get('device_info', ''),
+            'punch_in_ip': _client_ip(request),
         }
 
         if existing:
@@ -920,46 +921,50 @@ class AttendanceFaceVerifyPunchInView(APIView):
             data.get('device_info', ''),
         )
 
-        # 0. Location is mandatory for the WFH face flow — without it we can't
-        #    enforce the office geofence and the audit trail is meaningless.
-        if lat is None or lng is None:
-            return Response(
-                {
-                    'error': {
-                        'code': 'LOCATION_REQUIRED',
-                        'message': 'Location permission is required for face check-in. Enable it in Settings.',
-                    }
-                },
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        # 0. Location checks — skip in development if no GPS available.
+        import django.conf
 
-        # 1. Office geofence — block only when the office has a biometric device.
-        if _is_mobile_source(source):
-            office = _office_for_location(lat, lng)
-            if office is not None and office.get('has_biometric'):
+        skip_geo = getattr(django.conf.settings, 'DEBUG', False) and (lat is None or lng is None)
+
+        if not skip_geo:
+            if lat is None or lng is None:
                 return Response(
                     {
                         'error': {
-                            'code': 'GEOFENCE_OFFICE',
-                            'message': f'You are at {office["name"]}. Please punch in using the biometric device.',
-                            'office': office['name'],
+                            'code': 'LOCATION_REQUIRED',
+                            'message': 'Location permission is required for face check-in. Enable it in Settings.',
                         }
                     },
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-        # 2. WFH zone enforcement.
-        zone = _wfh_zone_for_location(lat, lng)
-        if zone is None:
-            return Response(
-                {
-                    'error': {
-                        'code': 'WFH_OUT_OF_ZONE',
-                        'message': 'You are not within an authorized work-from-home zone.',
-                    }
-                },
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            # 1. Office geofence — block only when the office has a biometric device.
+            if _is_mobile_source(source):
+                office = _office_for_location(lat, lng)
+                if office is not None and office.get('has_biometric'):
+                    return Response(
+                        {
+                            'error': {
+                                'code': 'GEOFENCE_OFFICE',
+                                'message': f'You are at {office["name"]}. Please punch in using the biometric device.',
+                                'office': office['name'],
+                            }
+                        },
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+
+            # 2. WFH zone enforcement.
+            zone = _wfh_zone_for_location(lat, lng)
+            if zone is None:
+                return Response(
+                    {
+                        'error': {
+                            'code': 'WFH_OUT_OF_ZONE',
+                            'message': 'You are not within an authorized work-from-home zone.',
+                        }
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
         # 3. Duplicate / biometric-active session checks (mirror PunchInView).
         today = date.today()
@@ -1174,6 +1179,7 @@ class AttendancePunchOutView(APIView):
         attendance.punch_out_lng = data.get('longitude')
         attendance.punch_out_location = data.get('location_name', '')
         attendance.punch_out_device = data.get('device_info', '')
+        attendance.punch_out_ip = _client_ip(request)
 
         if attendance.attendance_clock_in:
             in_seconds = (
@@ -2932,7 +2938,7 @@ class PayslipHTMLView(APIView):
     """Proxy payslip HTML directly from the web app — exact same template.
     No local generation — everything comes from web."""
 
-    WEB_BASE = 'http://127.0.0.1:8001'
+    WEB_BASE = 'http://127.0.0.1:8000'
 
     def _web_session(self, username):
         """Create an authenticated session on the web backend."""
@@ -2949,55 +2955,106 @@ class PayslipHTMLView(APIView):
         )
         return session
 
-    def _find_web_payslip_id(self, session, payslip):
-        """Find the matching payslip ID on the web backend."""
-        import requests as _req
+    def _clean_for_mobile(self, html_text):
+        """Strip modal header/footer and add responsive CSS for mobile WebView."""
+        import re
 
-        # Login via API to get token for REST calls
-        login_resp = _req.post(
-            f'{self.WEB_BASE}/api/auth/login/',
-            json={'username': 'admin', 'password': 'Ppulse@123'},
-            timeout=5,
+        text = html_text
+
+        # Remove modal header (Payslip: name + close button)
+        text = re.sub(
+            r'<div class="oh-modal__dialog-header">.*?</div>\s*',
+            '',
+            text,
+            flags=re.DOTALL,
+            count=1,
         )
-        if login_resp.status_code != 200:
-            return None
-        token = login_resp.json().get('access', '')
 
-        employee = get_employee_by_id(payslip.employee_id_id)
-        badge = employee.badge_id if employee else ''
-        target_start = str(payslip.start_date) if payslip.start_date else ''
-
-        list_resp = _req.get(
-            f'{self.WEB_BASE}/api/payroll/payslip/?view=admin',
-            headers={'Authorization': f'Bearer {token}'},
-            timeout=5,
+        # Remove modal footer (Download/Close buttons + iframe)
+        text = re.sub(
+            r'<div class="oh-modal__dialog-footer">.*?</div>\s*',
+            '',
+            text,
+            flags=re.DOTALL,
+            count=1,
         )
-        if list_resp.status_code != 200:
-            return None
+        text = re.sub(r'<iframe[^>]*payslip-modal-print-frame[^>]*></iframe>', '', text)
 
-        for wp in list_resp.json().get('results', []):
-            wp_emp = wp.get('employee') or {}
-            if wp.get('start_date') == target_start and wp_emp.get('badge_id') == badge:
-                return wp['id']
-        # Fallback: match by date only
-        for wp in list_resp.json().get('results', []):
-            if wp.get('start_date') == target_start:
-                return wp['id']
-        return None
+        # Remove ion-icon references (won't load in WebView)
+        text = re.sub(r'<ion-icon[^>]*></ion-icon>', '', text)
+
+        # Remove onclick handlers
+        text = re.sub(r'onclick="[^"]*"', '', text)
+
+        return text
 
     def get(self, request, pk):
         from django.http import HttpResponse
 
-        payslip = get_object_or_404(Payslip, id=pk)
-
         try:
             session = self._web_session('admin')
-            web_id = self._find_web_payslip_id(session, payslip)
-            if web_id:
-                # Fetch the exact same rendered HTML from the web
-                resp = session.get(f'{self.WEB_BASE}/payroll/view-payslip/{web_id}/', timeout=10)
-                if resp.status_code == 200 and len(resp.content) > 500:
-                    return HttpResponse(resp.content, content_type='text/html')
+            resp = session.get(
+                f'{self.WEB_BASE}/payroll/view-payslip-modal/{pk}/',
+                timeout=10,
+            )
+            if resp.status_code == 200 and len(resp.content) > 500:
+                body = self._clean_for_mobile(resp.text)
+
+                html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0"/>
+<style>
+* {{ box-sizing: border-box; }}
+body {{ margin: 0; padding: 8px; background: #fff; font-family: Arial, Helvetica, sans-serif; }}
+
+/* Mobile-responsive overrides */
+.payslip-pdf-view {{ padding: 12px !important; font-size: 13px !important; }}
+.pv-company-name {{ font-size: 16px !important; }}
+.pv-company-address {{ font-size: 11px !important; }}
+.pv-company-logo {{ max-width: 80px !important; max-height: 50px !important; }}
+.pv-payslip-month {{ font-size: 13px !important; }}
+.pv-employee-name {{ font-size: 14px !important; }}
+.pv-employee-badge {{ font-size: 12px !important; }}
+.pv-employee-detail {{ font-size: 11px !important; }}
+.pv-net-pay-amount {{ font-size: 20px !important; }}
+.pv-net-pay-label {{ font-size: 10px !important; }}
+.pv-paid-lop-info {{ font-size: 10px !important; }}
+
+/* Salary table responsive */
+.pv-salary-table th {{ font-size: 9px !important; padding: 6px 3px !important; }}
+.pv-salary-table td {{ font-size: 10px !important; padding: 4px 3px !important; }}
+.pv-salary-table .pv-col-name {{ width: 22% !important; }}
+.pv-salary-table .pv-col-amount {{ width: 16% !important; }}
+.pv-salary-table .pv-col-ytd {{ width: 12% !important; }}
+
+/* Net pay banner */
+.pv-net-pay-banner {{ padding: 14px 12px !important; margin-top: 16px !important; border-radius: 8px !important; }}
+.pv-net-pay-banner-amount {{ font-size: 14px !important; }}
+.pv-net-pay-banner-words {{ font-size: 12px !important; }}
+
+/* Account table */
+.pv-account-table td {{ font-size: 11px !important; }}
+.pv-account-label {{ width: 110px !important; }}
+
+/* Footer */
+.pv-footer-note {{ font-size: 10px !important; margin-top: 16px !important; }}
+
+/* Watermark smaller on mobile */
+.pv-watermark img {{ width: 150px !important; }}
+
+/* Period table — stack on very narrow screens */
+@media (max-width: 380px) {{
+  .pv-period-table td {{ display: block !important; width: 100% !important; }}
+  .pv-net-pay-label, .pv-net-pay-amount, .pv-paid-lop-info {{ text-align: left !important; }}
+  .pv-header-table td {{ display: block !important; width: 100% !important; }}
+}}
+</style>
+</head>
+<body>{body}</body>
+</html>"""
+                return HttpResponse(html, content_type='text/html')
         except Exception:
             pass
 
@@ -3007,7 +3064,7 @@ class PayslipHTMLView(APIView):
 class PayslipPDFView(APIView):
     """Proxy payslip PDF directly from the web app — no local generation."""
 
-    WEB_BASE = 'http://127.0.0.1:8001'
+    WEB_BASE = 'http://127.0.0.1:8000'
 
     def get(self, request, pk):
         from django.http import HttpResponse
@@ -4938,6 +4995,79 @@ class AdminFaceEnrollmentsView(APIView):
         return Response({'deleted': deleted})
 
 
+class FaceEnrollSelfView(APIView):
+    """Self-enrollment: authenticated user enrolls their own face."""
+
+    def get(self, request):
+        """Check if current user has an enrolled face."""
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+        from .models import EmployeeFaceData
+
+        enrolled = (
+            EmployeeFaceData.objects.filter(employee_id_id=employee.id).exclude(embedding=None).exists()
+        )
+        return Response({'enrolled': enrolled, 'employee_id': employee.id})
+
+    def post(self, request):
+        """Enroll the current user's face from a base64 image."""
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        from .face_verification import decode_image, extract_embedding, l2_normalize, pack_embedding
+
+        image_b64 = request.data.get('image')
+        if not image_b64:
+            return Response({'error': 'image required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        img = decode_image(image_b64)
+        if img is None:
+            return Response({'error': 'Invalid image'}, status=status.HTTP_400_BAD_REQUEST)
+
+        import numpy as np
+
+        emb, q, spoof_score, bbox = extract_embedding(img)
+        if emb is None:
+            reason = q.reason if q else 'no_face'
+            return Response(
+                {'error': f'Could not extract face: {reason}'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Reject spoofed images during enrollment
+        if spoof_score is not None and spoof_score >= 0.70:
+            return Response(
+                {'error': 'Liveness check failed. Please use a real face, not a photo or screen.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from .models import EmployeeFaceData
+
+        blob = pack_embedding(l2_normalize(np.asarray(emb, dtype=np.float32)))
+        obj, created = EmployeeFaceData.objects.update_or_create(
+            employee_id_id=employee.id,
+            defaults={
+                'embedding': blob,
+                'embedding_dim': 512,
+                'num_samples': 1,
+                'source_files': 'self_enrollment_mobile',
+            },
+        )
+        write_audit(
+            request,
+            action='face_self_enrollment',
+            target_type='EmployeeFaceData',
+            target_user_id=employee.id,
+            payload={'created': created, 'spoof_score': float(spoof_score or 0)},
+        )
+        return Response(
+            {'status': 'enrolled', 'employee_id': employee.id},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+
 class AdminWebhooksView(APIView):
     """List + create webhooks."""
 
@@ -6484,6 +6614,9 @@ class TeamMemberActivityView(APIView):
                     'punch_out_location': a.punch_out_location or '',
                     'source': a.punch_in_source or '',
                     'device': a.punch_in_device or '',
+                    'punch_out_device': a.punch_out_device or '',
+                    'punch_in_ip': a.punch_in_ip or '',
+                    'punch_out_ip': a.punch_out_ip or '',
                 }
             )
 

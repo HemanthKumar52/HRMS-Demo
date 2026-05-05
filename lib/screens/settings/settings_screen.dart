@@ -13,6 +13,7 @@ import '../../providers/theme_provider.dart';
 import '../../providers/app_provider.dart';
 import '../../utils/platform_adaptive.dart';
 import '../dashboard/org_chart_screen.dart';
+import 'face_enrollment_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -200,6 +201,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   delay: (3 * 80).ms,
                   curve: Curves.easeOutCubic,
                 ),
+            const SizedBox(height: 24),
+
+            // Face Enrollment
+            NeuCard(
+              child: InkWell(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const FaceEnrollmentScreen(),
+                  ),
+                ),
+                borderRadius: BorderRadius.circular(16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.face_retouching_natural,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Face Enrollment',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Text(
+                            'Set up face check-in',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: isDark ? Colors.white38 : Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right,
+                      color: isDark ? Colors.white24 : Colors.grey.shade400,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
             const SizedBox(height: 24),
 
             // Sync section

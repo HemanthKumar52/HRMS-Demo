@@ -56,6 +56,7 @@ class AppProvider extends ChangeNotifier {
 
   AppProvider() {
     _loadUserData();
+    _loadIpSetting();
   }
 
   @override
@@ -566,6 +567,21 @@ class AppProvider extends ChangeNotifier {
       _role == UserRole.manager ||
       _role == UserRole.hr ||
       _role == UserRole.admin;
+  // Manager setting: show IP in attendance detail popup
+  bool _showIpInAttendance = false;
+  bool get showIpInAttendance => _showIpInAttendance;
+  Future<void> toggleShowIp() async {
+    _showIpInAttendance = !_showIpInAttendance;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('show_ip_attendance', _showIpInAttendance);
+    notifyListeners();
+  }
+
+  Future<void> _loadIpSetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    _showIpInAttendance = prefs.getBool('show_ip_attendance') ?? false;
+  }
+
   bool get isLoggedIn => _isLoggedIn;
   String get userName => _userName;
   String get designation => _designation;
