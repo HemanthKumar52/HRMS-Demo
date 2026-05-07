@@ -8,11 +8,17 @@
 
 /* Begin PBXBuildFile section */
 		02A163FB78645B98E1437E50 /* AttendanceCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A2672961EF38B61339048DF /* AttendanceCheckInView.swift */; };
+		091A77D57CFAC8A2AFCFA049 /* ProfileSheetViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7695C0E789958BE9447EF2A2 /* ProfileSheetViewModel.swift */; };
+		097E935D8B5688561C67B0B7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 092B7F72BB9F31158A04975A /* SettingsView.swift */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
+		176B20A65FB3AE2EE63EDD38 /* NativeSettingsPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4916D163BA9E10FCF80909CC /* NativeSettingsPlatformView.swift */; };
 		2F2DE60DEFE6FE967DFA3E06 /* AttendanceActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 292EE1110E318CCBB2EC2872 /* AttendanceActivityWidget.swift */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
+		3A8F8ACCE90D82E75881553E /* ProfileSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C5CEE4C0B75037625E5F704 /* ProfileSheetView.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
+		45FBA47AB93AE9F27105F9EE /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E080B919A211A2740BB107C /* LoginView.swift */; };
 		4613047085CA70160A2A13B9 /* AttendanceWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5EBA6DB2E69A291A2852D28 /* AttendanceWidgetBundle.swift */; };
+		5861D457C73BB1EF690E34CD /* NativeDashboardPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46083E6CF51EE1A5B98DCA46 /* NativeDashboardPlatformView.swift */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
 		84B448D68864146E4F0676D6 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D9A8D53D463B68A0E1796FD /* Foundation.framework */; };
@@ -20,8 +26,14 @@
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		9A0422A88013A595D43094D2 /* LoginViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 131D08F4AAE5D5A946B68E1F /* LoginViewModel.swift */; };
+		ABB6862288EE693A99C3A293 /* NativeProfilePlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 378A8B09B293E62CD0397FAF /* NativeProfilePlatformView.swift */; };
 		B242798A696AE74DB0ED31C8 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2098508F0CDD3F1014AC6D18 /* Pods_RunnerTests.framework */; };
+		CB45A077118277D49C2A2BD4 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37327D2382F8EBCE47DAEFA3 /* DashboardView.swift */; };
+		D8BD41C16EB3A9351444B425 /* NativeLoginPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1453CA735AC4BCBD73F7A2 /* NativeLoginPlatformView.swift */; };
+		E3FECA8A7C6A1DE8BD29B6FB /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCD26CE31460D50287CFD4D3 /* DashboardViewModel.swift */; };
 		EC160A1016840BC6D929EDE2 /* NativeAttendancePlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A33A7B282D6E408C561B9FC /* NativeAttendancePlatformView.swift */; };
+		ED59CC179AB0208848817B37 /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73C41B2C30356AB366095691 /* SettingsViewModel.swift */; };
 		FA8A77D7DA633542267AE55B /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D7BB7440D240B9D384B4A168 /* Pods_Runner.framework */; };
 /* End PBXBuildFile section */
 
@@ -60,6 +72,8 @@
 
 /* Begin PBXFileReference section */
 		0161F3AF52776DFFB2070260 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
+		092B7F72BB9F31158A04975A /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		131D08F4AAE5D5A946B68E1F /* LoginViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LoginViewModel.swift; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
 		18E5F54E611125CB1D8A5035 /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
@@ -69,14 +83,22 @@
 		2A33A7B282D6E408C561B9FC /* NativeAttendancePlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeAttendancePlatformView.swift; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		37327D2382F8EBCE47DAEFA3 /* DashboardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		378A8B09B293E62CD0397FAF /* NativeProfilePlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeProfilePlatformView.swift; sourceTree = "<group>"; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
 		3D9A8D53D463B68A0E1796FD /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		46083E6CF51EE1A5B98DCA46 /* NativeDashboardPlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeDashboardPlatformView.swift; sourceTree = "<group>"; };
+		4916D163BA9E10FCF80909CC /* NativeSettingsPlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeSettingsPlatformView.swift; sourceTree = "<group>"; };
 		4FA23F8D0DDBBDF62B52E2F4 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
+		6D1453CA735AC4BCBD73F7A2 /* NativeLoginPlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeLoginPlatformView.swift; sourceTree = "<group>"; };
+		73C41B2C30356AB366095691 /* SettingsViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		7695C0E789958BE9447EF2A2 /* ProfileSheetViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProfileSheetViewModel.swift; sourceTree = "<group>"; };
 		7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		7A2672961EF38B61339048DF /* AttendanceCheckInView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AttendanceCheckInView.swift; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
+		8E080B919A211A2740BB107C /* LoginView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
 		9740EEB31CF90195004384FC /* Generated.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Generated.xcconfig; path = Flutter/Generated.xcconfig; sourceTree = "<group>"; };
 		97C146EE1CF9000F007C117D /* Runner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Runner.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -85,10 +107,12 @@
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9B403476EFBB235C9D9A0DAC /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
+		9C5CEE4C0B75037625E5F704 /* ProfileSheetView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProfileSheetView.swift; sourceTree = "<group>"; };
 		B00FCD009CDDC573B2E4FC69 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 		B5EBA6DB2E69A291A2852D28 /* AttendanceWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AttendanceWidgetBundle.swift; path = AttendanceWidget/AttendanceWidgetBundle.swift; sourceTree = "<group>"; };
 		B78ABFF2CF7B7CD27E22FAFE /* AttendanceCheckInViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AttendanceCheckInViewModel.swift; sourceTree = "<group>"; };
 		B7AFE389C5058FE9699F679A /* AttendanceWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; name = AttendanceWidget.entitlements; path = AttendanceWidget/AttendanceWidget.entitlements; sourceTree = "<group>"; };
+		BCD26CE31460D50287CFD4D3 /* DashboardViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
 		D7BB7440D240B9D384B4A168 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		DEAE1025D12BAD0DDA265A95 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = Info.plist; path = AttendanceWidget/Info.plist; sourceTree = "<group>"; };
 		F42FD0177A857FF4B724D59A /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
@@ -144,10 +168,22 @@
 				7A2672961EF38B61339048DF /* AttendanceCheckInView.swift */,
 				B78ABFF2CF7B7CD27E22FAFE /* AttendanceCheckInViewModel.swift */,
 				2A33A7B282D6E408C561B9FC /* NativeAttendancePlatformView.swift */,
+				46083E6CF51EE1A5B98DCA46 /* NativeDashboardPlatformView.swift */,
+				37327D2382F8EBCE47DAEFA3 /* DashboardView.swift */,
+				BCD26CE31460D50287CFD4D3 /* DashboardViewModel.swift */,
+				4916D163BA9E10FCF80909CC /* NativeSettingsPlatformView.swift */,
+				092B7F72BB9F31158A04975A /* SettingsView.swift */,
+				73C41B2C30356AB366095691 /* SettingsViewModel.swift */,
+				378A8B09B293E62CD0397FAF /* NativeProfilePlatformView.swift */,
+				9C5CEE4C0B75037625E5F704 /* ProfileSheetView.swift */,
+				7695C0E789958BE9447EF2A2 /* ProfileSheetViewModel.swift */,
+				6D1453CA735AC4BCBD73F7A2 /* NativeLoginPlatformView.swift */,
+				8E080B919A211A2740BB107C /* LoginView.swift */,
+				131D08F4AAE5D5A946B68E1F /* LoginViewModel.swift */,
 			);
 			name = NativeViews;
-			path = NativeViews;
-			sourceTree = "<group>";
+			path = Runner/NativeViews;
+			sourceTree = SOURCE_ROOT;
 		};
 		74C58929C51B6DF93DD50F99 /* Frameworks */ = {
 			isa = PBXGroup;
@@ -498,6 +534,18 @@
 				02A163FB78645B98E1437E50 /* AttendanceCheckInView.swift in Sources */,
 				8F1B5F117B7C051F13590D65 /* AttendanceCheckInViewModel.swift in Sources */,
 				EC160A1016840BC6D929EDE2 /* NativeAttendancePlatformView.swift in Sources */,
+				5861D457C73BB1EF690E34CD /* NativeDashboardPlatformView.swift in Sources */,
+				CB45A077118277D49C2A2BD4 /* DashboardView.swift in Sources */,
+				E3FECA8A7C6A1DE8BD29B6FB /* DashboardViewModel.swift in Sources */,
+				176B20A65FB3AE2EE63EDD38 /* NativeSettingsPlatformView.swift in Sources */,
+				097E935D8B5688561C67B0B7 /* SettingsView.swift in Sources */,
+				ED59CC179AB0208848817B37 /* SettingsViewModel.swift in Sources */,
+				ABB6862288EE693A99C3A293 /* NativeProfilePlatformView.swift in Sources */,
+				3A8F8ACCE90D82E75881553E /* ProfileSheetView.swift in Sources */,
+				091A77D57CFAC8A2AFCFA049 /* ProfileSheetViewModel.swift in Sources */,
+				D8BD41C16EB3A9351444B425 /* NativeLoginPlatformView.swift in Sources */,
+				45FBA47AB93AE9F27105F9EE /* LoginView.swift in Sources */,
+				9A0422A88013A595D43094D2 /* LoginViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

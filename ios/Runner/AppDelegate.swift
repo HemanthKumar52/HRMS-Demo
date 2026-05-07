@@ -19,7 +19,36 @@ import UIKit
     guard let registrar = registry.registrar(forPlugin: "PPulseNativeViewsPlugin")
     else { return }
 
-    let attendanceFactory = NativeAttendanceViewFactory(messenger: registrar.messenger())
-    registrar.register(attendanceFactory, withId: "ppulse/native-attendance-checkin")
+    let messenger = registrar.messenger()
+
+    // Face verification (existing)
+    registrar.register(
+      NativeAttendanceViewFactory(messenger: messenger),
+      withId: "ppulse/native-attendance-checkin"
+    )
+
+    // Dashboard
+    registrar.register(
+      NativeDashboardViewFactory(messenger: messenger),
+      withId: "ppulse/native-dashboard"
+    )
+
+    // Settings
+    registrar.register(
+      NativeSettingsViewFactory(messenger: messenger),
+      withId: "ppulse/native-settings"
+    )
+
+    // Profile
+    registrar.register(
+      NativeProfileViewFactory(messenger: messenger),
+      withId: "ppulse/native-profile"
+    )
+
+    // Login
+    registrar.register(
+      NativeLoginViewFactory(messenger: messenger),
+      withId: "ppulse/native-login"
+    )
   }
 }
