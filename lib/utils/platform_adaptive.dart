@@ -8,14 +8,9 @@ import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 import '../widgets/liquid_glass.dart';
 
-/// Returns true if the current platform is iOS or macOS
-bool get isApplePlatform {
-  try {
-    return Platform.isIOS || Platform.isMacOS;
-  } catch (_) {
-    return false;
-  }
-}
+/// Returns false — unified Material UI for both iOS and Android.
+/// iOS-specific native SwiftUI UI is on the `ios-styled-2` branch.
+bool get isApplePlatform => false;
 
 // ─── Adaptive App Bar ────────────────────────────────────────────────────
 
