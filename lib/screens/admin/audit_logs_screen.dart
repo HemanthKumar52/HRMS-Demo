@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,8 @@ import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Timeline-style audit log — grouped by date (Today, Yesterday, older).
 /// Tap any entry to see full details on a separate page.
@@ -95,6 +98,55 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
     await _load();
   }
 
+  Future<void> _exportCsv() async {
+    try {
+      final url = ApiService.adminAuditLogsExportUrl();
+      final headers = await ApiService.getAuthHeaders();
+      // Download via http and save, or open in browser
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback: download via API and share
+        final response = await ApiService.getRaw(url, headers: headers);
+        if (response.statusCode == 200) {
+          final dir = await _getDownloadDir();
+          final file = File(
+            '${dir.path}/audit_logs_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv',
+          );
+          await file.writeAsString(response.body);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Exported to ${file.path}'),
+                backgroundColor: AppColors.success,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<Directory> _getDownloadDir() async {
+    if (Platform.isAndroid) {
+      final dir = Directory('/storage/emulated/0/Download');
+      if (await dir.exists()) return dir;
+    }
+    return await getApplicationDocumentsDirectory();
+  }
+
   /// Group items by date label: Today, Yesterday, or formatted date.
   Map<String, List<Map<String, dynamic>>> get _grouped {
     final map = <String, List<Map<String, dynamic>>>{};
@@ -106,7 +158,13 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
 
     for (final item in _items) {
       final ts = item['created_at']?.toString() ?? '';
-      final dateStr = ts.length >= 10 ? ts.substring(0, 10) : '';
+      String dateStr;
+      try {
+        final local = DateTime.parse(ts).toLocal();
+        dateStr = DateFormat('yyyy-MM-dd').format(local);
+      } catch (_) {
+        dateStr = ts.length >= 10 ? ts.substring(0, 10) : '';
+      }
       String label;
       if (dateStr == today) {
         label = 'Today';
@@ -177,6 +235,11 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                         ),
                       )
                       .toList(),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.download_rounded),
+                  tooltip: 'Export CSV',
+                  onPressed: _exportCsv,
                 ),
                 IconButton(
                   icon: const Icon(Icons.refresh_rounded),
@@ -344,7 +407,13 @@ class _TimelineItem extends StatelessWidget {
     final actor = item['actor_name']?.toString() ?? '—';
     final target = item['target_name']?.toString() ?? '';
     final ts = item['created_at']?.toString() ?? '';
-    final time = ts.length >= 16 ? ts.substring(11, 16) : '';
+    String time = '';
+    try {
+      final dt = DateTime.parse(ts).toLocal();
+      time = DateFormat('hh:mm a').format(dt);
+    } catch (_) {
+      time = ts.length >= 16 ? ts.substring(11, 16) : '';
+    }
 
     final color = _actionColor(action);
     final icon = _actionIcon(action);

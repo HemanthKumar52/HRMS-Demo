@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/device_security_service.dart';
 
@@ -40,16 +41,22 @@ class _DeveloperModeBlockedScreenState extends State<DeveloperModeBlockedScreen>
     }
   }
 
+  static const _settingsChannel = MethodChannel(
+    'com.ppulse.hrms_demo/settings',
+  );
+
   Future<void> _openSettings() async {
     if (Platform.isAndroid) {
-      final uri = Uri.parse(
-        'android.settings.APPLICATION_DEVELOPMENT_SETTINGS',
-      );
       try {
-        await launchUrl(uri);
+        await _settingsChannel.invokeMethod('openDeveloperSettings');
       } catch (_) {
-        // Fallback: open general settings
-        await launchUrl(Uri.parse('app-settings:'));
+        // Fallback: try url_launcher with intent scheme
+        try {
+          await launchUrl(
+            Uri.parse('package:com.ppulse.hrms_demo'),
+            mode: LaunchMode.externalApplication,
+          );
+        } catch (_) {}
       }
     }
   }

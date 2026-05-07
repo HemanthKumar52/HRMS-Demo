@@ -17,8 +17,12 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await NotificationService.instance.init();
-  await LiveActivityService.instance.init();
+  try {
+    await NotificationService.instance.init();
+  } catch (_) {}
+  try {
+    await LiveActivityService.instance.init();
+  } catch (_) {}
   NotificationService.instance.navigatorKey = navigatorKey;
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

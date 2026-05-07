@@ -66,7 +66,10 @@ class ApiService {
     final password = prefs.getString('user_pass_login') ?? 'admin23';
     final resp = await http.post(
       Uri.parse('$webBaseUrl/auth/login/'),
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': '1',
+      },
       body: jsonEncode({'username': username, 'password': password}),
     );
     if (resp.statusCode == 200) {
@@ -222,7 +225,10 @@ class ApiService {
 
       final response = await http.post(
         Uri.parse('$baseUrl/auth/refresh'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': '1',
+        },
         body: jsonEncode({'refresh_token': token}),
       );
 
