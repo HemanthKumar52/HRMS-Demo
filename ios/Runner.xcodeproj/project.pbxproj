@@ -13,14 +13,18 @@
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		176B20A65FB3AE2EE63EDD38 /* NativeSettingsPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4916D163BA9E10FCF80909CC /* NativeSettingsPlatformView.swift */; };
 		2F2DE60DEFE6FE967DFA3E06 /* AttendanceActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 292EE1110E318CCBB2EC2872 /* AttendanceActivityWidget.swift */; };
+		309B42BDCA3B5592FE7E9E55 /* LiveActivityBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC43EFFEF72B92E3F8BB632A /* LiveActivityBridge.swift */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3A8F8ACCE90D82E75881553E /* ProfileSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C5CEE4C0B75037625E5F704 /* ProfileSheetView.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
 		45FBA47AB93AE9F27105F9EE /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E080B919A211A2740BB107C /* LoginView.swift */; };
 		4613047085CA70160A2A13B9 /* AttendanceWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5EBA6DB2E69A291A2852D28 /* AttendanceWidgetBundle.swift */; };
+		5415A1CBFA6859EF14D35B2B /* GlassEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB431FF31335EA60EBF39D08 /* GlassEffects.swift */; };
 		5861D457C73BB1EF690E34CD /* NativeDashboardPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46083E6CF51EE1A5B98DCA46 /* NativeDashboardPlatformView.swift */; };
+		6CFD22E3054EDFD10690AE49 /* NativeToastService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79373C885A1BF596282CB966 /* NativeToastService.swift */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
+		83FE61A2BD5F2D3A31A98500 /* SecurityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5495F3F33809ACE4801C271C /* SecurityService.swift */; };
 		84B448D68864146E4F0676D6 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D9A8D53D463B68A0E1796FD /* Foundation.framework */; };
 		8F1B5F117B7C051F13590D65 /* AttendanceCheckInViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B78ABFF2CF7B7CD27E22FAFE /* AttendanceCheckInViewModel.swift */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
@@ -90,12 +94,14 @@
 		46083E6CF51EE1A5B98DCA46 /* NativeDashboardPlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeDashboardPlatformView.swift; sourceTree = "<group>"; };
 		4916D163BA9E10FCF80909CC /* NativeSettingsPlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeSettingsPlatformView.swift; sourceTree = "<group>"; };
 		4FA23F8D0DDBBDF62B52E2F4 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
+		5495F3F33809ACE4801C271C /* SecurityService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SecurityService.swift; sourceTree = "<group>"; };
 		6D1453CA735AC4BCBD73F7A2 /* NativeLoginPlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeLoginPlatformView.swift; sourceTree = "<group>"; };
 		73C41B2C30356AB366095691 /* SettingsViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		7695C0E789958BE9447EF2A2 /* ProfileSheetViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProfileSheetViewModel.swift; sourceTree = "<group>"; };
 		7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		79373C885A1BF596282CB966 /* NativeToastService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeToastService.swift; sourceTree = "<group>"; };
 		7A2672961EF38B61339048DF /* AttendanceCheckInView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AttendanceCheckInView.swift; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
 		8E080B919A211A2740BB107C /* LoginView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
@@ -112,7 +118,9 @@
 		B5EBA6DB2E69A291A2852D28 /* AttendanceWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AttendanceWidgetBundle.swift; path = AttendanceWidget/AttendanceWidgetBundle.swift; sourceTree = "<group>"; };
 		B78ABFF2CF7B7CD27E22FAFE /* AttendanceCheckInViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AttendanceCheckInViewModel.swift; sourceTree = "<group>"; };
 		B7AFE389C5058FE9699F679A /* AttendanceWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; name = AttendanceWidget.entitlements; path = AttendanceWidget/AttendanceWidget.entitlements; sourceTree = "<group>"; };
+		BC43EFFEF72B92E3F8BB632A /* LiveActivityBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LiveActivityBridge.swift; sourceTree = "<group>"; };
 		BCD26CE31460D50287CFD4D3 /* DashboardViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
+		CB431FF31335EA60EBF39D08 /* GlassEffects.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GlassEffects.swift; sourceTree = "<group>"; };
 		D7BB7440D240B9D384B4A168 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		DEAE1025D12BAD0DDA265A95 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = Info.plist; path = AttendanceWidget/Info.plist; sourceTree = "<group>"; };
 		F42FD0177A857FF4B724D59A /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
@@ -180,6 +188,10 @@
 				6D1453CA735AC4BCBD73F7A2 /* NativeLoginPlatformView.swift */,
 				8E080B919A211A2740BB107C /* LoginView.swift */,
 				131D08F4AAE5D5A946B68E1F /* LoginViewModel.swift */,
+				5495F3F33809ACE4801C271C /* SecurityService.swift */,
+				79373C885A1BF596282CB966 /* NativeToastService.swift */,
+				BC43EFFEF72B92E3F8BB632A /* LiveActivityBridge.swift */,
+				CB431FF31335EA60EBF39D08 /* GlassEffects.swift */,
 			);
 			name = NativeViews;
 			path = Runner/NativeViews;
@@ -546,6 +558,10 @@
 				D8BD41C16EB3A9351444B425 /* NativeLoginPlatformView.swift in Sources */,
 				45FBA47AB93AE9F27105F9EE /* LoginView.swift in Sources */,
 				9A0422A88013A595D43094D2 /* LoginViewModel.swift in Sources */,
+				83FE61A2BD5F2D3A31A98500 /* SecurityService.swift in Sources */,
+				6CFD22E3054EDFD10690AE49 /* NativeToastService.swift in Sources */,
+				309B42BDCA3B5592FE7E9E55 /* LiveActivityBridge.swift in Sources */,
+				5415A1CBFA6859EF14D35B2B /* GlassEffects.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
