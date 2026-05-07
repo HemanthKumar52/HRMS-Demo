@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
+import '../../services/secure_token_service.dart';
 import '../../animations/motion.dart';
 import '../../animations/shake_animation.dart';
 import '../../providers/app_provider.dart';
@@ -125,6 +126,12 @@ class _LoginScreenState extends State<LoginScreen>
         final userData = data['user'];
         final refreshToken = data['refresh_token'];
         final prefs = await SharedPreferences.getInstance();
+        // Store tokens in secure storage (Android Keystore / iOS Keychain)
+        await SecureTokenService.instance.setAccessToken(token);
+        if (refreshToken != null) {
+          await SecureTokenService.instance.setRefreshToken(refreshToken);
+        }
+        // Keep in SharedPreferences for backward compat (non-sensitive)
         await prefs.setString('auth_token', token);
         if (refreshToken != null) {
           await prefs.setString('refresh_token', refreshToken);

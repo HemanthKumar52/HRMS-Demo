@@ -12,17 +12,11 @@ import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../widgets/face_guide_overlay.dart';
+import '../../widgets/face_scanner_painters.dart';
 
-/// WFH face-verification dialog with **inline live camera preview** and
-/// **auto-capture** after a short countdown.
-///
-/// Stages, all rendered inside the same circular avatar:
-///   • idle      → static face icon, "Verify" button enabled
-///   • preview   → live front-camera feed, countdown ring
-///   • capturing → progress spinner overlay
-///   • verifying → progress spinner
-///   • verified  → green check
-///   • failed    → red X + horizontal damped-sine shake + heavy haptic
+/// WFH face-verification dialog with real-time ML Kit face guidance,
+/// scanner animation, and auto-capture when conditions are optimal.
 class FaceVerificationDialog extends StatefulWidget {
   const FaceVerificationDialog({super.key});
 
@@ -33,23 +27,29 @@ class FaceVerificationDialog extends StatefulWidget {
 enum _Stage { idle, preview, capturing, verifying, verified, failed }
 
 class _FaceVerificationDialogState extends State<FaceVerificationDialog>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   static const _ringDiameter = 200.0;
-  static const _autoCaptureDelay = Duration(milliseconds: 1500);
+  static const _scannerSize = 230.0;
 
   _Stage _stage = _Stage.idle;
   String _statusMessage = 'Position your face within the circle';
   String? _errorCode;
 
   CameraController? _cameraController;
-  Future<void>? _initFuture;
-  Timer? _captureTimer;
-  Timer? _frameSampleTimer;
-  final List<String> _extraFrames =
-      []; // base64 frames for multi-frame liveness
+  CameraDescription? _cameraDesc;
+  final List<String> _extraFrames = [];
 
-  // ── Shake animation ──────────────────────────────────────────────────────
+  // Animations
   late final AnimationController _shakeController;
+  late final AnimationController _scanController;
+  late final AnimationController _pulseController;
+
+  // ML Kit real-time face guide
+  FaceGuideAnalyzer? _faceGuide;
+  FaceGuideStatus _guideStatus = const FaceGuideStatus();
+  int _goodFrameCount = 0;
+  static const _autoCaptureTrigger = 6; // ~6 good frames (~1s)
+  Timer? _frameSampleTimer;
 
   @override
   void initState() {
@@ -58,13 +58,23 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
+    _scanController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    );
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
   }
 
   @override
   void dispose() {
-    _captureTimer?.cancel();
     _frameSampleTimer?.cancel();
     _shakeController.dispose();
+    _scanController.dispose();
+    _pulseController.dispose();
+    _faceGuide?.dispose();
     _disposeCamera();
     super.dispose();
   }
@@ -72,7 +82,6 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
   Future<void> _disposeCamera() async {
     final c = _cameraController;
     _cameraController = null;
-    _initFuture = null;
     if (c != null) {
       try {
         await c.dispose();
@@ -80,16 +89,24 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
     }
   }
 
-  /// Damped sine wave: amplitude * sin(2πfreq·t) * (1 - t)
+  void _startScanAnimation() {
+    _scanController.repeat();
+    _pulseController.repeat(reverse: true);
+  }
+
+  void _stopScanAnimation() {
+    _scanController.stop();
+    _pulseController.stop();
+  }
+
   double _shakeOffset(double t) {
     if (t == 0) return 0;
-    const amplitude = 14.0;
-    const frequency = 4.0;
-    return amplitude * math.sin(frequency * 2 * math.pi * t) * (1 - t);
+    return 14.0 * math.sin(4.0 * 2 * math.pi * t) * (1 - t);
   }
 
   void _triggerFailureFeedback() {
     HapticFeedback.heavyImpact();
+    _stopScanAnimation();
     unawaited(_shakeController.forward(from: 0));
   }
 
@@ -98,58 +115,88 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
   Future<void> _startVerification() async {
     setState(() {
       _stage = _Stage.preview;
-      _statusMessage = 'Hold still — capturing in 1.5 s';
+      _statusMessage = 'Look directly into the camera';
       _errorCode = null;
+      _goodFrameCount = 0;
+      _guideStatus = const FaceGuideStatus();
     });
+    _startScanAnimation();
 
     try {
-      // Pick the front camera (fall back to first available).
       final cameras = await availableCameras();
       if (cameras.isEmpty)
-        throw CameraException('no_cameras', 'No cameras found on device');
+        throw CameraException('no_cameras', 'No cameras found');
+
       final front = cameras.firstWhere(
         (c) => c.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
+      _cameraDesc = front;
 
       final controller = CameraController(
         front,
-        ResolutionPreset
-            .medium, // good enough for face recognition, much faster than high
+        ResolutionPreset.high,
         enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.jpeg,
+        imageFormatGroup: ImageFormatGroup.nv21,
       );
       _cameraController = controller;
-      _initFuture = controller.initialize();
-      await _initFuture;
+      await controller.initialize();
 
       if (!mounted) {
         await _disposeCamera();
         return;
       }
-      setState(() {});
 
-      // Sample 2 extra frames during the preview for multi-frame liveness.
+      // Start ML Kit face guide
+      _faceGuide = FaceGuideAnalyzer(
+        onStatusChanged: (status) {
+          if (!mounted || _stage != _Stage.preview) return;
+          setState(() {
+            _guideStatus = status;
+            _statusMessage = status.guidance;
+          });
+          if (status.allGood && status.stable) {
+            _goodFrameCount++;
+            if (_goodFrameCount >= _autoCaptureTrigger) {
+              _captureAndVerify();
+            }
+          } else {
+            _goodFrameCount = 0;
+          }
+        },
+      );
+
+      // Collect extra frames for liveness while streaming
       _extraFrames.clear();
-      _frameSampleTimer = Timer.periodic(const Duration(milliseconds: 400), (
+      _frameSampleTimer = Timer.periodic(const Duration(milliseconds: 800), (
         _,
       ) async {
-        if (_extraFrames.length >= 2 || _cameraController == null) {
+        if (_extraFrames.length >= 2 ||
+            _cameraController == null ||
+            _stage != _Stage.preview) {
           _frameSampleTimer?.cancel();
           return;
         }
         try {
+          // Stop stream, take picture, restart stream
+          await _cameraController!.stopImageStream();
           final snap = await _cameraController!.takePicture();
           final bytes = await File(snap.path).readAsBytes();
           _extraFrames.add(base64Encode(bytes));
           unawaited(
             File(snap.path).delete().catchError((_) => File(snap.path)),
           );
+          await _cameraController!.startImageStream((image) {
+            _faceGuide?.processImage(image, _cameraDesc!);
+          });
         } catch (_) {}
       });
 
-      // Auto-capture the primary frame after the hold-still window.
-      _captureTimer = Timer(_autoCaptureDelay, _captureAndVerify);
+      await controller.startImageStream((image) {
+        _faceGuide?.processImage(image, _cameraDesc!);
+      });
+
+      if (mounted) setState(() {});
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -162,34 +209,44 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
   }
 
   Future<void> _captureAndVerify() async {
-    final controller = _cameraController;
-    if (controller == null || !controller.value.isInitialized) return;
+    if (_cameraController == null || !_cameraController!.value.isInitialized)
+      return;
+    if (_stage == _Stage.capturing || _stage == _Stage.verifying) return;
     if (!mounted) return;
+
+    _frameSampleTimer?.cancel();
+
+    // Stop image stream first
+    try {
+      await _cameraController!.stopImageStream();
+    } catch (_) {}
 
     setState(() {
       _stage = _Stage.capturing;
-      _statusMessage = 'Capturing…';
+      _statusMessage = 'Scanning face…';
     });
 
     try {
-      final shot = await controller.takePicture();
+      final shot = await _cameraController!.takePicture();
       await _disposeCamera();
+      _faceGuide?.dispose();
+      _faceGuide = null;
 
       if (!mounted) return;
       setState(() {
         _stage = _Stage.verifying;
-        _statusMessage = 'Verifying…';
+        _statusMessage = 'Verifying identity…';
       });
 
-      _frameSampleTimer?.cancel();
       final provider = context.read<AppProvider>();
       final bytes = await File(shot.path).readAsBytes();
       final b64 = base64Encode(bytes);
-      // Best-effort cleanup of the temp file.
       unawaited(File(shot.path).delete().catchError((_) => File(shot.path)));
 
       final err = await provider.facePunchIn(b64, extraFrames: _extraFrames);
       if (!mounted) return;
+
+      _stopScanAnimation();
 
       if (err == null || err == 'ALREADY_PUNCHED_IN') {
         HapticFeedback.lightImpact();
@@ -210,7 +267,10 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
       }
     } catch (e) {
       if (!mounted) return;
+      _stopScanAnimation();
       await _disposeCamera();
+      _faceGuide?.dispose();
+      _faceGuide = null;
       setState(() {
         _stage = _Stage.failed;
         _statusMessage = 'Could not capture image';
@@ -240,60 +300,38 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
 
   String _cameraErrorMessage(Object e) {
     final s = e.toString().toLowerCase();
-    if (s.contains('permission') || s.contains('denied')) {
-      return 'Camera permission denied. Enable it in Settings.';
-    }
-    if (s.contains('no_cameras') || s.contains('no cameras')) {
-      return 'No camera available on this device.';
-    }
+    if (s.contains('permission') || s.contains('denied'))
+      return 'Camera permission denied.';
+    if (s.contains('no_cameras') || s.contains('no cameras'))
+      return 'No camera available.';
     return 'Could not start the camera.';
   }
 
   // ── Visuals ──────────────────────────────────────────────────────────────
 
-  Color _ringColor() {
-    switch (_stage) {
-      case _Stage.verified:
-        return AppColors.success;
-      case _Stage.failed:
-        return AppColors.danger;
-      case _Stage.capturing:
-      case _Stage.verifying:
-      case _Stage.preview:
-        return AppColors.primary;
-      case _Stage.idle:
-        return Colors.grey.shade300;
-    }
-  }
+  bool get _isScanning =>
+      _stage == _Stage.preview ||
+      _stage == _Stage.capturing ||
+      _stage == _Stage.verifying;
 
-  Color _ringFill() {
-    switch (_stage) {
-      case _Stage.verified:
-        return AppColors.success.withValues(alpha: 0.10);
-      case _Stage.failed:
-        return AppColors.danger.withValues(alpha: 0.10);
-      default:
-        return AppColors.primary.withValues(alpha: 0.08);
-    }
-  }
+  Color get _scanColor => _guideStatus.allGood && _stage == _Stage.preview
+      ? AppColors.success
+      : const Color(0xFF3B82F6);
 
   Widget _ringContent() {
     switch (_stage) {
       case _Stage.idle:
         return Icon(Icons.face, color: Colors.grey[400], size: 70);
       case _Stage.preview:
-        // Live front-camera feed clipped into the circle.
         final controller = _cameraController;
         if (controller == null || !controller.value.isInitialized) {
-          return SizedBox(
+          return const SizedBox(
             width: 50,
             height: 50,
-            child: isApplePlatform
-                ? const CupertinoActivityIndicator(radius: 16)
-                : const CircularProgressIndicator(
-                    color: AppColors.primary,
-                    strokeWidth: 3.5,
-                  ),
+            child: CircularProgressIndicator(
+              color: Color(0xFF3B82F6),
+              strokeWidth: 3.5,
+            ),
           );
         }
         return ClipOval(
@@ -312,15 +350,10 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
         );
       case _Stage.capturing:
       case _Stage.verifying:
-        return SizedBox(
-          width: 50,
-          height: 50,
-          child: isApplePlatform
-              ? const CupertinoActivityIndicator(radius: 16)
-              : const CircularProgressIndicator(
-                  color: AppColors.primary,
-                  strokeWidth: 3.5,
-                ),
+        return const Icon(
+          Icons.face_retouching_natural,
+          color: Color(0xFF3B82F6),
+          size: 70,
         );
       case _Stage.verified:
         return const Icon(
@@ -331,6 +364,117 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
       case _Stage.failed:
         return const Icon(Icons.cancel, color: AppColors.danger, size: 90);
     }
+  }
+
+  Widget _buildScannerRing() {
+    return SizedBox(
+      width: _scannerSize,
+      height: _scannerSize,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (_isScanning)
+            PulsingGlowRing(
+              animation: _pulseController,
+              diameter: _scannerSize,
+              color: _scanColor,
+            ),
+
+          if (_isScanning)
+            AnimatedBuilder(
+              animation: _scanController,
+              builder: (context, _) => CustomPaint(
+                size: const Size(_scannerSize, _scannerSize),
+                painter: ScannerArcPainter(
+                  progress: _scanController.value,
+                  color: _scanColor,
+                ),
+              ),
+            ),
+
+          if (_isScanning)
+            SizedBox(
+              width: _scannerSize - 10,
+              height: _scannerSize - 10,
+              child: CustomPaint(
+                painter: CornerBracketPainter(color: _scanColor),
+              ),
+            ),
+
+          AnimatedBuilder(
+            animation: _shakeController,
+            builder: (context, child) => Transform.translate(
+              offset: Offset(_shakeOffset(_shakeController.value), 0),
+              child: child,
+            ),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              width: _ringDiameter,
+              height: _ringDiameter,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _stage == _Stage.idle
+                    ? AppColors.primary.withValues(alpha: 0.08)
+                    : _stage == _Stage.verified
+                    ? AppColors.success.withValues(alpha: 0.10)
+                    : _stage == _Stage.failed
+                    ? AppColors.danger.withValues(alpha: 0.10)
+                    : Colors.transparent,
+                border: Border.all(
+                  color: _isScanning
+                      ? _scanColor.withValues(alpha: 0.4)
+                      : _stage == _Stage.verified
+                      ? AppColors.success
+                      : _stage == _Stage.failed
+                      ? AppColors.danger
+                      : Colors.grey.shade300,
+                  width: _isScanning ? 2 : 3,
+                ),
+                boxShadow: _stage == _Stage.failed
+                    ? [
+                        BoxShadow(
+                          color: AppColors.danger.withValues(alpha: 0.25),
+                          blurRadius: 16,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                    : _stage == _Stage.verified
+                    ? [
+                        BoxShadow(
+                          color: AppColors.success.withValues(alpha: 0.25),
+                          blurRadius: 16,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: ClipOval(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  transitionBuilder: (child, anim) => ScaleTransition(
+                    scale: anim,
+                    child: FadeTransition(opacity: anim, child: child),
+                  ),
+                  child: Center(key: ValueKey(_stage), child: _ringContent()),
+                ),
+              ),
+            ),
+          ),
+
+          if (_stage == _Stage.capturing || _stage == _Stage.verifying)
+            AnimatedBuilder(
+              animation: _scanController,
+              builder: (context, _) => CustomPaint(
+                size: const Size(_ringDiameter, _ringDiameter),
+                painter: SweepLinePainter(
+                  progress: _scanController.value,
+                  color: const Color(0xFF3B82F6),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -344,123 +488,101 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
     return Dialog(
       backgroundColor: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Animated avatar circle.
-            AnimatedBuilder(
-              animation: _shakeController,
-              builder: (context, child) => Transform.translate(
-                offset: Offset(_shakeOffset(_shakeController.value), 0),
-                child: child,
-              ),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOut,
-                width: _ringDiameter,
-                height: _ringDiameter,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _ringFill(),
-                  border: Border.all(color: _ringColor(), width: 3),
-                  boxShadow: _stage == _Stage.failed
-                      ? [
-                          BoxShadow(
-                            color: AppColors.danger.withValues(alpha: 0.25),
-                            blurRadius: 16,
-                            spreadRadius: 2,
-                          ),
-                        ]
+      child: SizedBox(
+        width: _scannerSize + 50,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _buildScannerRing(),
+              const SizedBox(height: 16),
+
+              Text(
+                switch (_stage) {
+                  _Stage.verified => 'Verified!',
+                  _Stage.verifying => 'Verifying…',
+                  _Stage.capturing => 'Scanning…',
+                  _Stage.preview =>
+                    _guideStatus.allGood ? 'Perfect!' : 'Hold Still',
+                  _Stage.failed => 'Verification Failed',
+                  _Stage.idle => 'Face Verification',
+                },
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: _stage == _Stage.failed
+                      ? AppColors.danger
                       : _stage == _Stage.verified
-                      ? [
-                          BoxShadow(
-                            color: AppColors.success.withValues(alpha: 0.25),
-                            blurRadius: 16,
-                            spreadRadius: 2,
-                          ),
-                        ]
+                      ? AppColors.success
+                      : _guideStatus.allGood && _stage == _Stage.preview
+                      ? AppColors.success
+                      : _isScanning
+                      ? const Color(0xFF3B82F6)
                       : null,
                 ),
-                child: ClipOval(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    transitionBuilder: (child, animation) => ScaleTransition(
-                      scale: animation,
-                      child: FadeTransition(opacity: animation, child: child),
-                    ),
-                    child: Center(
-                      key: ValueKey(_stage),
-                      child: _ringContent(),
-                    ),
+              ),
+
+              const SizedBox(height: 6),
+
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Text(
+                  _statusMessage,
+                  key: ValueKey(_statusMessage),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.textTheme.bodySmall?.color,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              switch (_stage) {
-                _Stage.verified => 'Verified!',
-                _Stage.verifying => 'Verifying…',
-                _Stage.capturing => 'Capturing…',
-                _Stage.preview => 'Hold Still',
-                _Stage.failed => 'Verification Failed',
-                _Stage.idle => 'Face Verification',
-              },
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: _stage == _Stage.failed
-                    ? AppColors.danger
-                    : _stage == _Stage.verified
-                    ? AppColors.success
-                    : null,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _statusMessage,
-              style: theme.textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            if (!busy && _stage != _Stage.verified)
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+
+              // Face quality indicators during preview
+              if (_stage == _Stage.preview && _guideStatus.faceDetected) ...[
+                const SizedBox(height: 12),
+                FaceGuideIndicators(status: _guideStatus),
+              ],
+
+              const SizedBox(height: 20),
+
+              if (!busy && _stage != _Stage.verified)
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: const Text('Cancel'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _startVerification,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        _stage == _Stage.failed ? 'Try Again' : 'Verify',
+                        child: const Text('Cancel'),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            // Reserved for future telemetry / detail-screen handoff.
-            if (_errorCode != null) const SizedBox.shrink(),
-          ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _startVerification,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          _stage == _Stage.failed ? 'Try Again' : 'Verify',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              if (_errorCode != null) const SizedBox.shrink(),
+            ],
+          ),
         ),
       ),
     );

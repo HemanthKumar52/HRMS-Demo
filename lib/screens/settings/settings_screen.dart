@@ -11,6 +11,8 @@ import '../../widgets/neu_card.dart';
 import '../../widgets/adaptive_list.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/app_provider.dart';
+import '../../services/api_service.dart';
+import '../../services/app_lock_service.dart';
 import '../../utils/platform_adaptive.dart';
 import '../dashboard/org_chart_screen.dart';
 import 'face_enrollment_screen.dart';
@@ -26,11 +28,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _isSyncing = false;
   String _appVersion = '1.0.0';
+  bool _isFaceEnrolled = false;
+  bool _appLockEnabled = false;
+  bool _deviceSupportsLock = false;
 
   @override
   void initState() {
     super.initState();
     _loadPrefs();
+    _checkFaceEnrollment();
+    _checkAppLock();
+  }
+
+  Future<void> _checkFaceEnrollment() async {
+    final enrolled = await ApiService.isFaceEnrolled();
+    if (mounted) setState(() => _isFaceEnrolled = enrolled);
+  }
+
+  Future<void> _checkAppLock() async {
+    final supported = await AppLockService.instance.isDeviceSupported();
+    final enabled = await AppLockService.instance.isEnabled();
+    if (mounted) {
+      setState(() {
+        _deviceSupportsLock = supported;
+        _appLockEnabled = enabled;
+      });
+    }
+  }
+
+  Future<void> _toggleAppLock(bool value) async {
+    if (value) {
+      // Verify biometrics before enabling
+      final authenticated = await AppLockService.instance.authenticate();
+      if (!authenticated) return;
+    }
+    await AppLockService.instance.setEnabled(value);
+    if (mounted) setState(() => _appLockEnabled = value);
   }
 
   Future<void> _loadPrefs() async {
@@ -52,6 +85,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
+    final appProvider = context.watch<AppProvider>();
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -203,58 +237,108 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
             const SizedBox(height: 24),
 
-            // Face Enrollment
-            NeuCard(
-              child: InkWell(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const FaceEnrollmentScreen(),
+            // Face Enrollment — only show if not enrolled, or if admin
+            if (!_isFaceEnrolled || appProvider.role == UserRole.admin)
+              NeuCard(
+                child: InkWell(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const FaceEnrollmentScreen(),
+                    ),
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.face_retouching_natural,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Face Enrollment',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Text(
+                              'Set up face check-in',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: isDark ? Colors.white38 : Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right,
+                        color: isDark ? Colors.white24 : Colors.grey.shade400,
+                      ),
+                    ],
                   ),
                 ),
-                borderRadius: BorderRadius.circular(16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
+              ),
+
+            // App Lock (optional biometric/PIN)
+            if (_deviceSupportsLock)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: NeuCard(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.lock_outline,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.face_retouching_natural,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Face Enrollment',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w500,
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'App Lock',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                          Text(
-                            'Set up face check-in',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: isDark ? Colors.white38 : Colors.grey,
+                            Text(
+                              'Use device biometrics or PIN to lock app',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: isDark ? Colors.white38 : Colors.grey,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    Icon(
-                      Icons.chevron_right,
-                      color: isDark ? Colors.white24 : Colors.grey.shade400,
-                    ),
-                  ],
+                      Switch.adaptive(
+                        value: _appLockEnabled,
+                        onChanged: _toggleAppLock,
+                        activeColor: AppColors.primary,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
 
             const SizedBox(height: 24),
 

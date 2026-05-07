@@ -179,8 +179,8 @@ class _ProfileSheet extends StatelessWidget {
                   provider.role == UserRole.hr ||
                   provider.role == UserRole.admin)
                 _MenuItem(
-                  icon: Icons.group_outlined,
-                  label: 'My Team',
+                  icon: Icons.groups_outlined,
+                  label: 'Workforce',
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(

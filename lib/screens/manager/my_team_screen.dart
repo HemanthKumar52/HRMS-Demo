@@ -83,7 +83,7 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
           : theme.scaffoldBackgroundColor,
       appBar: adaptiveAppBar(
         context: context,
-        title: 'My Team',
+        title: 'Workforce',
         showBackButton: true,
       ),
       body: Column(

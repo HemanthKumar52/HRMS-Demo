@@ -12,6 +12,7 @@ import '../../widgets/neu_card.dart';
 import '../../widgets/styled_donut_chart.dart';
 
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:open_filex/open_filex.dart';
 import 'payslip_viewer_screen.dart';
 import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
@@ -207,7 +208,16 @@ class _PayslipScreenState extends State<PayslipScreen> {
       final response = await ApiService.getPayslipPdf(id);
       if (!mounted) return;
       if (response.statusCode == 200 && response.bodyBytes.length > 500) {
-        final dir = await getApplicationDocumentsDirectory();
+        // Save to Downloads folder (visible in file manager)
+        Directory dir;
+        if (Platform.isAndroid) {
+          dir = Directory('/storage/emulated/0/Download');
+          if (!await dir.exists()) {
+            dir = await getApplicationDocumentsDirectory();
+          }
+        } else {
+          dir = await getApplicationDocumentsDirectory();
+        }
         final fileName =
             'payslip_${_months[_selectedMonthIndex]}_$_selectedYear.pdf';
         final file = File('${dir.path}/$fileName');
@@ -230,6 +240,8 @@ class _PayslipScreenState extends State<PayslipScreen> {
             size: 20,
           ),
         );
+        // Open PDF in external viewer
+        await OpenFilex.open(file.path);
       } else {
         throw Exception('PDF not available');
       }
@@ -865,240 +877,6 @@ class _PayslipScreenState extends State<PayslipScreen> {
                             end: 0,
                             duration: 420.ms,
                             delay: 240.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
-
-                      const SizedBox(height: 16),
-
-                      // --- 3. Total Salary Breakdown Graph ---
-                      NeuCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.pie_chart_rounded,
-                                      color: AppColors.secondary,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Total Salary Breakdown',
-                                      style: tt.titleLarge,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                StyledDonutChart(
-                                  size: 220,
-                                  segments: [
-                                    ..._earnings.map(
-                                      (e) => DonutSegment(
-                                        label: e.label,
-                                        value: e.amount,
-                                        color: e.color,
-                                      ),
-                                    ),
-                                    ..._deductions.map(
-                                      (e) => DonutSegment(
-                                        label: e.label,
-                                        value: e.amount,
-                                        color: e.color.withValues(alpha: 0.6),
-                                      ),
-                                    ),
-                                  ],
-                                  centerBuilder: (total) => Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        _currencyFormat.format(_netPay),
-                                        style: tt.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.w800,
-                                          color: isDark
-                                              ? Colors.white
-                                              : Colors.black87,
-                                        ),
-                                      ),
-                                      Text(
-                                        'Net Pay',
-                                        style: tt.bodySmall?.copyWith(
-                                          color: isDark
-                                              ? Colors.white54
-                                              : Colors.black45,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                          .animate()
-                          .fadeIn(duration: 420.ms, delay: 320.ms)
-                          .slideY(
-                            begin: 0.12,
-                            end: 0,
-                            duration: 420.ms,
-                            delay: 320.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
-
-                      const SizedBox(height: 16),
-
-                      // --- Earnings Line Items ---
-                      NeuCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.list_alt_rounded,
-                                      color: AppColors.success,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Earnings Detail',
-                                      style: tt.titleLarge,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                ...List.generate(_earnings.length, (i) {
-                                  final item = _earnings[i];
-                                  final isLast = i == _earnings.length - 1;
-                                  return Column(
-                                    children: [
-                                      _buildLineItem(
-                                        item.label,
-                                        item.amount,
-                                        tt,
-                                        item.color,
-                                        isDark,
-                                      ),
-                                      if (!isLast)
-                                        Divider(
-                                          height: 20,
-                                          color: isDark
-                                              ? Colors.white.withValues(
-                                                  alpha: 0.06,
-                                                )
-                                              : Colors.grey.shade100,
-                                        ),
-                                    ],
-                                  );
-                                }),
-                                const Divider(height: 24),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Total Earnings',
-                                      style: tt.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    Text(
-                                      _currencyFormat.format(_grossSalary),
-                                      style: tt.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.success,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          )
-                          .animate()
-                          .fadeIn(duration: 420.ms, delay: 400.ms)
-                          .slideY(
-                            begin: 0.12,
-                            end: 0,
-                            duration: 420.ms,
-                            delay: 400.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
-
-                      const SizedBox(height: 16),
-
-                      // --- Deductions Line Items ---
-                      NeuCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.list_alt_rounded,
-                                      color: AppColors.danger,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Deductions Detail',
-                                      style: tt.titleLarge,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                ...List.generate(_deductions.length, (i) {
-                                  final item = _deductions[i];
-                                  final isLast = i == _deductions.length - 1;
-                                  return Column(
-                                    children: [
-                                      _buildLineItem(
-                                        item.label,
-                                        item.amount,
-                                        tt,
-                                        item.color,
-                                        isDark,
-                                      ),
-                                      if (!isLast)
-                                        Divider(
-                                          height: 20,
-                                          color: isDark
-                                              ? Colors.white.withValues(
-                                                  alpha: 0.06,
-                                                )
-                                              : Colors.grey.shade100,
-                                        ),
-                                    ],
-                                  );
-                                }),
-                                const Divider(height: 24),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Total Deductions',
-                                      style: tt.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    Text(
-                                      _currencyFormat.format(_totalDeductions),
-                                      style: tt.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.danger,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          )
-                          .animate()
-                          .fadeIn(duration: 420.ms, delay: 480.ms)
-                          .slideY(
-                            begin: 0.12,
-                            end: 0,
-                            duration: 420.ms,
-                            delay: 480.ms,
                             curve: Curves.easeOutCubic,
                           ),
 

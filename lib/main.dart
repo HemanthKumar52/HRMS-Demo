@@ -8,6 +8,7 @@ import 'providers/app_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/requests/request_detail_screen.dart';
 import 'screens/splash/splash_screen.dart';
+import 'services/app_lock_service.dart';
 import 'services/live_activity_service.dart';
 import 'services/notification_service.dart';
 import 'utils/platform_adaptive.dart';
@@ -35,15 +36,56 @@ class PPulseApp extends StatefulWidget {
   State<PPulseApp> createState() => _PPulseAppState();
 }
 
-class _PPulseAppState extends State<PPulseApp> {
+class _PPulseAppState extends State<PPulseApp> with WidgetsBindingObserver {
   final _appProvider = AppProvider();
+  DateTime? _pausedAt;
+  static const _inactivityTimeout = Duration(minutes: 30);
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     NotificationService.instance.onNotificationTap = () {
       _appProvider.navigateToRequested();
     };
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _pausedAt = DateTime.now();
+    } else if (state == AppLifecycleState.resumed) {
+      _checkInactivityTimeout();
+      _checkAppLock();
+    }
+  }
+
+  void _checkInactivityTimeout() {
+    if (_pausedAt == null || !_appProvider.isLoggedIn) return;
+    final elapsed = DateTime.now().difference(_pausedAt!);
+    if (elapsed > _inactivityTimeout) {
+      // Session expired due to inactivity — require re-auth
+      _appProvider.logout();
+    }
+    _pausedAt = null;
+  }
+
+  Future<void> _checkAppLock() async {
+    final lockService = AppLockService.instance;
+    if (!await lockService.isEnabled()) return;
+    if (!_appProvider.isLoggedIn) return;
+
+    final authenticated = await lockService.authenticate();
+    if (!authenticated) {
+      // If user fails authentication, show lock again or exit
+      // For now, just re-prompt on next resume
+    }
   }
 
   @override

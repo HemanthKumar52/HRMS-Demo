@@ -6,6 +6,7 @@ import '../services/live_activity_service.dart';
 import '../services/notification_service.dart';
 import '../services/api_service.dart';
 import '../services/punch_metadata_service.dart';
+import '../services/secure_token_service.dart';
 
 enum UserRole { employee, manager, hr, admin }
 
@@ -174,7 +175,9 @@ class AppProvider extends ChangeNotifier {
     final department = prefs.getString('user_department') ?? '';
     final employeeId = prefs.getString('employee_id') ?? '';
     final email = prefs.getString('user_email') ?? '';
-    final token = prefs.getString('auth_token');
+    // Check secure storage first, fallback to SharedPreferences
+    final secureToken = await SecureTokenService.instance.getAccessToken();
+    final token = secureToken ?? prefs.getString('auth_token');
 
     if (token != null && name.isNotEmpty) {
       _userName = name;
@@ -663,6 +666,7 @@ class AppProvider extends ChangeNotifier {
     _tickets = [];
     _bottomNavIndex = 0;
     await ApiService.logout();
+    await SecureTokenService.instance.clearAll();
     notifyListeners();
   }
 

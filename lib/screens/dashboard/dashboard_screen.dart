@@ -905,7 +905,7 @@ class _TeamAttendanceCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text('My Team', style: theme.textTheme.titleMedium),
+                Text('Workforce', style: theme.textTheme.titleMedium),
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(

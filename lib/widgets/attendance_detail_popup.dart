@@ -25,11 +25,34 @@ class AttendanceDetailPopup extends StatelessWidget {
     );
   }
 
+  /// Convert "HH:MM" to "h:MM AM/PM"
+  String _to12h(String hhmm) {
+    final parts = hhmm.split(':');
+    if (parts.length < 2) return hhmm;
+    var h = int.tryParse(parts[0]) ?? 0;
+    final m = parts[1];
+    final ampm = h >= 12 ? 'PM' : 'AM';
+    if (h == 0) h = 12;
+    if (h > 12) h -= 12;
+    return '$h:$m $ampm';
+  }
+
   String _val(String key) {
     final v = record[key];
     if (v == null) return 'N/A';
     final s = v.toString().trim();
-    return s.isEmpty ? 'N/A' : s;
+    if (s.isEmpty) return 'N/A';
+    // Strip seconds from time values (HH:MM:SS → HH:MM) and convert to 12h
+    if ((key.contains('punch_in') ||
+            key.contains('punch_out') ||
+            key == 'worked_hours') &&
+        RegExp(r'^\d{2}:\d{2}(:\d{2})?$').hasMatch(s)) {
+      final hhmm = s.substring(0, 5);
+      // Don't convert worked_hours to 12h — it's a duration
+      if (key == 'worked_hours') return hhmm;
+      return _to12h(hhmm);
+    }
+    return s;
   }
 
   String _coord(String latKey, String lngKey) {
@@ -81,7 +104,7 @@ class AttendanceDetailPopup extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Worked: ${_val('worked_hours')}',
+            'Worked Hours: ${_val('worked_hours')}',
             style: TextStyle(fontSize: 14, color: subtitleColor),
           ),
           const SizedBox(height: 16),

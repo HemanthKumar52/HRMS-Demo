@@ -45,13 +45,13 @@ logger = logging.getLogger(__name__)
 # the same person and rarely > 0.4 for unrelated faces, so 0.55 keeps both
 # false-accept and false-reject rates low.
 EMBEDDING_DIM = 512
-MATCH_THRESHOLD = 0.55  # cosine sim above this counts as a verified match
-STRONG_MATCH_THRESHOLD = 0.65  # high-confidence band
-MIN_MATCH_MARGIN = 0.10  # best match must beat second-best by ≥ this much
-MIN_FACE_PX = 60  # face bounding box must be ≥ this on the short side
-MIN_LAPLACIAN_VAR = 20.0  # below = too blurry (lowered — CLAHE rescues soft frames)
-MIN_BRIGHTNESS = 15  # 0..255 (lowered — adaptive gamma rescues dark frames)
-MAX_BRIGHTNESS = 245  # (raised — adaptive gamma rescues bright frames)
+MATCH_THRESHOLD = 0.55  # 1:1 verification — strict enough to reject different people
+STRONG_MATCH_THRESHOLD = 0.55  # high-confidence band (was 0.65)
+MIN_MATCH_MARGIN = 0.08  # best match must beat second-best by ≥ this much (was 0.10)
+MIN_FACE_PX = 50  # face bounding box must be ≥ this on the short side (was 60)
+MIN_LAPLACIAN_VAR = 15.0  # below = too blurry (was 20.0)
+MIN_BRIGHTNESS = 10  # 0..255 (was 15)
+MAX_BRIGHTNESS = 250  # (was 245)
 DET_SIZE = (640, 640)  # insightface detector input
 
 # ── Lazy model loader ───────────────────────────────────────────────────────
@@ -215,32 +215,110 @@ class QualityResult:
     sharpness: float
     brightness: float
     face_px: int
+    face_pct: float = 0.0  # face area as % of image
+    yaw: float = 0.0  # head left/right angle
+    pitch: float = 0.0  # head up/down angle
+    hint: str = ''  # user-facing guidance hint
 
 
-def quality_check(img: np.ndarray, face_bbox=None) -> QualityResult:
-    """Reject obviously bad frames before we trust an embedding."""
+def quality_check(img: np.ndarray, face_bbox=None, face_obj=None) -> QualityResult:
+    """Reject obviously bad frames before we trust an embedding.
+
+    Checks: brightness, blur, face size (px + %), head pose (yaw/pitch).
+    Returns a QualityResult with a human-readable `hint` for the client.
+    """
     if img is None or img.size == 0:
-        return QualityResult(False, 'empty_frame', 0, 0, 0)
+        return QualityResult(False, 'empty_frame', 0, 0, 0, hint='No image received')
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     sharp = float(cv2.Laplacian(gray, cv2.CV_64F).var())
     brightness = float(np.mean(gray))
 
     if brightness < MIN_BRIGHTNESS:
-        return QualityResult(False, 'too_dark', sharp, brightness, 0)
+        return QualityResult(
+            False, 'too_dark', sharp, brightness, 0, hint='Lighting is too dark — move to a brighter area'
+        )
     if brightness > MAX_BRIGHTNESS:
-        return QualityResult(False, 'too_bright', sharp, brightness, 0)
+        return QualityResult(
+            False,
+            'too_bright',
+            sharp,
+            brightness,
+            0,
+            hint='Too much light — avoid direct sunlight or backlight',
+        )
     if sharp < MIN_LAPLACIAN_VAR:
-        return QualityResult(False, 'too_blurry', sharp, brightness, 0)
+        return QualityResult(
+            False, 'too_blurry', sharp, brightness, 0, hint='Image is blurry — hold the device steady'
+        )
 
     face_px = 0
+    face_pct = 0.0
+    yaw = 0.0
+    pitch = 0.0
+
     if face_bbox is not None:
         x1, y1, x2, y2 = [int(v) for v in face_bbox]
-        face_px = min(x2 - x1, y2 - y1)
-        if face_px < MIN_FACE_PX:
-            return QualityResult(False, 'face_too_small', sharp, brightness, face_px)
+        face_w = x2 - x1
+        face_h = y2 - y1
+        face_px = min(face_w, face_h)
 
-    return QualityResult(True, 'ok', sharp, brightness, face_px)
+        # Face area as % of image
+        img_h, img_w = img.shape[:2]
+        if img_w > 0 and img_h > 0:
+            face_pct = (face_w * face_h) / (img_w * img_h) * 100
+
+        if face_px < MIN_FACE_PX:
+            return QualityResult(
+                False,
+                'face_too_small',
+                sharp,
+                brightness,
+                face_px,
+                face_pct,
+                hint='Move closer to the camera',
+            )
+
+        if face_pct < 3.0:
+            return QualityResult(
+                False,
+                'face_too_far',
+                sharp,
+                brightness,
+                face_px,
+                face_pct,
+                hint='Face is too far — move closer',
+            )
+
+        if face_pct > 65.0:
+            return QualityResult(
+                False,
+                'face_too_close',
+                sharp,
+                brightness,
+                face_px,
+                face_pct,
+                hint='Face is too close — move further away',
+            )
+
+    # Head pose from insightface (pose attribute: [pitch, yaw, roll])
+    if face_obj is not None and hasattr(face_obj, 'pose'):
+        pose = face_obj.pose
+        if pose is not None and len(pose) >= 2:
+            pitch = float(pose[0])
+            yaw = float(pose[1])
+            if abs(yaw) > 25:
+                hint = 'Turn your head slightly left' if yaw > 0 else 'Turn your head slightly right'
+                return QualityResult(
+                    False, 'head_turned', sharp, brightness, face_px, face_pct, yaw, pitch, hint
+                )
+            if abs(pitch) > 25:
+                hint = 'Lower your chin' if pitch > 0 else 'Raise your chin'
+                return QualityResult(
+                    False, 'head_tilted', sharp, brightness, face_px, face_pct, yaw, pitch, hint
+                )
+
+    return QualityResult(True, 'ok', sharp, brightness, face_px, face_pct, yaw, pitch, 'Good')
 
 
 def _crop_face(img: np.ndarray, face_bbox) -> np.ndarray:
@@ -488,13 +566,27 @@ def extract_embedding(
     if not faces:
         q = quality_check(img_pp)
         if q.ok:
-            q = QualityResult(False, 'no_face', q.sharpness, q.brightness, 0)
+            q = QualityResult(
+                False,
+                'no_face',
+                q.sharpness,
+                q.brightness,
+                0,
+                hint='No face detected — look directly at the camera',
+            )
+        return None, q, 0.0, None
+
+    # Reject multi-face frames — only allow one person.
+    if len(faces) > 1:
+        q = QualityResult(
+            False, 'multiple_faces', 0, 0, 0, hint='Multiple faces detected — only one person allowed'
+        )
         return None, q, 0.0, None
 
     # Pick the largest face (closest to camera).
     face = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
     bbox = tuple(int(v) for v in face.bbox)
-    q = quality_check(img_pp, bbox)
+    q = quality_check(img_pp, bbox, face_obj=face)
     spoof = screen_replay_score(img_pp, bbox)
     if not q.ok:
         return None, q, spoof, bbox
@@ -502,14 +594,17 @@ def extract_embedding(
     return emb, q, spoof, bbox
 
 
-def verify(image_payload, extra_frames=None) -> VerifyResult:
-    """End-to-end WFH face verification against the EmployeeFaceData table.
+def verify(image_payload, extra_frames=None, employee_id=None) -> VerifyResult:
+    """End-to-end WFH face verification.
 
     Args:
         image_payload: primary frame (base64 / bytes / ndarray).
         extra_frames:  optional list of additional base64 frames captured
                        during the preview window.  When provided, multi-frame
                        passive liveness is run across all frames.
+        employee_id:   when provided, do 1:1 verification against this
+                       employee's enrolled face only.  When None, fall back
+                       to 1:N search across all enrolled faces.
     """
     t0 = time.perf_counter()
 
@@ -562,21 +657,58 @@ def verify(image_payload, extra_frames=None) -> VerifyResult:
     # Match against DB.
     from .models import EmployeeFaceData
 
+    # ── 1:1 verification (preferred — caller knows who the user is) ──
+    if employee_id is not None:
+        row = (
+            EmployeeFaceData.objects.filter(
+                employee_id_id=employee_id,
+            )
+            .exclude(embedding=None)
+            .values('embedding')
+            .first()
+        )
+
+        elapsed = (time.perf_counter() - t0) * 1000
+
+        if not row:
+            logger.info('FACE: employee %s has no enrolled face', employee_id)
+            return VerifyResult(False, None, 0.0, 'not_enrolled', elapsed, quality, spoof)
+
+        ref = unpack_embedding(bytes(row['embedding']))
+        if ref.shape[0] != emb.shape[0]:
+            return VerifyResult(False, None, 0.0, 'embedding_dim_mismatch', elapsed, quality, spoof)
+
+        score = float(np.dot(emb, ref))  # both L2-normalized → cosine similarity
+
+        logger.info(
+            'FACE: 1:1 emp=%s score=%.4f thresh=%.2f q.sharp=%.0f q.bright=%.0f spoof=%.2f elapsed=%.0fms',
+            employee_id,
+            score,
+            MATCH_THRESHOLD,
+            quality.sharpness if quality else 0.0,
+            quality.brightness if quality else 0.0,
+            spoof,
+            elapsed,
+        )
+
+        if score < MATCH_THRESHOLD:
+            return VerifyResult(False, employee_id, score, 'face_mismatch', elapsed, quality, spoof)
+
+        return VerifyResult(True, employee_id, score, 'match', elapsed, quality, spoof)
+
+    # ── 1:N search fallback (no employee_id provided) ──
     rows = list(EmployeeFaceData.objects.exclude(embedding=None).values('employee_id_id', 'embedding'))
     if not rows:
         return VerifyResult(
             False, None, 0.0, 'no_enrolled_faces', (time.perf_counter() - t0) * 1000, quality, spoof
         )
 
-    # Score every enrolled employee, then keep the top two so we can enforce
-    # a margin between #1 and #2 (defends against ambiguous matches in small
-    # enrollments where the closest match wins by a hair).
     scored = []
     for row in rows:
         ref = unpack_embedding(bytes(row['embedding']))
         if ref.shape[0] != emb.shape[0]:
             continue
-        score = float(np.dot(emb, ref))  # both L2-normalized → cosine similarity
+        score = float(np.dot(emb, ref))
         scored.append((score, row['employee_id_id']))
     scored.sort(key=lambda x: x[0], reverse=True)
 
@@ -591,7 +723,7 @@ def verify(image_payload, extra_frames=None) -> VerifyResult:
     elapsed = (time.perf_counter() - t0) * 1000
 
     logger.info(
-        'FACE: best=%s/%.4f second=%.4f margin=%.4f thresh=%.2f q.sharp=%.0f q.bright=%.0f spoof=%.2f elapsed=%.0fms',
+        'FACE: 1:N best=%s/%.4f second=%.4f margin=%.4f thresh=%.2f q.sharp=%.0f q.bright=%.0f spoof=%.2f elapsed=%.0fms',
         best_id,
         best_score,
         second_score,
@@ -606,8 +738,6 @@ def verify(image_payload, extra_frames=None) -> VerifyResult:
     if best_score < MATCH_THRESHOLD:
         return VerifyResult(False, None, best_score, 'unknown_user', elapsed, quality, spoof)
 
-    # Margin gate — when only ONE enrollment exists margin is meaningless,
-    # so skip it. With ≥2 enrollments require a clear winner.
     if len(scored) >= 2 and margin < MIN_MATCH_MARGIN:
         return VerifyResult(False, None, best_score, 'ambiguous_match', elapsed, quality, spoof)
 

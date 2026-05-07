@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'secure_token_service.dart';
 
 class ApiService {
   /// Backend host. Can be overridden at build/run time with
@@ -19,7 +20,7 @@ class ApiService {
 
   /// Unified backend — web + mobile API merged into one Django server.
   /// Release: deployed web backend. Debug: local Django server.
-  static const String _prodHost = 'ppulsebackend.vercel.app';
+  static const String _prodHost = 'nag-murkiness-fracture.ngrok-free.dev';
 
   static String get baseUrl {
     // Explicit override via --dart-define always wins.
@@ -80,11 +81,16 @@ class ApiService {
   static void clearWebToken() => _webToken = null;
 
   static Future<Map<String, String>> _getHeaders() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token') ?? '';
+    // Try secure storage first, fallback to SharedPreferences for migration
+    final secureToken = await SecureTokenService.instance.getAccessToken();
+    final token =
+        secureToken ??
+        (await SharedPreferences.getInstance()).getString('auth_token') ??
+        '';
     return {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
+      'ngrok-skip-browser-warning': '1',
     };
   }
 
@@ -201,21 +207,31 @@ class ApiService {
     if (_isRefreshing) return false;
     _isRefreshing = true;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final refreshToken = prefs.getString('refresh_token');
-      if (refreshToken == null) return false;
+      final secure = SecureTokenService.instance;
+      final refreshToken = await secure.getRefreshToken();
+      if (refreshToken == null) {
+        // Fallback: migrate from SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        final oldToken = prefs.getString('refresh_token');
+        if (oldToken == null) return false;
+        await secure.setRefreshToken(oldToken);
+        // Continue with oldToken
+      }
+      final token = await secure.getRefreshToken();
+      if (token == null) return false;
 
       final response = await http.post(
         Uri.parse('$baseUrl/auth/refresh'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'refresh_token': refreshToken}),
+        body: jsonEncode({'refresh_token': token}),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        await prefs.setString('auth_token', data['access_token']);
+        // Store new tokens in secure storage (rotation: old refresh invalidated)
+        await secure.setAccessToken(data['access_token']);
         if (data['refresh_token'] != null) {
-          await prefs.setString('refresh_token', data['refresh_token']);
+          await secure.setRefreshToken(data['refresh_token']);
         }
         return true;
       }
@@ -408,8 +424,20 @@ class ApiService {
   }
 
   /// Self-enroll face from a base64 image.
-  static Future<Map<String, dynamic>> enrollFaceSelf(String imageBase64) async {
-    return await post('/face/enroll', {'image': imageBase64});
+  static Future<Map<String, dynamic>> enrollFaceSelf(
+    String imageBase64, {
+    List<String>? extraFrames,
+  }) async {
+    final body = <String, dynamic>{'image': imageBase64};
+    if (extraFrames != null && extraFrames.isNotEmpty) {
+      body['extra_frames'] = extraFrames;
+    }
+    return await post('/face/enroll', body);
+  }
+
+  /// GDPR: permanently delete current user's enrolled face data.
+  static Future<Map<String, dynamic>> deleteFaceEnrollment() async {
+    return await delete('/face/enroll');
   }
 
   static Future<Map<String, dynamic>> punchOut([
@@ -710,7 +738,10 @@ class ApiService {
       final token = await _getWebToken();
       final resp = await http.get(
         Uri.parse('$webBaseUrl/payroll/payslip/'),
-        headers: {'Authorization': 'Bearer $token'},
+        headers: {
+          'Authorization': 'Bearer $token',
+          'ngrok-skip-browser-warning': '1',
+        },
       );
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
@@ -787,7 +818,10 @@ class ApiService {
         final token = await _getWebToken();
         final resp = await http.get(
           Uri.parse('$webBaseUrl/payroll/payslip/$id/'),
-          headers: {'Authorization': 'Bearer $token'},
+          headers: {
+            'Authorization': 'Bearer $token',
+            'ngrok-skip-browser-warning': '1',
+          },
         );
         if (resp.statusCode == 200) {
           return jsonDecode(resp.body) as Map<String, dynamic>;
@@ -800,17 +834,7 @@ class ApiService {
   /// Download payslip PDF — tries direct web first (for binary),
   /// then falls back to mobile backend proxy.
   static Future<http.Response> getPayslipPdf(int id) async {
-    try {
-      final token = await _getWebToken();
-      final resp = await http.get(
-        Uri.parse('$webBaseUrl/payroll/payslip-download/$id'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (resp.statusCode == 200 && resp.bodyBytes.length > 500) {
-        return resp;
-      }
-    } catch (_) {}
-    // Fallback to mobile backend
+    // Use mobile backend's PDF proxy (it fetches from web app internally)
     final headers = await _getHeaders();
     return await http.get(
       Uri.parse('$baseUrl/payslips/$id/pdf'),

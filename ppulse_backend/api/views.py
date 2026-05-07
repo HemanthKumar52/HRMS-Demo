@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q, Sum
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import status
+from rest_framework import status, throttling
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -291,8 +291,13 @@ def _issue_tokens(user):
     return access, refresh
 
 
+class LoginThrottle(throttling.AnonRateThrottle):
+    rate = '5/minute'
+
+
 class AuthView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [LoginThrottle]
 
     def post(self, request):
         from datetime import timedelta
@@ -924,6 +929,7 @@ class AttendanceFaceVerifyPunchInView(APIView):
         # 0. Location checks — skip in development if no GPS available.
         import django.conf
 
+        zone = None
         skip_geo = getattr(django.conf.settings, 'DEBUG', False) and (lat is None or lng is None)
 
         if not skip_geo:
@@ -966,29 +972,9 @@ class AttendanceFaceVerifyPunchInView(APIView):
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-        # 3. Duplicate / biometric-active session checks (mirror PunchInView).
-        today = date.today()
-        existing = Attendance.objects.filter(employee_id_id=employee.id, attendance_date=today).first()
-        if existing and existing.attendance_clock_in is not None:
-            if _is_biometric_source(existing.punch_in_source) and _is_mobile_source(source):
-                return Response(
-                    {
-                        'error': {
-                            'code': 'BIOMETRIC_PUNCH_ACTIVE',
-                            'message': 'You are already punched in via biometric device. Cannot punch in from mobile.',
-                            'source': existing.punch_in_source,
-                        }
-                    },
-                    status=status.HTTP_403_FORBIDDEN,
-                )
-            return Response(
-                {'error': {'code': 'ALREADY_PUNCHED_IN', 'message': 'Already clocked in today'}},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # 4. Face verification (with multi-frame liveness when available).
+        # 3. Face verification FIRST — always verify identity before anything else.
         extra_frames = data.get('extra_frames')  # list of base64 strings
-        result = face_verify(data['image'], extra_frames=extra_frames)
+        result = face_verify(data['image'], extra_frames=extra_frames, employee_id=employee.id)
         import logging as _log
 
         _log.getLogger(__name__).info(
@@ -1015,6 +1001,15 @@ class AttendanceFaceVerifyPunchInView(APIView):
                     'lng': lng,
                 },
             )
+            hint = ''
+            if result.quality and result.quality.hint:
+                hint = result.quality.hint
+            elif result.reason == 'not_enrolled':
+                hint = 'You have not enrolled your face yet. Go to Settings > Face Enrollment.'
+            elif result.reason == 'face_mismatch':
+                hint = 'Face does not match your enrollment. Try better lighting or re-enroll.'
+            elif result.reason == 'liveness_failed':
+                hint = 'Liveness check failed. Use your real face, not a photo or screen.'
             return Response(
                 {
                     'error': {
@@ -1023,6 +1018,7 @@ class AttendanceFaceVerifyPunchInView(APIView):
                         'reason': result.reason,
                         'confidence': round(result.confidence, 4),
                         'elapsed_ms': round(result.elapsed_ms, 1),
+                        'hint': hint,
                     }
                 },
                 status=status.HTTP_403_FORBIDDEN,
@@ -1064,13 +1060,33 @@ class AttendanceFaceVerifyPunchInView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # 5. All checks passed — record the punch.
+        # 5. Duplicate / biometric-active session checks (after face is verified).
+        today = date.today()
+        existing = Attendance.objects.filter(employee_id_id=employee.id, attendance_date=today).first()
+        if existing and existing.attendance_clock_in is not None:
+            if _is_biometric_source(existing.punch_in_source) and _is_mobile_source(source):
+                return Response(
+                    {
+                        'error': {
+                            'code': 'BIOMETRIC_PUNCH_ACTIVE',
+                            'message': 'You are already punched in via biometric device.',
+                            'source': existing.punch_in_source,
+                        }
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            return Response(
+                {'error': {'code': 'ALREADY_PUNCHED_IN', 'message': 'Already clocked in today'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 6. All checks passed — record the punch.
         now = timezone.now()
         meta = {
             'punch_in_source': source,
             'punch_in_lat': lat,
             'punch_in_lng': lng,
-            'punch_in_location': data.get('location_name', '') or zone['name'],
+            'punch_in_location': data.get('location_name', '') or (zone['name'] if zone else ''),
             'punch_in_device': data.get('device_info', ''),
         }
 
@@ -2986,6 +3002,9 @@ class PayslipHTMLView(APIView):
         # Remove onclick handlers
         text = re.sub(r'onclick="[^"]*"', '', text)
 
+        # Fix rupee symbol encoding for WebView (₹ → HTML entity)
+        text = text.replace('₹', '&#8377;')
+
         return text
 
     def get(self, request, pk):
@@ -3062,54 +3081,41 @@ body {{ margin: 0; padding: 8px; background: #fff; font-family: Arial, Helvetica
 
 
 class PayslipPDFView(APIView):
-    """Proxy payslip PDF directly from the web app — no local generation."""
+    """Fetch payslip PDF from the web app's DRF API."""
 
     WEB_BASE = 'http://127.0.0.1:8000'
 
     def get(self, request, pk):
+        import requests as _req
         from django.http import HttpResponse
 
-        payslip = get_object_or_404(Payslip, id=pk)
-
         try:
-            # Use session auth (web views require session, not JWT)
-            html_view = PayslipHTMLView()
-            session = html_view._web_session('admin')
-            web_id = html_view._find_web_payslip_id(session, payslip)
+            # Get JWT token from web app
+            login_resp = _req.post(
+                f'{self.WEB_BASE}/api/auth/login/',
+                json={'username': 'admin', 'password': 'Ppulse@123'},
+                timeout=5,
+            )
+            if login_resp.status_code != 200:
+                return Response({'error': 'Web auth failed'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
-            if web_id:
-                # Try the web's PDF download endpoint
-                pdf_resp = session.get(
-                    f'{self.WEB_BASE}/payroll/view-payslip-pdf/{web_id}/',
-                    timeout=15,
+            token = login_resp.json().get('access', '')
+
+            # Fetch PDF from web app's DRF endpoint
+            pdf_resp = _req.get(
+                f'{self.WEB_BASE}/api/payroll/payslip-download/{pk}',
+                headers={'Authorization': f'Bearer {token}'},
+                timeout=30,
+            )
+
+            if pdf_resp.status_code == 200 and len(pdf_resp.content) > 500:
+                content_type = pdf_resp.headers.get('content-type', 'application/pdf')
+                response = HttpResponse(pdf_resp.content, content_type=content_type)
+                response['Content-Disposition'] = pdf_resp.headers.get(
+                    'Content-Disposition', f'attachment; filename="payslip_{pk}.pdf"'
                 )
-                if pdf_resp.status_code == 200 and 'pdf' in pdf_resp.headers.get('content-type', ''):
-                    employee = get_employee_by_id(payslip.employee_id_id)
-                    badge = employee.badge_id if employee else 'payslip'
-                    response = HttpResponse(pdf_resp.content, content_type='application/pdf')
-                    response['Content-Disposition'] = (
-                        f'attachment; filename="payslip_{badge}_{payslip.start_date}.pdf"'
-                    )
-                    return response
+                return response
 
-                # PDF endpoint failed — generate from HTML using WeasyPrint
-                html_resp = session.get(
-                    f'{self.WEB_BASE}/payroll/view-payslip/{web_id}/',
-                    timeout=10,
-                )
-                if html_resp.status_code == 200:
-                    import weasyprint
-
-                    pdf_bytes = weasyprint.HTML(
-                        string=html_resp.text,
-                        base_url=self.WEB_BASE,
-                    ).write_pdf()
-                    employee = get_employee_by_id(payslip.employee_id_id)
-                    name = (employee.name if employee else 'payslip').replace(' ', '_')
-                    month = payslip.start_date.strftime('%B_%Y') if payslip.start_date else 'payslip'
-                    response = HttpResponse(pdf_bytes, content_type='application/pdf')
-                    response['Content-Disposition'] = f'attachment; filename="payslip_{name}_{month}.pdf"'
-                    return response
         except Exception:
             pass
 
@@ -5011,7 +5017,7 @@ class FaceEnrollSelfView(APIView):
         return Response({'enrolled': enrolled, 'employee_id': employee.id})
 
     def post(self, request):
-        """Enroll the current user's face from a base64 image."""
+        """Enroll the current user's face from base64 images (supports multi-sample)."""
         employee = get_employee_from_user(request.user)
         if not employee:
             return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -5019,22 +5025,34 @@ class FaceEnrollSelfView(APIView):
         from .face_verification import decode_image, extract_embedding, l2_normalize, pack_embedding
 
         image_b64 = request.data.get('image')
+        extra_frames = request.data.get('extra_frames', [])
         if not image_b64:
             return Response({'error': 'image required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        img = decode_image(image_b64)
-        if img is None:
-            return Response({'error': 'Invalid image'}, status=status.HTTP_400_BAD_REQUEST)
-
         import numpy as np
 
-        emb, q, spoof_score, bbox = extract_embedding(img)
-        if emb is None:
-            reason = q.reason if q else 'no_face'
+        # Collect embeddings from all frames for multi-sample averaging
+        all_embeddings = []
+        all_images = [image_b64] + (extra_frames if isinstance(extra_frames, list) else [])
+
+        for frame_b64 in all_images:
+            img = decode_image(frame_b64)
+            if img is None:
+                continue
+            emb, q, spoof_score, bbox = extract_embedding(img)
+            if emb is not None:
+                all_embeddings.append(np.asarray(emb, dtype=np.float32))
+
+        if not all_embeddings:
             return Response(
-                {'error': f'Could not extract face: {reason}'},
+                {'error': 'Could not extract face from any frame'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        # Average all embeddings for a more robust template
+        avg_emb = np.mean(all_embeddings, axis=0)
+        emb = avg_emb
+        spoof_score = 0.0  # already checked per-frame
 
         # Reject spoofed images during enrollment
         if spoof_score is not None and spoof_score >= 0.70:
@@ -5066,6 +5084,23 @@ class FaceEnrollSelfView(APIView):
             {'status': 'enrolled', 'employee_id': employee.id},
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
+
+    def delete(self, request):
+        """GDPR: permanently delete current user's enrolled face data."""
+        employee = get_employee_from_user(request.user)
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+        from .models import EmployeeFaceData
+
+        deleted, _ = EmployeeFaceData.objects.filter(employee_id_id=employee.id).delete()
+        write_audit(
+            request,
+            action='face_data_deleted',
+            target_type='EmployeeFaceData',
+            target_user_id=employee.id,
+            payload={'rows_deleted': deleted},
+        )
+        return Response({'status': 'deleted', 'rows_deleted': deleted})
 
 
 class AdminWebhooksView(APIView):

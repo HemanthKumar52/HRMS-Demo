@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:no_screenshot/no_screenshot.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -130,10 +131,22 @@ class _PayslipViewerScreenState extends State<PayslipViewerScreen> {
     try {
       final response = await ApiService.getPayslipPdf(_resolvedId!);
       if (response.statusCode == 200 && response.bodyBytes.length > 500) {
-        final dir = await getApplicationDocumentsDirectory();
+        // Save to Downloads folder (visible in file manager)
+        Directory dir;
+        if (Platform.isAndroid) {
+          dir = Directory('/storage/emulated/0/Download');
+          if (!await dir.exists()) {
+            dir = await getApplicationDocumentsDirectory();
+          }
+        } else {
+          dir = await getApplicationDocumentsDirectory();
+        }
         final fileName = 'payslip_${widget.month}_${widget.year}.pdf';
         final file = File('${dir.path}/$fileName');
         await file.writeAsBytes(response.bodyBytes);
+
+        // Open PDF in external viewer
+        await OpenFilex.open(file.path);
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(

@@ -21,7 +21,7 @@ class NotificationService {
     if (_initialized) return;
 
     const androidSettings = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
+      '@drawable/ic_notification',
     );
 
     // iOS: request permissions AND enable foreground presentation
@@ -90,6 +90,11 @@ class NotificationService {
 
   void _onNotificationTap(NotificationResponse response) {
     debugPrint('NOTIF_TAP: payload=${response.payload}');
+    final payload = response.payload ?? '';
+    // Don't navigate for download-type notifications — just dismiss
+    if (payload == 'payslip_download') {
+      return;
+    }
     onNotificationTap?.call();
   }
 
