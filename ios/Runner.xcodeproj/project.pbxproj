@@ -7,37 +7,64 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		025CA0475333C5E44E54A445 /* PayslipViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C89BC6266F45B21D2F6B13 /* PayslipViewModel.swift */; };
 		02A163FB78645B98E1437E50 /* AttendanceCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A2672961EF38B61339048DF /* AttendanceCheckInView.swift */; };
 		091A77D57CFAC8A2AFCFA049 /* ProfileSheetViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7695C0E789958BE9447EF2A2 /* ProfileSheetViewModel.swift */; };
 		097E935D8B5688561C67B0B7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 092B7F72BB9F31158A04975A /* SettingsView.swift */; };
+		0DDEBD5EF9A00B10798683F5 /* ShellViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9BDA3F20A345037773B8EA5 /* ShellViewModel.swift */; };
+		12A0EDDBA7E2FF958C7595C5 /* NativePayslipPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B5E82F59E40958DEE67EEFA /* NativePayslipPlatformView.swift */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		176B20A65FB3AE2EE63EDD38 /* NativeSettingsPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4916D163BA9E10FCF80909CC /* NativeSettingsPlatformView.swift */; };
+		1E03FDA79FD6A70249B475E4 /* RequestsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84FB0C8521F9173960071699 /* RequestsView.swift */; };
+		236888BF6A550C7B3AD0FB0C /* DirectoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11051BA5FB755CC409F99C46 /* DirectoryViewModel.swift */; };
+		24E211C53C986FDB3A042132 /* NativeSplashOnboardingPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BC89C6A11EEFCBDEA60AA7B /* NativeSplashOnboardingPlatformView.swift */; };
+		2AAF0572119F39DBAB1D0209 /* NativeAdminPanelPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57EA866B033484EE45025F2B /* NativeAdminPanelPlatformView.swift */; };
 		2F2DE60DEFE6FE967DFA3E06 /* AttendanceActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 292EE1110E318CCBB2EC2872 /* AttendanceActivityWidget.swift */; };
 		309B42BDCA3B5592FE7E9E55 /* LiveActivityBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC43EFFEF72B92E3F8BB632A /* LiveActivityBridge.swift */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3A8F8ACCE90D82E75881553E /* ProfileSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C5CEE4C0B75037625E5F704 /* ProfileSheetView.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
+		3C03CF04351CA59A7DAC950F /* NativeShellPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DA1DA2DAA7FB883926E08C4 /* NativeShellPlatformView.swift */; };
+		44CB6440237175D113DA2674 /* SplashOnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A66F77A78DF3A83DD9228089 /* SplashOnboardingViewModel.swift */; };
 		45FBA47AB93AE9F27105F9EE /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E080B919A211A2740BB107C /* LoginView.swift */; };
 		4613047085CA70160A2A13B9 /* AttendanceWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5EBA6DB2E69A291A2852D28 /* AttendanceWidgetBundle.swift */; };
 		5415A1CBFA6859EF14D35B2B /* GlassEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB431FF31335EA60EBF39D08 /* GlassEffects.swift */; };
+		563F842889FE8570C4750735 /* ManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1F524C7EC002C7BB94E2A7A /* ManagerView.swift */; };
 		5861D457C73BB1EF690E34CD /* NativeDashboardPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46083E6CF51EE1A5B98DCA46 /* NativeDashboardPlatformView.swift */; };
+		5D736E03B15C7024FF3207CF /* RequestsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0798B68452204D1DB77931C6 /* RequestsViewModel.swift */; };
+		5D999FE0A31EEEC5245194F4 /* ShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8FD6465A8E9FF3DAC2EBCFB /* ShellView.swift */; };
 		6CFD22E3054EDFD10690AE49 /* NativeToastService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79373C885A1BF596282CB966 /* NativeToastService.swift */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
 		83FE61A2BD5F2D3A31A98500 /* SecurityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5495F3F33809ACE4801C271C /* SecurityService.swift */; };
 		84B448D68864146E4F0676D6 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D9A8D53D463B68A0E1796FD /* Foundation.framework */; };
 		8F1B5F117B7C051F13590D65 /* AttendanceCheckInViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B78ABFF2CF7B7CD27E22FAFE /* AttendanceCheckInViewModel.swift */; };
+		94185C7BA27E4202CC894E49 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 247702D8C03FB101BB7F1AEB /* SplashView.swift */; };
+		948CD7F14B7697584B090AC5 /* NativeHRDashboardPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5F42D9390C4AC4D11BD7FC3 /* NativeHRDashboardPlatformView.swift */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		9A0422A88013A595D43094D2 /* LoginViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 131D08F4AAE5D5A946B68E1F /* LoginViewModel.swift */; };
 		ABB6862288EE693A99C3A293 /* NativeProfilePlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 378A8B09B293E62CD0397FAF /* NativeProfilePlatformView.swift */; };
 		B242798A696AE74DB0ED31C8 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2098508F0CDD3F1014AC6D18 /* Pods_RunnerTests.framework */; };
+		B26DBDF8B148D292E93CB2E6 /* NativeRequestsPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A57CC2C983BCC669DA2BC5D3 /* NativeRequestsPlatformView.swift */; };
+		C18791EAAE06EA37BE24589F /* NativeManagerPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D19053E13A9D0D046874831B /* NativeManagerPlatformView.swift */; };
 		CB45A077118277D49C2A2BD4 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37327D2382F8EBCE47DAEFA3 /* DashboardView.swift */; };
+		CCB8D875168CD6FBA95B4C99 /* AdminPanelViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD14397A0027D7C98A589BC1 /* AdminPanelViewModel.swift */; };
+		CE6E53E25105A86E84FF63A9 /* HRViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C931FC1D0BEE38BD69C28F98 /* HRViewModel.swift */; };
 		D8BD41C16EB3A9351444B425 /* NativeLoginPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1453CA735AC4BCBD73F7A2 /* NativeLoginPlatformView.swift */; };
+		DA688A8BD599C745C721E8FC /* PayslipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1741F6711A8D8E5EA233D8 /* PayslipView.swift */; };
+		DF4D8572DA12180DD75D63C2 /* AttendanceScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F9FC41D8F8771BB1212569C /* AttendanceScreenView.swift */; };
 		E3FECA8A7C6A1DE8BD29B6FB /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCD26CE31460D50287CFD4D3 /* DashboardViewModel.swift */; };
+		E6EE73F8A425E7F6E25F5F1E /* ManagerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DE16BE40E81F381B11C32B0 /* ManagerViewModel.swift */; };
+		E7E390FA10C40617E8847B0D /* NativeDirectoryPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B508C8B2B5E741D68446A2 /* NativeDirectoryPlatformView.swift */; };
+		E9A0A6597FFAA1A934EB7A4E /* NativeAttendanceScreenPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87E67EF7EA84FDA8D6AC3B19 /* NativeAttendanceScreenPlatformView.swift */; };
+		EA798241204621919D23F6E6 /* DirectoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5DA62E1320AEC7E85FAAD82 /* DirectoryView.swift */; };
+		EB33803B8C9584A23053A58D /* AttendanceScreenViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 730EE721DBDA41C9DE670096 /* AttendanceScreenViewModel.swift */; };
+		EC0824E79EEB1A837BF6A305 /* AdminPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420609FCBB9783F2E2B1F26B /* AdminPanelView.swift */; };
 		EC160A1016840BC6D929EDE2 /* NativeAttendancePlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A33A7B282D6E408C561B9FC /* NativeAttendancePlatformView.swift */; };
 		ED59CC179AB0208848817B37 /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73C41B2C30356AB366095691 /* SettingsViewModel.swift */; };
+		F13463EEF21AD7FFE1B9FDB0 /* HRDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33E926AC8CCB354CB0B73F6A /* HRDashboardView.swift */; };
 		FA8A77D7DA633542267AE55B /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D7BB7440D240B9D384B4A168 /* Pods_Runner.framework */; };
 /* End PBXBuildFile section */
 
@@ -76,26 +103,38 @@
 
 /* Begin PBXFileReference section */
 		0161F3AF52776DFFB2070260 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
+		0798B68452204D1DB77931C6 /* RequestsViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RequestsViewModel.swift; path = RequestsViewModel.swift; sourceTree = "<group>"; };
 		092B7F72BB9F31158A04975A /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		0A1741F6711A8D8E5EA233D8 /* PayslipView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PayslipView.swift; path = PayslipView.swift; sourceTree = "<group>"; };
+		11051BA5FB755CC409F99C46 /* DirectoryViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DirectoryViewModel.swift; path = DirectoryViewModel.swift; sourceTree = "<group>"; };
 		131D08F4AAE5D5A946B68E1F /* LoginViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LoginViewModel.swift; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
 		18E5F54E611125CB1D8A5035 /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
+		1B5E82F59E40958DEE67EEFA /* NativePayslipPlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NativePayslipPlatformView.swift; path = NativePayslipPlatformView.swift; sourceTree = "<group>"; };
 		2098508F0CDD3F1014AC6D18 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		247702D8C03FB101BB7F1AEB /* SplashView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SplashView.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		282B53EBBBFAC2AFB652DA19 /* AttendanceWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AttendanceWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		292EE1110E318CCBB2EC2872 /* AttendanceActivityWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AttendanceActivityWidget.swift; path = AttendanceWidget/AttendanceActivityWidget.swift; sourceTree = "<group>"; };
 		2A33A7B282D6E408C561B9FC /* NativeAttendancePlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeAttendancePlatformView.swift; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		33E926AC8CCB354CB0B73F6A /* HRDashboardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HRDashboardView.swift; path = HRDashboardView.swift; sourceTree = "<group>"; };
 		37327D2382F8EBCE47DAEFA3 /* DashboardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		378A8B09B293E62CD0397FAF /* NativeProfilePlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeProfilePlatformView.swift; sourceTree = "<group>"; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
+		3BC89C6A11EEFCBDEA60AA7B /* NativeSplashOnboardingPlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NativeSplashOnboardingPlatformView.swift; path = NativeSplashOnboardingPlatformView.swift; sourceTree = "<group>"; };
 		3D9A8D53D463B68A0E1796FD /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		420609FCBB9783F2E2B1F26B /* AdminPanelView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AdminPanelView.swift; path = AdminPanelView.swift; sourceTree = "<group>"; };
 		46083E6CF51EE1A5B98DCA46 /* NativeDashboardPlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeDashboardPlatformView.swift; sourceTree = "<group>"; };
 		4916D163BA9E10FCF80909CC /* NativeSettingsPlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeSettingsPlatformView.swift; sourceTree = "<group>"; };
 		4FA23F8D0DDBBDF62B52E2F4 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		5495F3F33809ACE4801C271C /* SecurityService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SecurityService.swift; sourceTree = "<group>"; };
+		57EA866B033484EE45025F2B /* NativeAdminPanelPlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NativeAdminPanelPlatformView.swift; path = NativeAdminPanelPlatformView.swift; sourceTree = "<group>"; };
+		5DE16BE40E81F381B11C32B0 /* ManagerViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ManagerViewModel.swift; path = ManagerViewModel.swift; sourceTree = "<group>"; };
 		6D1453CA735AC4BCBD73F7A2 /* NativeLoginPlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeLoginPlatformView.swift; sourceTree = "<group>"; };
+		6DA1DA2DAA7FB883926E08C4 /* NativeShellPlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NativeShellPlatformView.swift; path = NativeShellPlatformView.swift; sourceTree = "<group>"; };
+		730EE721DBDA41C9DE670096 /* AttendanceScreenViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AttendanceScreenViewModel.swift; path = AttendanceScreenViewModel.swift; sourceTree = "<group>"; };
 		73C41B2C30356AB366095691 /* SettingsViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -104,6 +143,8 @@
 		79373C885A1BF596282CB966 /* NativeToastService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeToastService.swift; sourceTree = "<group>"; };
 		7A2672961EF38B61339048DF /* AttendanceCheckInView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AttendanceCheckInView.swift; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
+		84FB0C8521F9173960071699 /* RequestsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RequestsView.swift; path = RequestsView.swift; sourceTree = "<group>"; };
+		87E67EF7EA84FDA8D6AC3B19 /* NativeAttendanceScreenPlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NativeAttendanceScreenPlatformView.swift; path = NativeAttendanceScreenPlatformView.swift; sourceTree = "<group>"; };
 		8E080B919A211A2740BB107C /* LoginView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
 		9740EEB31CF90195004384FC /* Generated.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Generated.xcconfig; path = Flutter/Generated.xcconfig; sourceTree = "<group>"; };
@@ -114,16 +155,29 @@
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9B403476EFBB235C9D9A0DAC /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		9C5CEE4C0B75037625E5F704 /* ProfileSheetView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProfileSheetView.swift; sourceTree = "<group>"; };
+		9F9FC41D8F8771BB1212569C /* AttendanceScreenView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AttendanceScreenView.swift; path = AttendanceScreenView.swift; sourceTree = "<group>"; };
+		A1B508C8B2B5E741D68446A2 /* NativeDirectoryPlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NativeDirectoryPlatformView.swift; path = NativeDirectoryPlatformView.swift; sourceTree = "<group>"; };
+		A57CC2C983BCC669DA2BC5D3 /* NativeRequestsPlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NativeRequestsPlatformView.swift; path = NativeRequestsPlatformView.swift; sourceTree = "<group>"; };
+		A66F77A78DF3A83DD9228089 /* SplashOnboardingViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SplashOnboardingViewModel.swift; path = SplashOnboardingViewModel.swift; sourceTree = "<group>"; };
 		B00FCD009CDDC573B2E4FC69 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
+		B0C89BC6266F45B21D2F6B13 /* PayslipViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PayslipViewModel.swift; path = PayslipViewModel.swift; sourceTree = "<group>"; };
+		B5DA62E1320AEC7E85FAAD82 /* DirectoryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DirectoryView.swift; path = DirectoryView.swift; sourceTree = "<group>"; };
 		B5EBA6DB2E69A291A2852D28 /* AttendanceWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AttendanceWidgetBundle.swift; path = AttendanceWidget/AttendanceWidgetBundle.swift; sourceTree = "<group>"; };
 		B78ABFF2CF7B7CD27E22FAFE /* AttendanceCheckInViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AttendanceCheckInViewModel.swift; sourceTree = "<group>"; };
 		B7AFE389C5058FE9699F679A /* AttendanceWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; name = AttendanceWidget.entitlements; path = AttendanceWidget/AttendanceWidget.entitlements; sourceTree = "<group>"; };
+		B8FD6465A8E9FF3DAC2EBCFB /* ShellView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShellView.swift; path = ShellView.swift; sourceTree = "<group>"; };
 		BC43EFFEF72B92E3F8BB632A /* LiveActivityBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LiveActivityBridge.swift; sourceTree = "<group>"; };
 		BCD26CE31460D50287CFD4D3 /* DashboardViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
+		C931FC1D0BEE38BD69C28F98 /* HRViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HRViewModel.swift; path = HRViewModel.swift; sourceTree = "<group>"; };
 		CB431FF31335EA60EBF39D08 /* GlassEffects.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GlassEffects.swift; sourceTree = "<group>"; };
+		D19053E13A9D0D046874831B /* NativeManagerPlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NativeManagerPlatformView.swift; path = NativeManagerPlatformView.swift; sourceTree = "<group>"; };
+		D1F524C7EC002C7BB94E2A7A /* ManagerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ManagerView.swift; path = ManagerView.swift; sourceTree = "<group>"; };
 		D7BB7440D240B9D384B4A168 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		DEAE1025D12BAD0DDA265A95 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = Info.plist; path = AttendanceWidget/Info.plist; sourceTree = "<group>"; };
 		F42FD0177A857FF4B724D59A /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
+		F5F42D9390C4AC4D11BD7FC3 /* NativeHRDashboardPlatformView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NativeHRDashboardPlatformView.swift; path = NativeHRDashboardPlatformView.swift; sourceTree = "<group>"; };
+		F9BDA3F20A345037773B8EA5 /* ShellViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShellViewModel.swift; path = ShellViewModel.swift; sourceTree = "<group>"; };
+		FD14397A0027D7C98A589BC1 /* AdminPanelViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AdminPanelViewModel.swift; path = AdminPanelViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -192,6 +246,33 @@
 				79373C885A1BF596282CB966 /* NativeToastService.swift */,
 				BC43EFFEF72B92E3F8BB632A /* LiveActivityBridge.swift */,
 				CB431FF31335EA60EBF39D08 /* GlassEffects.swift */,
+				9F9FC41D8F8771BB1212569C /* AttendanceScreenView.swift */,
+				730EE721DBDA41C9DE670096 /* AttendanceScreenViewModel.swift */,
+				87E67EF7EA84FDA8D6AC3B19 /* NativeAttendanceScreenPlatformView.swift */,
+				84FB0C8521F9173960071699 /* RequestsView.swift */,
+				0798B68452204D1DB77931C6 /* RequestsViewModel.swift */,
+				A57CC2C983BCC669DA2BC5D3 /* NativeRequestsPlatformView.swift */,
+				0A1741F6711A8D8E5EA233D8 /* PayslipView.swift */,
+				B0C89BC6266F45B21D2F6B13 /* PayslipViewModel.swift */,
+				1B5E82F59E40958DEE67EEFA /* NativePayslipPlatformView.swift */,
+				420609FCBB9783F2E2B1F26B /* AdminPanelView.swift */,
+				FD14397A0027D7C98A589BC1 /* AdminPanelViewModel.swift */,
+				57EA866B033484EE45025F2B /* NativeAdminPanelPlatformView.swift */,
+				D1F524C7EC002C7BB94E2A7A /* ManagerView.swift */,
+				5DE16BE40E81F381B11C32B0 /* ManagerViewModel.swift */,
+				D19053E13A9D0D046874831B /* NativeManagerPlatformView.swift */,
+				B8FD6465A8E9FF3DAC2EBCFB /* ShellView.swift */,
+				F9BDA3F20A345037773B8EA5 /* ShellViewModel.swift */,
+				6DA1DA2DAA7FB883926E08C4 /* NativeShellPlatformView.swift */,
+				247702D8C03FB101BB7F1AEB /* SplashView.swift */,
+				A66F77A78DF3A83DD9228089 /* SplashOnboardingViewModel.swift */,
+				3BC89C6A11EEFCBDEA60AA7B /* NativeSplashOnboardingPlatformView.swift */,
+				B5DA62E1320AEC7E85FAAD82 /* DirectoryView.swift */,
+				11051BA5FB755CC409F99C46 /* DirectoryViewModel.swift */,
+				A1B508C8B2B5E741D68446A2 /* NativeDirectoryPlatformView.swift */,
+				33E926AC8CCB354CB0B73F6A /* HRDashboardView.swift */,
+				C931FC1D0BEE38BD69C28F98 /* HRViewModel.swift */,
+				F5F42D9390C4AC4D11BD7FC3 /* NativeHRDashboardPlatformView.swift */,
 			);
 			name = NativeViews;
 			path = Runner/NativeViews;
@@ -562,6 +643,33 @@
 				6CFD22E3054EDFD10690AE49 /* NativeToastService.swift in Sources */,
 				309B42BDCA3B5592FE7E9E55 /* LiveActivityBridge.swift in Sources */,
 				5415A1CBFA6859EF14D35B2B /* GlassEffects.swift in Sources */,
+				DF4D8572DA12180DD75D63C2 /* AttendanceScreenView.swift in Sources */,
+				EB33803B8C9584A23053A58D /* AttendanceScreenViewModel.swift in Sources */,
+				E9A0A6597FFAA1A934EB7A4E /* NativeAttendanceScreenPlatformView.swift in Sources */,
+				1E03FDA79FD6A70249B475E4 /* RequestsView.swift in Sources */,
+				5D736E03B15C7024FF3207CF /* RequestsViewModel.swift in Sources */,
+				B26DBDF8B148D292E93CB2E6 /* NativeRequestsPlatformView.swift in Sources */,
+				DA688A8BD599C745C721E8FC /* PayslipView.swift in Sources */,
+				025CA0475333C5E44E54A445 /* PayslipViewModel.swift in Sources */,
+				12A0EDDBA7E2FF958C7595C5 /* NativePayslipPlatformView.swift in Sources */,
+				EC0824E79EEB1A837BF6A305 /* AdminPanelView.swift in Sources */,
+				CCB8D875168CD6FBA95B4C99 /* AdminPanelViewModel.swift in Sources */,
+				2AAF0572119F39DBAB1D0209 /* NativeAdminPanelPlatformView.swift in Sources */,
+				563F842889FE8570C4750735 /* ManagerView.swift in Sources */,
+				E6EE73F8A425E7F6E25F5F1E /* ManagerViewModel.swift in Sources */,
+				C18791EAAE06EA37BE24589F /* NativeManagerPlatformView.swift in Sources */,
+				5D999FE0A31EEEC5245194F4 /* ShellView.swift in Sources */,
+				0DDEBD5EF9A00B10798683F5 /* ShellViewModel.swift in Sources */,
+				3C03CF04351CA59A7DAC950F /* NativeShellPlatformView.swift in Sources */,
+				94185C7BA27E4202CC894E49 /* SplashView.swift in Sources */,
+				44CB6440237175D113DA2674 /* SplashOnboardingViewModel.swift in Sources */,
+				24E211C53C986FDB3A042132 /* NativeSplashOnboardingPlatformView.swift in Sources */,
+				EA798241204621919D23F6E6 /* DirectoryView.swift in Sources */,
+				236888BF6A550C7B3AD0FB0C /* DirectoryViewModel.swift in Sources */,
+				E7E390FA10C40617E8847B0D /* NativeDirectoryPlatformView.swift in Sources */,
+				F13463EEF21AD7FFE1B9FDB0 /* HRDashboardView.swift in Sources */,
+				CE6E53E25105A86E84FF63A9 /* HRViewModel.swift in Sources */,
+				948CD7F14B7697584B090AC5 /* NativeHRDashboardPlatformView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

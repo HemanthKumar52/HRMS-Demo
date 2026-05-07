@@ -50,5 +50,71 @@ import UIKit
       NativeLoginViewFactory(messenger: messenger),
       withId: "ppulse/native-login"
     )
+
+    // Attendance Screen (calendar/history)
+    registrar.register(
+      NativeAttendanceScreenViewFactory(messenger: messenger),
+      withId: "ppulse/native-attendance-screen"
+    )
+
+    // Requests
+    registrar.register(
+      NativeRequestsViewFactory(messenger: messenger),
+      withId: "ppulse/native-requests"
+    )
+
+    // Payslip
+    registrar.register(
+      NativePayslipViewFactory(messenger: messenger),
+      withId: "ppulse/native-payslip"
+    )
+
+    // Admin Panel
+    registrar.register(
+      NativeAdminPanelViewFactory(messenger: messenger),
+      withId: "ppulse/native-admin-panel"
+    )
+
+    // Manager
+    registrar.register(
+      NativeManagerViewFactory(messenger: messenger),
+      withId: "ppulse/native-manager"
+    )
+
+    // Shell (Tab Container)
+    registrar.register(
+      NativeShellViewFactory(messenger: messenger),
+      withId: "ppulse/native-shell"
+    )
+
+    // Splash
+    registrar.register(
+      NativeSplashViewFactory(messenger: messenger),
+      withId: "ppulse/native-splash"
+    )
+
+    // Onboarding
+    registrar.register(
+      NativeOnboardingViewFactory(messenger: messenger),
+      withId: "ppulse/native-onboarding"
+    )
+
+    // Directory
+    registrar.register(
+      NativeDirectoryViewFactory(messenger: messenger),
+      withId: "ppulse/native-directory"
+    )
+
+    // Employee Detail
+    registrar.register(
+      NativeEmployeeDetailViewFactory(messenger: messenger),
+      withId: "ppulse/native-employee-detail"
+    )
+
+    // HR Dashboard
+    registrar.register(
+      NativeHRDashboardViewFactory(messenger: messenger),
+      withId: "ppulse/native-hr-dashboard"
+    )
   }
 }
