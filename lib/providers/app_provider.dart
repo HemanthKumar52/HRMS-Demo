@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/device_security_service.dart';
 import '../services/live_activity_service.dart';
 import '../services/notification_service.dart';
 import '../services/api_service.dart';
@@ -365,6 +366,15 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> punchIn() async {
     try {
+      // Block mock/fake GPS
+      if (await DeviceSecurityService.instance.isMockLocationEnabled()) {
+        triggerDynamicIsland(
+          'Fake location detected — punch blocked',
+          Icons.gps_off,
+          Colors.red,
+        );
+        return;
+      }
       // Capture location + device info silently
       final metadata = await PunchMetadataService.instance.capture();
       await ApiService.punchIn(metadata);
@@ -421,6 +431,10 @@ class AppProvider extends ChangeNotifier {
     List<String>? extraFrames,
   }) async {
     try {
+      // Block mock/fake GPS
+      if (await DeviceSecurityService.instance.isMockLocationEnabled()) {
+        return 'MOCK_LOCATION';
+      }
       final metadata = await PunchMetadataService.instance.capture();
       await ApiService.facePunchIn(
         imageBase64: imageBase64,

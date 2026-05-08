@@ -487,10 +487,19 @@ class _LoginScreenState extends State<LoginScreen>
                                             ),
                                           ],
                                         ),
-                                        child: const Icon(
-                                          Icons.person,
-                                          color: Colors.white,
-                                          size: 36,
+                                        child: ClipOval(
+                                          child: Image.asset(
+                                            'assets/ic_launcher.png',
+                                            width: 50,
+                                            height: 50,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                const Icon(
+                                                  Icons.person,
+                                                  color: Colors.white,
+                                                  size: 36,
+                                                ),
+                                          ),
                                         ),
                                       );
                                     },

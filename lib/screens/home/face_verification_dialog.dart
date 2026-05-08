@@ -293,6 +293,8 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
         return 'Unknown user — verification failed.';
       case 'BIOMETRIC_PUNCH_ACTIVE':
         return 'Already checked in via biometric device.';
+      case 'MOCK_LOCATION':
+        return 'Fake GPS detected. Disable mock locations to check in.';
       default:
         return 'Clock in failed. Please try again.';
     }
