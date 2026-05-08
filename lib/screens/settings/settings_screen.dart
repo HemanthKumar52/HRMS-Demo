@@ -14,6 +14,7 @@ import '../../providers/app_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/app_lock_service.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../utils/responsive.dart';
 import '../dashboard/org_chart_screen.dart';
 import 'face_enrollment_screen.dart';
 
@@ -97,514 +98,519 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       body: SingleChildScrollView(
         physics: isApplePlatform ? const BouncingScrollPhysics() : null,
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Theme section
-            Text(
-                  'Appearance',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                )
-                .animate()
-                .fadeIn(duration: 420.ms, delay: (0 * 80).ms)
-                .slideY(
-                  begin: 0.12,
-                  end: 0,
-                  duration: 420.ms,
-                  delay: (0 * 80).ms,
-                  curve: Curves.easeOutCubic,
-                ),
-            const SizedBox(height: 12),
-            NeuCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Theme Mode',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Choose your preferred appearance',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: 16),
-                      _ThemeTile(
-                        icon: Icons.light_mode_rounded,
-                        label: 'Light Mode',
-                        subtitle: 'Clean and bright',
-                        color: AppColors.warning,
-                        isSelected:
-                            themeProvider.themeMode == AppThemeMode.light,
-                        onTap: () => themeProvider.setTheme(AppThemeMode.light),
-                      ),
-                      const SizedBox(height: 8),
-                      _ThemeTile(
-                        icon: Icons.dark_mode_rounded,
-                        label: 'Dark Mode',
-                        subtitle: 'Easy on the eyes',
-                        color: AppColors.secondary,
-                        isSelected:
-                            themeProvider.themeMode == AppThemeMode.dark,
-                        onTap: () => themeProvider.setTheme(AppThemeMode.dark),
-                      ),
-                    ],
-                  ),
-                )
-                .animate()
-                .fadeIn(duration: 420.ms, delay: (1 * 80).ms)
-                .slideY(
-                  begin: 0.12,
-                  end: 0,
-                  duration: 420.ms,
-                  delay: (1 * 80).ms,
-                  curve: Curves.easeOutCubic,
-                ),
-            const SizedBox(height: 24),
-
-            // Notifications section
-            Text(
-                  'Notifications',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                )
-                .animate()
-                .fadeIn(duration: 420.ms, delay: (2 * 80).ms)
-                .slideY(
-                  begin: 0.12,
-                  end: 0,
-                  duration: 420.ms,
-                  delay: (2 * 80).ms,
-                  curve: Curves.easeOutCubic,
-                ),
-            const SizedBox(height: 12),
-            NeuCard(
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.notifications_outlined,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Push Notifications',
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Receive alerts for approvals, announcements',
-                              style: theme.textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Switch.adaptive(
-                        value: _notificationsEnabled,
-                        onChanged: _setNotificationsEnabled,
-                        activeColor: AppColors.primary,
-                      ),
-                    ],
-                  ),
-                )
-                .animate()
-                .fadeIn(duration: 420.ms, delay: (3 * 80).ms)
-                .slideY(
-                  begin: 0.12,
-                  end: 0,
-                  duration: 420.ms,
-                  delay: (3 * 80).ms,
-                  curve: Curves.easeOutCubic,
-                ),
-            const SizedBox(height: 24),
-
-            // Face Enrollment — only show if not enrolled, or if admin
-            if (!_isFaceEnrolled || appProvider.role == UserRole.admin)
-              NeuCard(
-                child: InkWell(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const FaceEnrollmentScreen(),
+        child: ResponsiveCenter(
+          maxWidth: 600,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Theme section
+              Text(
+                    'Appearance',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
+                  )
+                  .animate()
+                  .fadeIn(duration: 420.ms, delay: (0 * 80).ms)
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: (0 * 80).ms,
+                    curve: Curves.easeOutCubic,
                   ),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
+              const SizedBox(height: 12),
+              NeuCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Theme Mode',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.face_retouching_natural,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Face Enrollment',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              'Set up face check-in',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: isDark ? Colors.white38 : Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.chevron_right,
-                        color: isDark ? Colors.white24 : Colors.grey.shade400,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-            // App Lock (optional biometric/PIN)
-            if (_deviceSupportsLock)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: NeuCard(
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.lock_outline,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'App Lock',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              'Use device biometrics or PIN to lock app',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: isDark ? Colors.white38 : Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Switch.adaptive(
-                        value: _appLockEnabled,
-                        onChanged: _toggleAppLock,
-                        activeColor: AppColors.primary,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-            const SizedBox(height: 24),
-
-            // Sync section
-            Text(
-                  'Data',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                )
-                .animate()
-                .fadeIn(duration: 420.ms, delay: (4 * 80).ms)
-                .slideY(
-                  begin: 0.12,
-                  end: 0,
-                  duration: 420.ms,
-                  delay: (4 * 80).ms,
-                  curve: Curves.easeOutCubic,
-                ),
-            const SizedBox(height: 12),
-            NeuCard(
-                  onTap: _isSyncing
-                      ? null
-                      : () async {
-                          setState(() => _isSyncing = true);
-                          try {
-                            await context
-                                .read<AppProvider>()
-                                .fetchDashboardData();
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text(
-                                  'All data synced successfully',
-                                ),
-                                backgroundColor: AppColors.success,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            );
-                          } catch (e) {
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text(
-                                  'Sync failed. Check your connection.',
-                                ),
-                                backgroundColor: AppColors.danger,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            );
-                          } finally {
-                            if (mounted) setState(() => _isSyncing = false);
-                          }
-                        },
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.success.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: _isSyncing
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: isApplePlatform
-                                    ? const CupertinoActivityIndicator()
-                                    : CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: AppColors.success,
-                                      ),
-                              )
-                            : const Icon(
-                                Icons.sync_rounded,
-                                color: AppColors.success,
-                                size: 20,
-                              ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Sync Data',
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Refresh all data from the server',
-                              style: theme.textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        size: 20,
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.3)
-                            : Colors.black.withValues(alpha: 0.25),
-                      ),
-                    ],
-                  ),
-                )
-                .animate()
-                .fadeIn(duration: 420.ms, delay: (5 * 80).ms)
-                .slideY(
-                  begin: 0.12,
-                  end: 0,
-                  duration: 420.ms,
-                  delay: (5 * 80).ms,
-                  curve: Curves.easeOutCubic,
-                ),
-            const SizedBox(height: 24),
-
-            // General section
-            Text(
-                  'General',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                )
-                .animate()
-                .fadeIn(duration: 420.ms, delay: (6 * 80).ms)
-                .slideY(
-                  begin: 0.12,
-                  end: 0,
-                  duration: 420.ms,
-                  delay: (6 * 80).ms,
-                  curve: Curves.easeOutCubic,
-                ),
-            const SizedBox(height: 12),
-            NeuCard(
-                  child: Column(
-                    children: [
-                      _SettingsRow(
-                        icon: Icons.account_tree_rounded,
-                        label: 'Organisation Chart',
-                        trailing: const SizedBox.shrink(),
-                        onTap: () => Navigator.push(
-                          context,
-                          adaptivePageRoute(child: const OrgChartScreen()),
-                        ),
-                      ),
-                      Divider(
-                        height: 24,
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.06)
-                            : Colors.black.withValues(alpha: 0.08),
-                      ),
-                      // Language selector — commented out for now, ready to activate later.
-                      // Translations are in lib/l10n/ for 9 languages.
-                      // _SettingsRow(
-                      //   icon: Icons.language_rounded,
-                      //   label: 'Language',
-                      //   trailing: Text(
-                      //     _currentLanguageName(),
-                      //     style: theme.textTheme.bodyMedium?.copyWith(
-                      //       color: AppColors.primary,
-                      //       fontWeight: FontWeight.w500,
-                      //     ),
-                      //   ),
-                      //   onTap: () => _showLanguagePicker(context),
-                      // ),
-                      // Divider(
-                      //   height: 24,
-                      //   color: isDark
-                      //       ? Colors.white.withValues(alpha: 0.06)
-                      //       : Colors.black.withValues(alpha: 0.08),
-                      // ),
-                      _SettingsRow(
-                        icon: Icons.info_outline_rounded,
-                        label: 'About',
-                        trailing: Text(
-                          'v$_appVersion',
+                        const SizedBox(height: 4),
+                        Text(
+                          'Choose your preferred appearance',
                           style: theme.textTheme.bodySmall,
                         ),
-                        onTap: () => _showAboutPopup(context),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        _ThemeTile(
+                          icon: Icons.light_mode_rounded,
+                          label: 'Light Mode',
+                          subtitle: 'Clean and bright',
+                          color: AppColors.warning,
+                          isSelected:
+                              themeProvider.themeMode == AppThemeMode.light,
+                          onTap: () =>
+                              themeProvider.setTheme(AppThemeMode.light),
+                        ),
+                        const SizedBox(height: 8),
+                        _ThemeTile(
+                          icon: Icons.dark_mode_rounded,
+                          label: 'Dark Mode',
+                          subtitle: 'Easy on the eyes',
+                          color: AppColors.secondary,
+                          isSelected:
+                              themeProvider.themeMode == AppThemeMode.dark,
+                          onTap: () =>
+                              themeProvider.setTheme(AppThemeMode.dark),
+                        ),
+                      ],
+                    ),
+                  )
+                  .animate()
+                  .fadeIn(duration: 420.ms, delay: (1 * 80).ms)
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: (1 * 80).ms,
+                    curve: Curves.easeOutCubic,
                   ),
-                )
-                .animate()
-                .fadeIn(duration: 420.ms, delay: (5 * 80).ms)
-                .slideY(
-                  begin: 0.12,
-                  end: 0,
-                  duration: 420.ms,
-                  delay: (5 * 80).ms,
-                  curve: Curves.easeOutCubic,
-                ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // Legal section
-            Text(
-                  'Legal',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+              // Notifications section
+              Text(
+                    'Notifications',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  )
+                  .animate()
+                  .fadeIn(duration: 420.ms, delay: (2 * 80).ms)
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: (2 * 80).ms,
+                    curve: Curves.easeOutCubic,
                   ),
-                )
-                .animate()
-                .fadeIn(duration: 420.ms, delay: (6 * 80).ms)
-                .slideY(
-                  begin: 0.12,
-                  end: 0,
-                  duration: 420.ms,
-                  delay: (6 * 80).ms,
-                  curve: Curves.easeOutCubic,
-                ),
-            const SizedBox(height: 12),
-            NeuCard(
-                  child: Column(
-                    children: [
-                      _SettingsRow(
-                        icon: Icons.privacy_tip_outlined,
-                        label: 'Privacy Policy',
-                        trailing: const Icon(
-                          Icons.open_in_new_rounded,
-                          size: 16,
-                          color: AppColors.primary,
+              const SizedBox(height: 12),
+              NeuCard(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.notifications_outlined,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
                         ),
-                        onTap: () {
-                          _showPrivacyPolicy(context);
-                        },
-                      ),
-                      Divider(
-                        height: 24,
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.06)
-                            : Colors.black.withValues(alpha: 0.08),
-                      ),
-                      _SettingsRow(
-                        icon: Icons.description_outlined,
-                        label: 'Terms of Service',
-                        trailing: const Icon(
-                          Icons.open_in_new_rounded,
-                          size: 16,
-                          color: AppColors.primary,
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Push Notifications',
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Receive alerts for approvals, announcements',
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
                         ),
-                        onTap: () {
-                          _showTermsOfService(context);
-                        },
-                      ),
-                    ],
+                        Switch.adaptive(
+                          value: _notificationsEnabled,
+                          onChanged: _setNotificationsEnabled,
+                          activeColor: AppColors.primary,
+                        ),
+                      ],
+                    ),
+                  )
+                  .animate()
+                  .fadeIn(duration: 420.ms, delay: (3 * 80).ms)
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: (3 * 80).ms,
+                    curve: Curves.easeOutCubic,
                   ),
-                )
-                .animate()
-                .fadeIn(duration: 420.ms, delay: (7 * 80).ms)
-                .slideY(
-                  begin: 0.12,
-                  end: 0,
-                  duration: 420.ms,
-                  delay: (7 * 80).ms,
-                  curve: Curves.easeOutCubic,
+              const SizedBox(height: 24),
+
+              // Face Enrollment — only show if not enrolled, or if admin
+              if (!_isFaceEnrolled || appProvider.role == UserRole.admin)
+                NeuCard(
+                  child: InkWell(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const FaceEnrollmentScreen(),
+                      ),
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.face_retouching_natural,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Face Enrollment',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                'Set up face check-in',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: isDark ? Colors.white38 : Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right,
+                          color: isDark ? Colors.white24 : Colors.grey.shade400,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-          ],
+
+              // App Lock (optional biometric/PIN)
+              if (_deviceSupportsLock)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: NeuCard(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.lock_outline,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'App Lock',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                'Use device biometrics or PIN to lock app',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: isDark ? Colors.white38 : Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch.adaptive(
+                          value: _appLockEnabled,
+                          onChanged: _toggleAppLock,
+                          activeColor: AppColors.primary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              const SizedBox(height: 24),
+
+              // Sync section
+              Text(
+                    'Data',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  )
+                  .animate()
+                  .fadeIn(duration: 420.ms, delay: (4 * 80).ms)
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: (4 * 80).ms,
+                    curve: Curves.easeOutCubic,
+                  ),
+              const SizedBox(height: 12),
+              NeuCard(
+                    onTap: _isSyncing
+                        ? null
+                        : () async {
+                            setState(() => _isSyncing = true);
+                            try {
+                              await context
+                                  .read<AppProvider>()
+                                  .fetchDashboardData();
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text(
+                                    'All data synced successfully',
+                                  ),
+                                  backgroundColor: AppColors.success,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              );
+                            } catch (e) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text(
+                                    'Sync failed. Check your connection.',
+                                  ),
+                                  backgroundColor: AppColors.danger,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              );
+                            } finally {
+                              if (mounted) setState(() => _isSyncing = false);
+                            }
+                          },
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: _isSyncing
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: isApplePlatform
+                                      ? const CupertinoActivityIndicator()
+                                      : CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.success,
+                                        ),
+                                )
+                              : const Icon(
+                                  Icons.sync_rounded,
+                                  color: AppColors.success,
+                                  size: 20,
+                                ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Sync Data',
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Refresh all data from the server',
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 20,
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.3)
+                              : Colors.black.withValues(alpha: 0.25),
+                        ),
+                      ],
+                    ),
+                  )
+                  .animate()
+                  .fadeIn(duration: 420.ms, delay: (5 * 80).ms)
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: (5 * 80).ms,
+                    curve: Curves.easeOutCubic,
+                  ),
+              const SizedBox(height: 24),
+
+              // General section
+              Text(
+                    'General',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  )
+                  .animate()
+                  .fadeIn(duration: 420.ms, delay: (6 * 80).ms)
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: (6 * 80).ms,
+                    curve: Curves.easeOutCubic,
+                  ),
+              const SizedBox(height: 12),
+              NeuCard(
+                    child: Column(
+                      children: [
+                        _SettingsRow(
+                          icon: Icons.account_tree_rounded,
+                          label: 'Organisation Chart',
+                          trailing: const SizedBox.shrink(),
+                          onTap: () => Navigator.push(
+                            context,
+                            adaptivePageRoute(child: const OrgChartScreen()),
+                          ),
+                        ),
+                        Divider(
+                          height: 24,
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.06)
+                              : Colors.black.withValues(alpha: 0.08),
+                        ),
+                        // Language selector — commented out for now, ready to activate later.
+                        // Translations are in lib/l10n/ for 9 languages.
+                        // _SettingsRow(
+                        //   icon: Icons.language_rounded,
+                        //   label: 'Language',
+                        //   trailing: Text(
+                        //     _currentLanguageName(),
+                        //     style: theme.textTheme.bodyMedium?.copyWith(
+                        //       color: AppColors.primary,
+                        //       fontWeight: FontWeight.w500,
+                        //     ),
+                        //   ),
+                        //   onTap: () => _showLanguagePicker(context),
+                        // ),
+                        // Divider(
+                        //   height: 24,
+                        //   color: isDark
+                        //       ? Colors.white.withValues(alpha: 0.06)
+                        //       : Colors.black.withValues(alpha: 0.08),
+                        // ),
+                        _SettingsRow(
+                          icon: Icons.info_outline_rounded,
+                          label: 'About',
+                          trailing: Text(
+                            'v$_appVersion',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                          onTap: () => _showAboutPopup(context),
+                        ),
+                      ],
+                    ),
+                  )
+                  .animate()
+                  .fadeIn(duration: 420.ms, delay: (5 * 80).ms)
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: (5 * 80).ms,
+                    curve: Curves.easeOutCubic,
+                  ),
+              const SizedBox(height: 24),
+
+              // Legal section
+              Text(
+                    'Legal',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  )
+                  .animate()
+                  .fadeIn(duration: 420.ms, delay: (6 * 80).ms)
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: (6 * 80).ms,
+                    curve: Curves.easeOutCubic,
+                  ),
+              const SizedBox(height: 12),
+              NeuCard(
+                    child: Column(
+                      children: [
+                        _SettingsRow(
+                          icon: Icons.privacy_tip_outlined,
+                          label: 'Privacy Policy',
+                          trailing: const Icon(
+                            Icons.open_in_new_rounded,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
+                          onTap: () {
+                            _showPrivacyPolicy(context);
+                          },
+                        ),
+                        Divider(
+                          height: 24,
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.06)
+                              : Colors.black.withValues(alpha: 0.08),
+                        ),
+                        _SettingsRow(
+                          icon: Icons.description_outlined,
+                          label: 'Terms of Service',
+                          trailing: const Icon(
+                            Icons.open_in_new_rounded,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
+                          onTap: () {
+                            _showTermsOfService(context);
+                          },
+                        ),
+                      ],
+                    ),
+                  )
+                  .animate()
+                  .fadeIn(duration: 420.ms, delay: (7 * 80).ms)
+                  .slideY(
+                    begin: 0.12,
+                    end: 0,
+                    duration: 420.ms,
+                    delay: (7 * 80).ms,
+                    curve: Curves.easeOutCubic,
+                  ),
+            ],
+          ),
         ),
       ),
     );

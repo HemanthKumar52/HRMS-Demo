@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../utils/responsive.dart';
 import 'admin_biometric_devices_screen.dart';
 import 'admin_geofences_screen.dart';
 import 'admin_round3_screens.dart';
@@ -22,71 +23,75 @@ class AdminSettingsScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: ListView(
-        physics: isApplePlatform ? const BouncingScrollPhysics() : null,
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-        children: [
-          // Configuration
-          _SectionHeader(label: 'CONFIGURATION'),
-          _SettingsGroup(
-            isDark: isDark,
-            bgColor: bgColor,
-            children: [
-              _SettingsTile(
-                icon: Icons.location_on_outlined,
-                iconColor: AppColors.secondary,
-                title: 'Office Geofences',
-                onTap: () => _open(context, const AdminGeofencesScreen()),
-              ),
-            ],
-          ),
+      body: ResponsiveCenter(
+        maxWidth: 600,
+        child: ListView(
+          physics: isApplePlatform ? const BouncingScrollPhysics() : null,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+          children: [
+            // Configuration
+            _SectionHeader(label: 'CONFIGURATION'),
+            _SettingsGroup(
+              isDark: isDark,
+              bgColor: bgColor,
+              children: [
+                _SettingsTile(
+                  icon: Icons.location_on_outlined,
+                  iconColor: AppColors.secondary,
+                  title: 'Office Geofences',
+                  onTap: () => _open(context, const AdminGeofencesScreen()),
+                ),
+              ],
+            ),
 
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-          // Monitoring
-          _SectionHeader(label: 'MONITORING'),
-          _SettingsGroup(
-            isDark: isDark,
-            bgColor: bgColor,
-            children: [
-              _SettingsTile(
-                icon: Icons.map_outlined,
-                iconColor: AppColors.success,
-                title: 'Live Attendance Feed',
-                onTap: () => _open(context, const AdminLiveActivityScreen()),
-              ),
-              _SettingsTile(
-                icon: Icons.campaign_outlined,
-                iconColor: AppColors.warning,
-                title: 'Push Announcements',
-                onTap: () => _open(context, const AdminPushCampaignScreen()),
-              ),
-              _SettingsTile(
-                icon: Icons.face_retouching_natural_rounded,
-                iconColor: AppColors.secondary,
-                title: 'Face Enrollment',
-                onTap: () => _open(context, const AdminFaceEnrollmentsScreen()),
-              ),
-            ],
-          ),
+            // Monitoring
+            _SectionHeader(label: 'MONITORING'),
+            _SettingsGroup(
+              isDark: isDark,
+              bgColor: bgColor,
+              children: [
+                _SettingsTile(
+                  icon: Icons.map_outlined,
+                  iconColor: AppColors.success,
+                  title: 'Live Attendance Feed',
+                  onTap: () => _open(context, const AdminLiveActivityScreen()),
+                ),
+                _SettingsTile(
+                  icon: Icons.campaign_outlined,
+                  iconColor: AppColors.warning,
+                  title: 'Push Announcements',
+                  onTap: () => _open(context, const AdminPushCampaignScreen()),
+                ),
+                _SettingsTile(
+                  icon: Icons.face_retouching_natural_rounded,
+                  iconColor: AppColors.secondary,
+                  title: 'Face Enrollment',
+                  onTap: () =>
+                      _open(context, const AdminFaceEnrollmentsScreen()),
+                ),
+              ],
+            ),
 
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-          // Security
-          _SectionHeader(label: 'SECURITY'),
-          _SettingsGroup(
-            isDark: isDark,
-            bgColor: bgColor,
-            children: [
-              _SettingsTile(
-                icon: Icons.lan_rounded,
-                iconColor: AppColors.danger,
-                title: 'IP Allowlist',
-                onTap: () => _open(context, const AdminAllowedIpsScreen()),
-              ),
-            ],
-          ),
-        ],
+            // Security
+            _SectionHeader(label: 'SECURITY'),
+            _SettingsGroup(
+              isDark: isDark,
+              bgColor: bgColor,
+              children: [
+                _SettingsTile(
+                  icon: Icons.lan_rounded,
+                  iconColor: AppColors.danger,
+                  title: 'IP Allowlist',
+                  onTap: () => _open(context, const AdminAllowedIpsScreen()),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

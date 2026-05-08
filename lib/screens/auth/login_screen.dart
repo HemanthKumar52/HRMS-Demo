@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,6 +18,7 @@ import '../../providers/app_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/punch_metadata_service.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../utils/responsive.dart';
 import '../shell_screen.dart';
 import 'forgot_password_screen.dart';
 
@@ -432,164 +434,141 @@ class _LoginScreenState extends State<LoginScreen>
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 40),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                        child: Container(
-                          width: double.infinity,
-                          constraints: const BoxConstraints(maxWidth: 420),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 32,
-                            vertical: 44,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF1A1A2E,
-                            ).withValues(alpha: 0.75),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.08),
+                child: ResponsiveCenter(
+                  maxWidth: 450,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 40),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                          child: Container(
+                            width: double.infinity,
+                            constraints: const BoxConstraints(maxWidth: 420),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 44,
                             ),
-                          ),
-                          child: Column(
-                            children: [
-                              // ═══ PURPLE PERSON ICON (matching web) ═══
-                              AnimatedBuilder(
-                                    animation: _pulseController,
-                                    builder: (_, __) {
-                                      final glow =
-                                          12 + _pulseController.value * 16;
-                                      return Container(
-                                        width: 72,
-                                        height: 72,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          gradient: const LinearGradient(
-                                            begin: Alignment.topCenter,
-                                            end: Alignment.bottomCenter,
-                                            colors: [
-                                              Color(0xFF9B6DFF),
-                                              Color(0xFF6B3FA0),
-                                            ],
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFF1A1A2E,
+                              ).withValues(alpha: 0.75),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.08),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                // ═══ LOGO: Icon pill + Text pill (vertical, matching web style) ═══
+                                Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        // Icon pill — 72x72 white circle
+                                        Container(
+                                          width: 72,
+                                          height: 72,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            shape: BoxShape.circle,
                                           ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(
-                                                0xFF9B6DFF,
-                                              ).withValues(alpha: 0.4),
-                                              blurRadius: glow,
-                                            ),
-                                          ],
-                                        ),
-                                        child: ClipOval(
+                                          alignment: Alignment.center,
                                           child: Image.asset(
                                             'assets/ic_launcher.png',
-                                            width: 50,
-                                            height: 50,
-                                            fit: BoxFit.cover,
+                                            width: 44,
+                                            height: 44,
+                                            fit: BoxFit.contain,
                                             errorBuilder: (_, __, ___) =>
                                                 const Icon(
                                                   Icons.person,
-                                                  color: Colors.white,
-                                                  size: 36,
+                                                  color: Color(0xFF6B3FA0),
+                                                  size: 32,
                                                 ),
                                           ),
                                         ),
-                                      );
-                                    },
-                                  )
-                                  .animate()
-                                  .scale(
-                                    begin: const Offset(0.5, 0.5),
-                                    end: const Offset(1, 1),
-                                    duration: 700.ms,
-                                    curve: Curves.elasticOut,
-                                  )
-                                  .fadeIn(duration: 500.ms),
-                              const SizedBox(height: 20),
-
-                              // ═══ pPULSE TEXT ═══
-                              RichText(
-                                    text: const TextSpan(
-                                      children: [
-                                        TextSpan(
-                                          text: 'p',
-                                          style: TextStyle(
-                                            color: Color(0xFF9B6DFF),
-                                            fontSize: 28,
-                                            fontWeight: FontWeight.w300,
-                                            fontStyle: FontStyle.italic,
-                                          ),
-                                        ),
-                                        TextSpan(
-                                          text: 'PULSE',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 28,
-                                            fontWeight: FontWeight.w800,
-                                            letterSpacing: 2,
+                                        const SizedBox(height: 16),
+                                        // Text — pPULSE (Inter font, matching web)
+                                        RichText(
+                                          text: TextSpan(
+                                            children: [
+                                              TextSpan(
+                                                text: 'p',
+                                                style: GoogleFonts.inter(
+                                                  color: Colors.white,
+                                                  fontSize: 28,
+                                                  fontWeight: FontWeight.w900,
+                                                  fontStyle: FontStyle.italic,
+                                                ),
+                                              ),
+                                              TextSpan(
+                                                text: 'PULSE',
+                                                style: GoogleFonts.inter(
+                                                  color: Colors.white,
+                                                  fontSize: 28,
+                                                  fontWeight: FontWeight.w100,
+                                                  fontStyle: FontStyle.italic,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ],
-                                    ),
-                                  )
-                                  .animate()
-                                  .fadeIn(duration: 500.ms, delay: 200.ms)
-                                  .slideY(
-                                    begin: 0.15,
-                                    end: 0,
-                                    duration: 500.ms,
-                                    delay: 200.ms,
+                                    )
+                                    .animate()
+                                    .scale(
+                                      begin: const Offset(0.5, 0.5),
+                                      end: const Offset(1, 1),
+                                      duration: 700.ms,
+                                      curve: Curves.elasticOut,
+                                    )
+                                    .fadeIn(duration: 500.ms),
+                                const SizedBox(height: 28),
+
+                                // ═══ TAGLINE ═══
+                                const Text(
+                                  'HRMS, as it should be...',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
                                   ),
-                              const SizedBox(height: 28),
-
-                              // ═══ TAGLINE ═══
-                              const Text(
-                                'HRMS, as it should be...',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w700,
+                                ).animate().fadeIn(
+                                  duration: 500.ms,
+                                  delay: 350.ms,
                                 ),
-                              ).animate().fadeIn(
-                                duration: 500.ms,
-                                delay: 350.ms,
-                              ),
-                              const SizedBox(height: 14),
+                                const SizedBox(height: 14),
 
-                              // ═══ SUBTITLE ═══
-                              Text(
-                                'Experience intelligent HR management with AI-powered insights and automation',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.45),
-                                  fontSize: 13,
-                                  height: 1.6,
+                                // ═══ SUBTITLE ═══
+                                Text(
+                                  'Experience intelligent HR management with AI-powered insights and automation',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.45),
+                                    fontSize: 13,
+                                    height: 1.6,
+                                  ),
+                                ).animate().fadeIn(
+                                  duration: 500.ms,
+                                  delay: 450.ms,
                                 ),
-                              ).animate().fadeIn(
-                                duration: 500.ms,
-                                delay: 450.ms,
-                              ),
-                              const SizedBox(height: 36),
+                                const SizedBox(height: 36),
 
-                              // ═══ LOGIN FORM ═══
-                              _buildLoginForm().animate().fadeIn(
-                                duration: 500.ms,
-                                delay: 550.ms,
-                              ),
-                            ],
+                                // ═══ LOGIN FORM ═══
+                                _buildLoginForm().animate().fadeIn(
+                                  duration: 500.ms,
+                                  delay: 550.ms,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 40),
-                  ],
+                      const SizedBox(height: 40),
+                    ],
+                  ),
                 ),
               ),
             ),

@@ -119,7 +119,7 @@ class NotificationService {
     if (!_initialized) await init();
 
     // Android: max importance, heads-up, full screen intent for guaranteed visibility
-    const androidDetails = AndroidNotificationDetails(
+    final androidDetails = AndroidNotificationDetails(
       'hrms_channel',
       'HRMS Notifications',
       channelDescription: 'Notifications for requests, approvals & alerts',
@@ -129,11 +129,12 @@ class NotificationService {
       playSound: true,
       showWhen: true,
       enableLights: true,
-      ledColor: Color(0xFF6B3FA0),
+      ledColor: const Color(0xFF6B3FA0),
       ledOnMs: 1000,
       ledOffMs: 500,
       ticker: 'PPULSE',
-      styleInformation: BigTextStyleInformation(
+      icon: '@drawable/ic_notification',
+      styleInformation: const BigTextStyleInformation(
         '',
         contentTitle: null,
         summaryText: 'PPULSE',
@@ -141,6 +142,7 @@ class NotificationService {
       category: AndroidNotificationCategory.message,
       visibility: NotificationVisibility.public,
       fullScreenIntent: true,
+      number: _notifId + 1,
     );
 
     // iOS: show alert, badge, sound even when app is in foreground
@@ -160,7 +162,7 @@ class NotificationService {
       presentBanner: true,
     );
 
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
       macOS: macDetails,

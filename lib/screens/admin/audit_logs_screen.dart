@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../utils/responsive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -189,121 +190,124 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: Column(
-        children: [
-          // Top bar: filter + refresh
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
-            child: Row(
-              children: [
-                Text(
-                  '${_items.length} of $_total entries',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.grey,
-                  ),
-                ),
-                const Spacer(),
-                PopupMenuButton<String>(
-                  icon: Badge(
-                    isLabelVisible: _actionFilter != null,
-                    backgroundColor: AppColors.primary,
-                    child: const Icon(Icons.filter_list_rounded),
-                  ),
-                  onSelected: (v) {
-                    setState(() => _actionFilter = v == 'All' ? null : v);
-                    _load(reset: true);
-                  },
-                  itemBuilder: (_) => _filters
-                      .map(
-                        (f) => PopupMenuItem(
-                          value: f,
-                          child: Row(
-                            children: [
-                              if ((_actionFilter == null && f == 'All') ||
-                                  _actionFilter == f)
-                                const Icon(
-                                  Icons.check_rounded,
-                                  size: 18,
-                                  color: AppColors.primary,
-                                )
-                              else
-                                const SizedBox(width: 18),
-                              const SizedBox(width: 8),
-                              Text(_humanAction(f)),
-                            ],
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.download_rounded),
-                  tooltip: 'Export CSV',
-                  onPressed: _exportCsv,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.refresh_rounded),
-                  onPressed: _loading ? null : () => _load(reset: true),
-                ),
-              ],
-            ),
-          ),
-
-          // Timeline list
-          Expanded(
-            child: _items.isEmpty && _loading
-                ? Center(
-                    child: isApplePlatform
-                        ? const CupertinoActivityIndicator(radius: 14)
-                        : const CircularProgressIndicator(
-                            color: AppColors.primary,
-                          ),
-                  )
-                : _error != null
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          color: AppColors.danger,
-                          size: 40,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _error!,
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () => _load(reset: true),
-                          child: const Text('Retry'),
-                        ),
-                      ],
+      body: ResponsiveCenter(
+        child: Column(
+          children: [
+            // Top bar: filter + refresh
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+              child: Row(
+                children: [
+                  Text(
+                    '${_items.length} of $_total entries',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.grey,
                     ),
-                  )
-                : NotificationListener<ScrollNotification>(
-                    onNotification: (n) {
-                      if (n is ScrollEndNotification &&
-                          n.metrics.pixels >= n.metrics.maxScrollExtent - 200) {
-                        _loadMore();
-                      }
-                      return false;
+                  ),
+                  const Spacer(),
+                  PopupMenuButton<String>(
+                    icon: Badge(
+                      isLabelVisible: _actionFilter != null,
+                      backgroundColor: AppColors.primary,
+                      child: const Icon(Icons.filter_list_rounded),
+                    ),
+                    onSelected: (v) {
+                      setState(() => _actionFilter = v == 'All' ? null : v);
+                      _load(reset: true);
                     },
-                    child: RefreshIndicator(
-                      color: AppColors.primary,
-                      onRefresh: () => _load(reset: true),
-                      child: ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                        itemCount: _buildListItems(grouped).length,
-                        itemBuilder: (ctx, i) => _buildListItems(grouped)[i],
+                    itemBuilder: (_) => _filters
+                        .map(
+                          (f) => PopupMenuItem(
+                            value: f,
+                            child: Row(
+                              children: [
+                                if ((_actionFilter == null && f == 'All') ||
+                                    _actionFilter == f)
+                                  const Icon(
+                                    Icons.check_rounded,
+                                    size: 18,
+                                    color: AppColors.primary,
+                                  )
+                                else
+                                  const SizedBox(width: 18),
+                                const SizedBox(width: 8),
+                                Text(_humanAction(f)),
+                              ],
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.download_rounded),
+                    tooltip: 'Export CSV',
+                    onPressed: _exportCsv,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh_rounded),
+                    onPressed: _loading ? null : () => _load(reset: true),
+                  ),
+                ],
+              ),
+            ),
+
+            // Timeline list
+            Expanded(
+              child: _items.isEmpty && _loading
+                  ? Center(
+                      child: isApplePlatform
+                          ? const CupertinoActivityIndicator(radius: 14)
+                          : const CircularProgressIndicator(
+                              color: AppColors.primary,
+                            ),
+                    )
+                  : _error != null
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            color: AppColors.danger,
+                            size: 40,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _error!,
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => _load(reset: true),
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : NotificationListener<ScrollNotification>(
+                      onNotification: (n) {
+                        if (n is ScrollEndNotification &&
+                            n.metrics.pixels >=
+                                n.metrics.maxScrollExtent - 200) {
+                          _loadMore();
+                        }
+                        return false;
+                      },
+                      child: RefreshIndicator(
+                        color: AppColors.primary,
+                        onRefresh: () => _load(reset: true),
+                        child: ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                          itemCount: _buildListItems(grouped).length,
+                          itemBuilder: (ctx, i) => _buildListItems(grouped)[i],
+                        ),
                       ),
                     ),
-                  ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

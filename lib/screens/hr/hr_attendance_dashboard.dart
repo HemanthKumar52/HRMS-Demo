@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/neu_card.dart';
 
 class HrAttendanceDashboard extends StatefulWidget {
@@ -24,409 +25,415 @@ class _HrAttendanceDashboardState extends State<HrAttendanceDashboard> {
 
     return SingleChildScrollView(
       physics: isApplePlatform ? const BouncingScrollPhysics() : null,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Filter Chips
-          SizedBox(
-                height: 38,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: ['Today', 'This Week', 'This Month', 'Custom'].map((
-                    f,
-                  ) {
-                    final isSelected = _selectedFilter == f;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedFilter = f),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppColors.primary
-                                : (isDark
-                                      ? Colors.white.withValues(alpha: 0.08)
-                                      : const Color(0xFFE4E8EE)),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: !isSelected
-                                ? null
-                                : [
-                                    BoxShadow(
-                                      color: AppColors.primary.withValues(
-                                        alpha: 0.3,
-                                      ),
-                                      offset: const Offset(0, 3),
-                                      blurRadius: 8,
-                                    ),
-                                  ],
-                          ),
-                          child: Text(
-                            f,
-                            style: TextStyle(
-                              color: isSelected
-                                  ? Colors.white
-                                  : (isDark
-                                        ? AppColors.darkSubtext
-                                        : AppColors.lightSubtext),
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
+      child: ResponsiveCenter(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Filter Chips
+            SizedBox(
+                  height: 38,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: ['Today', 'This Week', 'This Month', 'Custom']
+                        .map((
+                          f,
+                        ) {
+                          final isSelected = _selectedFilter == f;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: GestureDetector(
+                              onTap: () => setState(() => _selectedFilter = f),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : (isDark
+                                            ? Colors.white.withValues(
+                                                alpha: 0.08,
+                                              )
+                                            : const Color(0xFFE4E8EE)),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: !isSelected
+                                      ? null
+                                      : [
+                                          BoxShadow(
+                                            color: AppColors.primary.withValues(
+                                              alpha: 0.3,
+                                            ),
+                                            offset: const Offset(0, 3),
+                                            blurRadius: 8,
+                                          ),
+                                        ],
+                                ),
+                                child: Text(
+                                  f,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : (isDark
+                                              ? AppColors.darkSubtext
+                                              : AppColors.lightSubtext),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                          );
+                        })
+                        .toList(),
+                  ),
+                )
+                .animate()
+                .fadeIn(duration: 420.ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 400.ms,
+                  curve: Curves.easeOutCubic,
                 ),
-              )
-              .animate()
-              .fadeIn(duration: 420.ms)
-              .slideY(
-                begin: 0.12,
-                end: 0,
-                duration: 400.ms,
-                curve: Curves.easeOutCubic,
-              ),
-          const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-          // Overall Attendance Summary
-          Row(
-                children: [
-                  Expanded(
-                    child: _SummaryCard(
-                      label: 'Present',
-                      value: '1,180',
-                      pct: '95.2%',
-                      color: AppColors.success,
-                      icon: Icons.check_circle,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _SummaryCard(
-                      label: 'Absent',
-                      value: '18',
-                      pct: '1.5%',
-                      color: AppColors.danger,
-                      icon: Icons.cancel,
-                    ),
-                  ),
-                ],
-              )
-              .animate()
-              .fadeIn(duration: 420.ms, delay: 80.ms)
-              .slideY(
-                begin: 0.12,
-                end: 0,
-                duration: 420.ms,
-                delay: 80.ms,
-                curve: Curves.easeOutCubic,
-              ),
-          const SizedBox(height: 10),
-          Row(
-                children: [
-                  Expanded(
-                    child: _SummaryCard(
-                      label: 'Late',
-                      value: '32',
-                      pct: '2.6%',
-                      color: AppColors.warning,
-                      icon: Icons.schedule,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _SummaryCard(
-                      label: 'WFH',
-                      value: '10',
-                      pct: '0.8%',
-                      color: AppColors.primary,
-                      icon: Icons.home_work,
-                    ),
-                  ),
-                ],
-              )
-              .animate()
-              .fadeIn(duration: 420.ms, delay: 160.ms)
-              .slideY(
-                begin: 0.12,
-                end: 0,
-                duration: 420.ms,
-                delay: 160.ms,
-                curve: Curves.easeOutCubic,
-              ),
-          const SizedBox(height: 24),
-
-          // Department-wise Attendance
-          Text(
-                'Department-wise Attendance',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              )
-              .animate()
-              .fadeIn(duration: 420.ms, delay: 240.ms)
-              .slideY(
-                begin: 0.12,
-                end: 0,
-                duration: 420.ms,
-                delay: 240.ms,
-                curve: Curves.easeOutCubic,
-              ),
-          const SizedBox(height: 12),
-          NeuCard(
-                padding: const EdgeInsets.all(20),
-                child: Column(
+            // Overall Attendance Summary
+            Row(
                   children: [
-                    _DeptAttendanceRow(
-                      dept: 'Engineering',
-                      present: 456,
-                      total: 480,
-                      color: AppColors.primary,
-                      isDark: isDark,
+                    Expanded(
+                      child: _SummaryCard(
+                        label: 'Present',
+                        value: '1,180',
+                        pct: '95.2%',
+                        color: AppColors.success,
+                        icon: Icons.check_circle,
+                      ),
                     ),
-                    const SizedBox(height: 16),
-                    _DeptAttendanceRow(
-                      dept: 'Design',
-                      present: 246,
-                      total: 280,
-                      color: AppColors.secondary,
-                      isDark: isDark,
-                    ),
-                    const SizedBox(height: 16),
-                    _DeptAttendanceRow(
-                      dept: 'Marketing',
-                      present: 184,
-                      total: 200,
-                      color: AppColors.success,
-                      isDark: isDark,
-                    ),
-                    const SizedBox(height: 16),
-                    _DeptAttendanceRow(
-                      dept: 'HR',
-                      present: 178,
-                      total: 180,
-                      color: AppColors.orange,
-                      isDark: isDark,
-                    ),
-                    const SizedBox(height: 16),
-                    _DeptAttendanceRow(
-                      dept: 'Finance',
-                      present: 95,
-                      total: 100,
-                      color: AppColors.pink,
-                      isDark: isDark,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _SummaryCard(
+                        label: 'Absent',
+                        value: '18',
+                        pct: '1.5%',
+                        color: AppColors.danger,
+                        icon: Icons.cancel,
+                      ),
                     ),
                   ],
+                )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 80.ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: 80.ms,
+                  curve: Curves.easeOutCubic,
                 ),
-              )
-              .animate()
-              .fadeIn(duration: 420.ms, delay: 320.ms)
-              .slideY(
-                begin: 0.12,
-                end: 0,
-                duration: 420.ms,
-                delay: 320.ms,
-                curve: Curves.easeOutCubic,
-              ),
-          const SizedBox(height: 24),
-
-          // Weekly Attendance Heatmap
-          Text(
-                'Weekly Attendance Rate',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              )
-              .animate()
-              .fadeIn(duration: 420.ms, delay: 400.ms)
-              .slideY(
-                begin: 0.12,
-                end: 0,
-                duration: 420.ms,
-                delay: 400.ms,
-                curve: Curves.easeOutCubic,
-              ),
-          const SizedBox(height: 12),
-          NeuCard(
-                padding: const EdgeInsets.all(16),
-                child: SizedBox(
-                  height: 200,
-                  child: BarChart(
-                    BarChartData(
-                      alignment: BarChartAlignment.spaceAround,
-                      maxY: 100,
-                      barTouchData: BarTouchData(
-                        touchTooltipData: BarTouchTooltipData(
-                          getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                            return BarTooltipItem(
-                              '${rod.toY.toInt()}%',
-                              const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            );
-                          },
-                        ),
+            const SizedBox(height: 10),
+            Row(
+                  children: [
+                    Expanded(
+                      child: _SummaryCard(
+                        label: 'Late',
+                        value: '32',
+                        pct: '2.6%',
+                        color: AppColors.warning,
+                        icon: Icons.schedule,
                       ),
-                      titlesData: FlTitlesData(
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            getTitlesWidget: (value, meta) {
-                              const days = [
-                                'Mon',
-                                'Tue',
-                                'Wed',
-                                'Thu',
-                                'Fri',
-                                'Sat',
-                              ];
-                              if (value.toInt() >= days.length)
-                                return const SizedBox.shrink();
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Text(
-                                  days[value.toInt()],
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: isDark
-                                        ? AppColors.darkSubtext
-                                        : AppColors.lightSubtext,
-                                  ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _SummaryCard(
+                        label: 'WFH',
+                        value: '10',
+                        pct: '0.8%',
+                        color: AppColors.primary,
+                        icon: Icons.home_work,
+                      ),
+                    ),
+                  ],
+                )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 160.ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: 160.ms,
+                  curve: Curves.easeOutCubic,
+                ),
+            const SizedBox(height: 24),
+
+            // Department-wise Attendance
+            Text(
+                  'Department-wise Attendance',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 240.ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: 240.ms,
+                  curve: Curves.easeOutCubic,
+                ),
+            const SizedBox(height: 12),
+            NeuCard(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      _DeptAttendanceRow(
+                        dept: 'Engineering',
+                        present: 456,
+                        total: 480,
+                        color: AppColors.primary,
+                        isDark: isDark,
+                      ),
+                      const SizedBox(height: 16),
+                      _DeptAttendanceRow(
+                        dept: 'Design',
+                        present: 246,
+                        total: 280,
+                        color: AppColors.secondary,
+                        isDark: isDark,
+                      ),
+                      const SizedBox(height: 16),
+                      _DeptAttendanceRow(
+                        dept: 'Marketing',
+                        present: 184,
+                        total: 200,
+                        color: AppColors.success,
+                        isDark: isDark,
+                      ),
+                      const SizedBox(height: 16),
+                      _DeptAttendanceRow(
+                        dept: 'HR',
+                        present: 178,
+                        total: 180,
+                        color: AppColors.orange,
+                        isDark: isDark,
+                      ),
+                      const SizedBox(height: 16),
+                      _DeptAttendanceRow(
+                        dept: 'Finance',
+                        present: 95,
+                        total: 100,
+                        color: AppColors.pink,
+                        isDark: isDark,
+                      ),
+                    ],
+                  ),
+                )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 320.ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: 320.ms,
+                  curve: Curves.easeOutCubic,
+                ),
+            const SizedBox(height: 24),
+
+            // Weekly Attendance Heatmap
+            Text(
+                  'Weekly Attendance Rate',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 400.ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: 400.ms,
+                  curve: Curves.easeOutCubic,
+                ),
+            const SizedBox(height: 12),
+            NeuCard(
+                  padding: const EdgeInsets.all(16),
+                  child: SizedBox(
+                    height: 200,
+                    child: BarChart(
+                      BarChartData(
+                        alignment: BarChartAlignment.spaceAround,
+                        maxY: 100,
+                        barTouchData: BarTouchData(
+                          touchTooltipData: BarTouchTooltipData(
+                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                              return BarTooltipItem(
+                                '${rod.toY.toInt()}%',
+                                const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               );
                             },
                           ),
                         ),
-                        leftTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
+                        titlesData: FlTitlesData(
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              getTitlesWidget: (value, meta) {
+                                const days = [
+                                  'Mon',
+                                  'Tue',
+                                  'Wed',
+                                  'Thu',
+                                  'Fri',
+                                  'Sat',
+                                ];
+                                if (value.toInt() >= days.length)
+                                  return const SizedBox.shrink();
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Text(
+                                    days[value.toInt()],
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark
+                                          ? AppColors.darkSubtext
+                                          : AppColors.lightSubtext,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          leftTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
                         ),
-                        topTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        rightTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
+                        borderData: FlBorderData(show: false),
+                        gridData: const FlGridData(show: false),
+                        barGroups: [
+                          _makeBarGroup(0, 95.2, AppColors.success),
+                          _makeBarGroup(1, 92.8, AppColors.success),
+                          _makeBarGroup(2, 97.1, AppColors.success),
+                          _makeBarGroup(3, 89.5, AppColors.warning),
+                          _makeBarGroup(4, 94.3, AppColors.success),
+                          _makeBarGroup(5, 45.0, AppColors.primary),
+                        ],
                       ),
-                      borderData: FlBorderData(show: false),
-                      gridData: const FlGridData(show: false),
-                      barGroups: [
-                        _makeBarGroup(0, 95.2, AppColors.success),
-                        _makeBarGroup(1, 92.8, AppColors.success),
-                        _makeBarGroup(2, 97.1, AppColors.success),
-                        _makeBarGroup(3, 89.5, AppColors.warning),
-                        _makeBarGroup(4, 94.3, AppColors.success),
-                        _makeBarGroup(5, 45.0, AppColors.primary),
-                      ],
+                      duration: const Duration(milliseconds: 800),
+                      curve: Curves.easeInOutCubic,
                     ),
-                    duration: const Duration(milliseconds: 800),
-                    curve: Curves.easeInOutCubic,
                   ),
+                )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 480.ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: 480.ms,
+                  curve: Curves.easeOutCubic,
                 ),
-              )
-              .animate()
-              .fadeIn(duration: 420.ms, delay: 480.ms)
-              .slideY(
-                begin: 0.12,
-                end: 0,
-                duration: 420.ms,
-                delay: 480.ms,
-                curve: Curves.easeOutCubic,
-              ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-          // Attendance Anomalies
-          Text(
-                'Attendance Anomalies',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+            // Attendance Anomalies
+            Text(
+                  'Attendance Anomalies',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 560.ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: 560.ms,
+                  curve: Curves.easeOutCubic,
                 ),
-              )
-              .animate()
-              .fadeIn(duration: 420.ms, delay: 560.ms)
-              .slideY(
-                begin: 0.12,
-                end: 0,
-                duration: 420.ms,
-                delay: 560.ms,
-                curve: Curves.easeOutCubic,
-              ),
-          const SizedBox(height: 12),
-          ..._buildAnomalies(theme, isDark),
-          const SizedBox(height: 24),
+            const SizedBox(height: 12),
+            ..._buildAnomalies(theme, isDark),
+            const SizedBox(height: 24),
 
-          // Bulk Actions
-          NeuCard(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Bulk Actions',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+            // Bulk Actions
+            NeuCard(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Bulk Actions',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _BulkActionBtn(
-                            icon: Icons.download,
-                            label: 'Export Report',
-                            color: AppColors.primary,
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _BulkActionBtn(
+                              icon: Icons.download,
+                              label: 'Export Report',
+                              color: AppColors.primary,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _BulkActionBtn(
-                            icon: Icons.email,
-                            label: 'Send Reminders',
-                            color: AppColors.warning,
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _BulkActionBtn(
+                              icon: Icons.email,
+                              label: 'Send Reminders',
+                              color: AppColors.warning,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _BulkActionBtn(
-                            icon: Icons.edit_note,
-                            label: 'Regularize',
-                            color: AppColors.success,
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _BulkActionBtn(
+                              icon: Icons.edit_note,
+                              label: 'Regularize',
+                              color: AppColors.success,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _BulkActionBtn(
-                            icon: Icons.print,
-                            label: 'Print Summary',
-                            color: AppColors.secondary,
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _BulkActionBtn(
+                              icon: Icons.print,
+                              label: 'Print Summary',
+                              color: AppColors.secondary,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
+                )
+                .animate()
+                .fadeIn(duration: 420.ms, delay: 720.ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 420.ms,
+                  delay: 720.ms,
+                  curve: Curves.easeOutCubic,
                 ),
-              )
-              .animate()
-              .fadeIn(duration: 420.ms, delay: 720.ms)
-              .slideY(
-                begin: 0.12,
-                end: 0,
-                duration: 420.ms,
-                delay: 720.ms,
-                curve: Curves.easeOutCubic,
-              ),
-          const SizedBox(height: 20),
-        ],
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }

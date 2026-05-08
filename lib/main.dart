@@ -19,10 +19,14 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await NotificationService.instance.init();
-  } catch (_) {}
+  } catch (e) {
+    debugPrint('MAIN: NotificationService init failed: $e');
+  }
   try {
     await LiveActivityService.instance.init();
-  } catch (_) {}
+  } catch (e) {
+    debugPrint('MAIN: LiveActivityService init failed: $e');
+  }
   NotificationService.instance.navigatorKey = navigatorKey;
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

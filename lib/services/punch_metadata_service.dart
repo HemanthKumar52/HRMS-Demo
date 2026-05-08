@@ -145,34 +145,47 @@ class PunchMetadataService {
     }
   }
 
+  /// Why location failed (if it did). Reset on each capture().
+  String? lastLocationError;
+
   Future<Position?> _getCurrentPosition() async {
+    lastLocationError = null;
     try {
-      // Check service enabled
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
+        lastLocationError = 'Location service is turned off';
         debugPrint('PUNCH_META: Location service disabled');
         return null;
       }
 
-      // Check & request permission
       var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
+          lastLocationError = 'Location permission denied';
+          debugPrint('PUNCH_META: Location permission denied');
           return null;
         }
       }
       if (permission == LocationPermission.deniedForever) {
+        lastLocationError =
+            'Location permission permanently denied — enable in Settings';
+        debugPrint('PUNCH_META: Location permission denied forever');
         return null;
       }
 
-      return await Geolocator.getCurrentPosition(
+      final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.medium,
+          accuracy: LocationAccuracy.high,
           timeLimit: Duration(seconds: 10),
         ),
       );
+      debugPrint(
+        'PUNCH_META: Got position ${position.latitude}, ${position.longitude}',
+      );
+      return position;
     } catch (e) {
+      lastLocationError = 'GPS timeout — try moving to an open area';
       debugPrint('PUNCH_META: getCurrentPosition error - $e');
       return null;
     }

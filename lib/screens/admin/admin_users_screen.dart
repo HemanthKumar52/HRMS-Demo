@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/neu_card.dart';
 
 class AdminUsersScreen extends StatefulWidget {
@@ -175,179 +176,185 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
-        child: Column(
-          children: [
-            // Search + filter
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      onChanged: (v) => _search = v,
-                      onSubmitted: (_) => _load(),
-                      decoration: InputDecoration(
-                        hintText: 'Search employees...',
-                        prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                        filled: true,
-                        fillColor: isDark
-                            ? Colors.white.withValues(alpha: 0.05)
-                            : Colors.grey.withValues(alpha: 0.08),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
+        child: ResponsiveCenter(
+          child: Column(
+            children: [
+              // Search + filter
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        onChanged: (v) => _search = v,
+                        onSubmitted: (_) => _load(),
+                        decoration: InputDecoration(
+                          hintText: 'Search employees...',
+                          prefixIcon: const Icon(
+                            Icons.search_rounded,
+                            size: 20,
+                          ),
+                          filled: true,
+                          fillColor: isDark
+                              ? Colors.white.withValues(alpha: 0.05)
+                              : Colors.grey.withValues(alpha: 0.08),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  // Filter icon
-                  PopupMenuButton<String>(
-                    icon: Badge(
-                      isLabelVisible: _roleFilter != 'All',
-                      backgroundColor: AppColors.primary,
-                      child: const Icon(Icons.filter_list_rounded),
-                    ),
-                    onSelected: (v) {
-                      setState(() => _roleFilter = v);
-                      _load();
-                    },
-                    itemBuilder: (_) => _roles
-                        .map(
-                          (r) => PopupMenuItem(
-                            value: r,
-                            child: Row(
-                              children: [
-                                if (_roleFilter == r)
-                                  const Icon(
-                                    Icons.check_rounded,
-                                    size: 18,
-                                    color: AppColors.primary,
-                                  )
-                                else
-                                  const SizedBox(width: 18),
-                                const SizedBox(width: 8),
-                                Text(
-                                  r == 'All'
-                                      ? 'All Roles'
-                                      : r[0].toUpperCase() + r.substring(1),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh_rounded),
-                    onPressed: _loading ? null : _load,
-                  ),
-                ],
-              ),
-            ),
-
-            // List
-            Expanded(
-              child: _loading && _users.isEmpty
-                  ? Center(
-                      child: isApplePlatform
-                          ? const CupertinoActivityIndicator(radius: 14)
-                          : const CircularProgressIndicator(
-                              color: AppColors.primary,
-                            ),
-                    )
-                  : _error != null
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            color: AppColors.danger,
-                            size: 40,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _error!,
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 12,
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: _load,
-                            child: const Text('Retry'),
-                          ),
-                        ],
+                    // Filter icon
+                    PopupMenuButton<String>(
+                      icon: Badge(
+                        isLabelVisible: _roleFilter != 'All',
+                        backgroundColor: AppColors.primary,
+                        child: const Icon(Icons.filter_list_rounded),
                       ),
-                    )
-                  : RefreshIndicator(
-                      color: AppColors.primary,
-                      onRefresh: _load,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-                        itemCount: _users.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (_, i) {
-                          final user = _users[i];
-                          final name = (user['name'] ?? '—').toString();
-                          final isOnline = user['is_online'] == true;
-
-                          return GestureDetector(
-                            onTap: () => _openActions(user),
-                            child: NeuCard(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 12,
-                              ),
+                      onSelected: (v) {
+                        setState(() => _roleFilter = v);
+                        _load();
+                      },
+                      itemBuilder: (_) => _roles
+                          .map(
+                            (r) => PopupMenuItem(
+                              value: r,
                               child: Row(
                                 children: [
-                                  CircleAvatar(
-                                    radius: 20,
-                                    backgroundColor: AppColors.primary
-                                        .withValues(alpha: 0.12),
-                                    child: Text(
-                                      name.isNotEmpty
-                                          ? name[0].toUpperCase()
-                                          : '?',
-                                      style: const TextStyle(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      name,
-                                      style: theme.textTheme.titleSmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                    ),
-                                  ),
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: isOnline
-                                          ? AppColors.success
-                                          : Colors.grey.shade300,
-                                      shape: BoxShape.circle,
-                                    ),
+                                  if (_roleFilter == r)
+                                    const Icon(
+                                      Icons.check_rounded,
+                                      size: 18,
+                                      color: AppColors.primary,
+                                    )
+                                  else
+                                    const SizedBox(width: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    r == 'All'
+                                        ? 'All Roles'
+                                        : r[0].toUpperCase() + r.substring(1),
                                   ),
                                 ],
                               ),
                             ),
-                          );
-                        },
-                      ),
+                          )
+                          .toList(),
                     ),
-            ),
-          ],
+                    IconButton(
+                      icon: const Icon(Icons.refresh_rounded),
+                      onPressed: _loading ? null : _load,
+                    ),
+                  ],
+                ),
+              ),
+
+              // List
+              Expanded(
+                child: _loading && _users.isEmpty
+                    ? Center(
+                        child: isApplePlatform
+                            ? const CupertinoActivityIndicator(radius: 14)
+                            : const CircularProgressIndicator(
+                                color: AppColors.primary,
+                              ),
+                      )
+                    : _error != null
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: AppColors.danger,
+                              size: 40,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _error!,
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _load,
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        color: AppColors.primary,
+                        onRefresh: _load,
+                        child: ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+                          itemCount: _users.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 8),
+                          itemBuilder: (_, i) {
+                            final user = _users[i];
+                            final name = (user['name'] ?? '—').toString();
+                            final isOnline = user['is_online'] == true;
+
+                            return GestureDetector(
+                              onTap: () => _openActions(user),
+                              child: NeuCard(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 12,
+                                ),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: AppColors.primary
+                                          .withValues(alpha: 0.12),
+                                      child: Text(
+                                        name.isNotEmpty
+                                            ? name[0].toUpperCase()
+                                            : '?',
+                                        style: const TextStyle(
+                                          color: AppColors.primary,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        name,
+                                        style: theme.textTheme.titleSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
+                                    ),
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: isOnline
+                                            ? AppColors.success
+                                            : Colors.grey.shade300,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );

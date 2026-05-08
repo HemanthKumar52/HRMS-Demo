@@ -1146,7 +1146,7 @@ class AttendanceFaceVerifyPunchInView(APIView):
                 'face': {
                     'confidence': round(result.confidence, 4),
                     'elapsed_ms': round(result.elapsed_ms, 1),
-                    'zone': zone['name'],
+                    'zone': zone['name'] if zone else '',
                 },
             }
         )

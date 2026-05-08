@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/adaptive_colors.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/neu_card.dart';
 import '../../providers/app_provider.dart';
 
@@ -95,151 +96,154 @@ class _ProfileScreenState extends State<ProfileScreen>
                   parent: AlwaysScrollableScrollPhysics(),
                 )
               : const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
-          child: Column(
-            children: [
-              // ── Profile Header ──
-              Center(
-                child: Stack(
-                  children: [
-                    _buildProfileAvatar(p, provider, theme, 56),
-                    Positioned(
-                      bottom: 2,
-                      right: 2,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: theme.scaffoldBackgroundColor,
-                            width: 3,
+          child: ResponsiveCenter(
+            maxWidth: 600,
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+            child: Column(
+              children: [
+                // ── Profile Header ──
+                Center(
+                  child: Stack(
+                    children: [
+                      _buildProfileAvatar(p, provider, theme, 56),
+                      Positioned(
+                        bottom: 2,
+                        right: 2,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: theme.scaffoldBackgroundColor,
+                              width: 3,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt_rounded,
+                            color: Colors.white,
+                            size: 18,
                           ),
                         ),
-                        child: const Icon(
-                          Icons.camera_alt_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(provider.userName, style: theme.textTheme.headlineMedium),
+                const SizedBox(height: 4),
+                Text(
+                  _val(p['designation'], provider.designation),
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    _val(p['employee_id'], provider.employeeId),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+
+                // Quick info row
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _QuickInfo(
+                        icon: Icons.wc_outlined,
+                        label: 'Gender',
+                        value: _val(p['gender']),
+                        isDark: isDark,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _QuickInfo(
+                        icon: Icons.email_outlined,
+                        label: 'Email',
+                        value: _val(p['email'], provider.email),
+                        isDark: isDark,
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(provider.userName, style: theme.textTheme.headlineMedium),
-              const SizedBox(height: 4),
-              Text(
-                _val(p['designation'], provider.designation),
-                style: theme.textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  _val(p['employee_id'], provider.employeeId),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-
-              // Quick info row
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: _QuickInfo(
-                      icon: Icons.wc_outlined,
-                      label: 'Gender',
-                      value: _val(p['gender']),
-                      isDark: isDark,
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _QuickInfo(
+                        icon: Icons.phone_outlined,
+                        label: 'Phone',
+                        value: _val(p['phone']),
+                        isDark: isDark,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _QuickInfo(
-                      icon: Icons.email_outlined,
-                      label: 'Email',
-                      value: _val(p['email'], provider.email),
-                      isDark: isDark,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _QuickInfo(
+                        icon: Icons.badge_outlined,
+                        label: 'Role',
+                        value: _val(p['role'], 'Employee'),
+                        isDark: isDark,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: _QuickInfo(
-                      icon: Icons.phone_outlined,
-                      label: 'Phone',
-                      value: _val(p['phone']),
-                      isDark: isDark,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _QuickInfo(
-                      icon: Icons.badge_outlined,
-                      label: 'Role',
-                      value: _val(p['role'], 'Employee'),
-                      isDark: isDark,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // ── Tab Bar ──
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : const Color(0xFFF0F0F0),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: TabBar(
-                  controller: _tabController,
-                  onTap: (_) => setState(() {}),
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  indicator: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  labelColor: Colors.white,
-                  unselectedLabelColor: isDark
-                      ? AppColors.darkSubtext
-                      : AppColors.lightSubtext,
-                  labelStyle: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                  dividerHeight: 0,
-                  tabs: const [
-                    Tab(text: 'Work Info'),
-                    Tab(text: 'Personal'),
-                    Tab(text: 'Emergency'),
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
 
-              // ── Tab Content ──
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: _buildTabContent(p, theme, isDark),
-              ),
-            ],
+                const SizedBox(height: 24),
+
+                // ── Tab Bar ──
+                Container(
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : const Color(0xFFF0F0F0),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    onTap: (_) => setState(() {}),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    indicator: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    labelColor: Colors.white,
+                    unselectedLabelColor: isDark
+                        ? AppColors.darkSubtext
+                        : AppColors.lightSubtext,
+                    labelStyle: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                    dividerHeight: 0,
+                    tabs: const [
+                      Tab(text: 'Work Info'),
+                      Tab(text: 'Personal'),
+                      Tab(text: 'Emergency'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // ── Tab Content ──
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: _buildTabContent(p, theme, isDark),
+                ),
+              ],
+            ),
           ),
         ),
       ),

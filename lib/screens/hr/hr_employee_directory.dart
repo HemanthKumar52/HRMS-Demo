@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/neu_card.dart';
 
 class HrEmployeeDirectory extends StatefulWidget {
@@ -166,186 +167,188 @@ class _HrEmployeeDirectoryState extends State<HrEmployeeDirectory> {
     final isDark = theme.brightness == Brightness.dark;
     final filtered = _filteredEmployees;
 
-    return Column(
-      children: [
-        // Search Bar
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-          child: isApplePlatform
-              ? CupertinoSearchTextField(
-                      placeholder: 'Search by name, ID, or designation...',
-                      onChanged: (v) => setState(() => _searchQuery = v),
-                    )
-                    .animate()
-                    .fadeIn(duration: 420.ms)
-                    .slideY(
-                      begin: 0.12,
-                      end: 0,
-                      duration: 400.ms,
-                      curve: Curves.easeOutCubic,
-                    )
-              : NeuCard(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
-                      child: TextField(
+    return ResponsiveCenter(
+      child: Column(
+        children: [
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            child: isApplePlatform
+                ? CupertinoSearchTextField(
+                        placeholder: 'Search by name, ID, or designation...',
                         onChanged: (v) => setState(() => _searchQuery = v),
-                        style: TextStyle(
-                          color: isDark ? Colors.white : AppColors.lightText,
+                      )
+                      .animate()
+                      .fadeIn(duration: 420.ms)
+                      .slideY(
+                        begin: 0.12,
+                        end: 0,
+                        duration: 400.ms,
+                        curve: Curves.easeOutCubic,
+                      )
+                : NeuCard(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 4,
                         ),
-                        decoration: InputDecoration(
-                          hintText: 'Search by name, ID, or designation...',
-                          hintStyle: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 14,
+                        child: TextField(
+                          onChanged: (v) => setState(() => _searchQuery = v),
+                          style: TextStyle(
+                            color: isDark ? Colors.white : AppColors.lightText,
                           ),
-                          prefixIcon: Icon(
-                            Icons.search,
-                            color: Colors.grey[500],
-                            size: 20,
+                          decoration: InputDecoration(
+                            hintText: 'Search by name, ID, or designation...',
+                            hintStyle: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 14,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: Colors.grey[500],
+                              size: 20,
+                            ),
+                            border: InputBorder.none,
                           ),
-                          border: InputBorder.none,
                         ),
+                      )
+                      .animate()
+                      .fadeIn(duration: 420.ms)
+                      .slideY(
+                        begin: 0.12,
+                        end: 0,
+                        duration: 400.ms,
+                        curve: Curves.easeOutCubic,
                       ),
+          ),
+          const SizedBox(height: 12),
+
+          // Filter Chips
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child:
+                Row(
+                      children: [
+                        Expanded(
+                          child: _buildFilterDropdown(
+                            'Department',
+                            _selectedDepartment,
+                            _departments,
+                            (v) => setState(() => _selectedDepartment = v),
+                            isDark,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildFilterDropdown(
+                            'Status',
+                            _selectedStatus,
+                            _statuses,
+                            (v) => setState(() => _selectedStatus = v),
+                            isDark,
+                          ),
+                        ),
+                      ],
                     )
                     .animate()
-                    .fadeIn(duration: 420.ms)
+                    .fadeIn(duration: 420.ms, delay: 80.ms)
                     .slideY(
                       begin: 0.12,
                       end: 0,
-                      duration: 400.ms,
+                      duration: 420.ms,
+                      delay: 80.ms,
                       curve: Curves.easeOutCubic,
                     ),
-        ),
-        const SizedBox(height: 12),
+          ),
+          const SizedBox(height: 8),
 
-        // Filter Chips
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child:
-              Row(
-                    children: [
-                      Expanded(
-                        child: _buildFilterDropdown(
-                          'Department',
-                          _selectedDepartment,
-                          _departments,
-                          (v) => setState(() => _selectedDepartment = v),
-                          isDark,
+          // Results count
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              children: [
+                Text(
+                  '${filtered.length} employees found',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: isDark
+                        ? AppColors.darkSubtext
+                        : AppColors.lightSubtext,
+                  ),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Exporting employee data...'),
+                        backgroundColor: AppColors.primary,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
+                        duration: const Duration(seconds: 1),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _buildFilterDropdown(
-                          'Status',
-                          _selectedStatus,
-                          _statuses,
-                          (v) => setState(() => _selectedStatus = v),
-                          isDark,
+                    );
+                  },
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.download_rounded,
+                        size: 18,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Export',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
                         ),
                       ),
                     ],
-                  )
-                  .animate()
-                  .fadeIn(duration: 420.ms, delay: 80.ms)
-                  .slideY(
-                    begin: 0.12,
-                    end: 0,
-                    duration: 420.ms,
-                    delay: 80.ms,
-                    curve: Curves.easeOutCubic,
                   ),
-        ),
-        const SizedBox(height: 8),
-
-        // Results count
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            children: [
-              Text(
-                '${filtered.length} employees found',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: isDark
-                      ? AppColors.darkSubtext
-                      : AppColors.lightSubtext,
                 ),
-              ),
-              const Spacer(),
-              GestureDetector(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Exporting employee data...'),
-                      backgroundColor: AppColors.primary,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
-                },
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.download_rounded,
-                      size: 18,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Export',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
+          const SizedBox(height: 8),
 
-        // Employee List
-        Expanded(
-          child: ListView.builder(
-            physics: isApplePlatform
-                ? const BouncingScrollPhysics(
-                    parent: AlwaysScrollableScrollPhysics(),
-                  )
-                : null,
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
-            itemCount: filtered.length,
-            itemBuilder: (context, index) {
-              final emp = filtered[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _EmployeeCard(employee: emp)
-                    .animate()
-                    .fadeIn(
-                      duration: 420.ms,
-                      delay: ((index < 8 ? index : 8) * 60).ms,
+          // Employee List
+          Expanded(
+            child: ListView.builder(
+              physics: isApplePlatform
+                  ? const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
                     )
-                    .slideY(
-                      begin: 0.06,
-                      end: 0,
-                      duration: 420.ms,
-                      delay: ((index < 8 ? index : 8) * 60).ms,
-                      curve: Curves.easeOutCubic,
-                    ),
-              );
-            },
+                  : null,
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
+              itemCount: filtered.length,
+              itemBuilder: (context, index) {
+                final emp = filtered[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _EmployeeCard(employee: emp)
+                      .animate()
+                      .fadeIn(
+                        duration: 420.ms,
+                        delay: ((index < 8 ? index : 8) * 60).ms,
+                      )
+                      .slideY(
+                        begin: 0.06,
+                        end: 0,
+                        duration: 420.ms,
+                        delay: ((index < 8 ? index : 8) * 60).ms,
+                        curve: Curves.easeOutCubic,
+                      ),
+                );
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

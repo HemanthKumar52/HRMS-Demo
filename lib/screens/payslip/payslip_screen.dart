@@ -8,6 +8,7 @@ import '../../animations/motion.dart';
 import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/styled_donut_chart.dart';
 
@@ -463,601 +464,616 @@ class _PayslipScreenState extends State<PayslipScreen> {
                         parent: AlwaysScrollableScrollPhysics(),
                       )
                     : const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // --- Employee Picker (admin/manager only) ---
-                    if (_employees.length > 1)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: NeuCard(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 4,
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: _selectedEmployee,
-                              isExpanded: true,
-                              hint: const Text('All Employees'),
-                              icon: const Icon(Icons.people_outline, size: 20),
-                              items: [
-                                const DropdownMenuItem(
-                                  value: null,
-                                  child: Text('All Employees'),
+                child: ResponsiveCenter(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // --- Employee Picker (admin/manager only) ---
+                      if (_employees.length > 1)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: NeuCard(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 4,
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _selectedEmployee,
+                                isExpanded: true,
+                                hint: const Text('All Employees'),
+                                icon: const Icon(
+                                  Icons.people_outline,
+                                  size: 20,
                                 ),
-                                ..._employees.map(
-                                  (e) => DropdownMenuItem(
-                                    value: e,
-                                    child: Text(e),
+                                items: [
+                                  const DropdownMenuItem(
+                                    value: null,
+                                    child: Text('All Employees'),
                                   ),
-                                ),
-                              ],
-                              onChanged: (v) {
-                                setState(() => _selectedEmployee = v);
-                                _loadPayslips();
-                              },
+                                  ..._employees.map(
+                                    (e) => DropdownMenuItem(
+                                      value: e,
+                                      child: Text(e),
+                                    ),
+                                  ),
+                                ],
+                                onChanged: (v) {
+                                  setState(() => _selectedEmployee = v);
+                                  _loadPayslips();
+                                },
+                              ),
                             ),
                           ),
                         ),
-                      ),
 
-                    // --- Month/Year Selector ---
-                    NeuCard(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              isApplePlatform
-                                  ? CupertinoButton(
-                                      padding: EdgeInsets.zero,
-                                      onPressed: _canGoBack
-                                          ? () {
-                                              HapticFeedback.selectionClick();
-                                              _goToPreviousMonth();
-                                            }
-                                          : null,
-                                      child: Icon(
-                                        CupertinoIcons.chevron_left,
-                                        size: 20,
-                                        color: _canGoBack
-                                            ? null
-                                            : Colors.grey.shade300,
+                      // --- Month/Year Selector ---
+                      NeuCard(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                isApplePlatform
+                                    ? CupertinoButton(
+                                        padding: EdgeInsets.zero,
+                                        onPressed: _canGoBack
+                                            ? () {
+                                                HapticFeedback.selectionClick();
+                                                _goToPreviousMonth();
+                                              }
+                                            : null,
+                                        child: Icon(
+                                          CupertinoIcons.chevron_left,
+                                          size: 20,
+                                          color: _canGoBack
+                                              ? null
+                                              : Colors.grey.shade300,
+                                        ),
+                                      )
+                                    : IconButton(
+                                        icon: Icon(
+                                          Icons.chevron_left_rounded,
+                                          color: _canGoBack
+                                              ? null
+                                              : Colors.grey.shade300,
+                                        ),
+                                        onPressed: _canGoBack
+                                            ? _goToPreviousMonth
+                                            : null,
                                       ),
-                                    )
-                                  : IconButton(
-                                      icon: Icon(
-                                        Icons.chevron_left_rounded,
-                                        color: _canGoBack
-                                            ? null
-                                            : Colors.grey.shade300,
-                                      ),
-                                      onPressed: _canGoBack
-                                          ? _goToPreviousMonth
-                                          : null,
+                                GestureDetector(
+                                  onTap: isApplePlatform
+                                      ? () {
+                                          HapticFeedback.selectionClick();
+                                          _showCupertinoMonthPicker();
+                                        }
+                                      : null,
+                                  child: Text(
+                                    '${_months[_selectedMonthIndex]} $_selectedYear',
+                                    style: tt.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
                                     ),
-                              GestureDetector(
-                                onTap: isApplePlatform
-                                    ? () {
-                                        HapticFeedback.selectionClick();
-                                        _showCupertinoMonthPicker();
-                                      }
-                                    : null,
-                                child: Text(
-                                  '${_months[_selectedMonthIndex]} $_selectedYear',
-                                  style: tt.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
+                                isApplePlatform
+                                    ? CupertinoButton(
+                                        padding: EdgeInsets.zero,
+                                        onPressed: _canGoForward
+                                            ? () {
+                                                HapticFeedback.selectionClick();
+                                                _goToNextMonth();
+                                              }
+                                            : null,
+                                        child: Icon(
+                                          CupertinoIcons.chevron_right,
+                                          size: 20,
+                                          color: _canGoForward
+                                              ? null
+                                              : Colors.grey.shade300,
+                                        ),
+                                      )
+                                    : IconButton(
+                                        icon: Icon(
+                                          Icons.chevron_right_rounded,
+                                          color: _canGoForward
+                                              ? null
+                                              : Colors.grey.shade300,
+                                        ),
+                                        onPressed: _canGoForward
+                                            ? _goToNextMonth
+                                            : null,
+                                      ),
+                              ],
+                            ),
+                          )
+                          .animate()
+                          .fadeIn(duration: 420.ms)
+                          .slideY(
+                            begin: 0.12,
+                            end: 0,
+                            duration: 400.ms,
+                            curve: Curves.easeOutCubic,
+                          ),
+
+                      const SizedBox(height: 16),
+
+                      if (_selectedPayslip.isEmpty) ...[
+                        const SizedBox(height: 60),
+                        Center(
+                          child: Column(
+                            children: [
+                              Icon(
+                                isApplePlatform
+                                    ? CupertinoIcons.doc_text
+                                    : Icons.receipt_long_rounded,
+                                size: 64,
+                                color: Colors.grey.shade400,
                               ),
-                              isApplePlatform
-                                  ? CupertinoButton(
-                                      padding: EdgeInsets.zero,
-                                      onPressed: _canGoForward
-                                          ? () {
-                                              HapticFeedback.selectionClick();
-                                              _goToNextMonth();
-                                            }
-                                          : null,
-                                      child: Icon(
-                                        CupertinoIcons.chevron_right,
-                                        size: 20,
-                                        color: _canGoForward
-                                            ? null
-                                            : Colors.grey.shade300,
-                                      ),
-                                    )
-                                  : IconButton(
-                                      icon: Icon(
-                                        Icons.chevron_right_rounded,
-                                        color: _canGoForward
-                                            ? null
-                                            : Colors.grey.shade300,
-                                      ),
-                                      onPressed: _canGoForward
-                                          ? _goToNextMonth
-                                          : null,
-                                    ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No payslip data',
+                                style: tt.titleMedium?.copyWith(
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Payslip for ${_months[_selectedMonthIndex]} $_selectedYear is not available.',
+                                style: tt.bodyMedium?.copyWith(
+                                  color: Colors.grey,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
                             ],
                           ),
-                        )
-                        .animate()
-                        .fadeIn(duration: 420.ms)
-                        .slideY(
-                          begin: 0.12,
-                          end: 0,
-                          duration: 400.ms,
-                          curve: Curves.easeOutCubic,
                         ),
-
-                    const SizedBox(height: 16),
-
-                    if (_selectedPayslip.isEmpty) ...[
-                      const SizedBox(height: 60),
-                      Center(
-                        child: Column(
-                          children: [
-                            Icon(
-                              isApplePlatform
-                                  ? CupertinoIcons.doc_text
-                                  : Icons.receipt_long_rounded,
-                              size: 64,
-                              color: Colors.grey.shade400,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No payslip data',
-                              style: tt.titleMedium?.copyWith(
-                                color: Colors.grey,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Payslip for ${_months[_selectedMonthIndex]} $_selectedYear is not available.',
-                              style: tt.bodyMedium?.copyWith(
-                                color: Colors.grey,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const SizedBox(height: 80),
-                    ] else ...[
-                      // --- Total Earnings Card ---
-                      Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [Color(0xFF3B5FE5), Color(0xFF5B7FF9)],
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(
-                                    0xFF3B5FE5,
-                                  ).withValues(alpha: 0.3),
-                                  blurRadius: 16,
-                                  offset: const Offset(0, 6),
+                        const SizedBox(height: 12),
+                        const SizedBox(height: 80),
+                      ] else ...[
+                        // --- Total Earnings Card ---
+                        Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Color(0xFF3B5FE5),
+                                    Color(0xFF5B7FF9),
+                                  ],
                                 ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          const Text(
-                                            'Total Earnings',
-                                            style: TextStyle(
-                                              color: Colors.white70,
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(
+                                      0xFF3B5FE5,
+                                    ).withValues(alpha: 0.3),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Total Earnings',
+                                              style: TextStyle(
+                                                color: Colors.white70,
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w500,
+                                              ),
                                             ),
+                                            const SizedBox(height: 6),
+                                            TweenAnimationBuilder<double>(
+                                              tween: Tween(
+                                                begin: 0,
+                                                end: _grossSalary,
+                                              ),
+                                              duration: const Duration(
+                                                milliseconds: 1500,
+                                              ),
+                                              curve: Curves.easeOutCubic,
+                                              builder: (context, value, _) =>
+                                                  Text(
+                                                    _currencyFormat.format(
+                                                      value,
+                                                    ),
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 28,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                    ),
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        width: 44,
+                                        height: 44,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.18,
                                           ),
-                                          const SizedBox(height: 6),
-                                          TweenAnimationBuilder<double>(
-                                            tween: Tween(
-                                              begin: 0,
-                                              end: _grossSalary,
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.account_balance_wallet_rounded,
+                                          color: Colors.white,
+                                          size: 22,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Row(
+                                    children: [
+                                      _buildEarningsSubItem(
+                                        'Gross Salary',
+                                        _grossSalary,
+                                      ),
+                                      const SizedBox(width: 16),
+                                      _buildEarningsSubItem('Net Pay', _netPay),
+                                      const SizedBox(width: 16),
+                                      _buildEarningsSubItem(
+                                        'Deductions',
+                                        _totalDeductions,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            )
+                            .animate()
+                            .fadeIn(duration: 420.ms, delay: 40.ms)
+                            .slideY(
+                              begin: 0.12,
+                              end: 0,
+                              duration: 420.ms,
+                              delay: 40.ms,
+                              curve: Curves.easeOutCubic,
+                            ),
+
+                        const SizedBox(height: 16),
+
+                        // --- 1. Earnings Graph ---
+                        NeuCard(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.trending_up_rounded,
+                                        color: AppColors.success,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Earnings Breakdown',
+                                        style: tt.titleLarge,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  StyledDonutChart(
+                                    segments: _earnings
+                                        .map(
+                                          (e) => DonutSegment(
+                                            label: e.label,
+                                            value: e.amount,
+                                            color: e.color,
+                                          ),
+                                        )
+                                        .toList(),
+                                    centerLabel: 'Earnings',
+                                    centerBuilder: (total) => Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          _currencyFormat.format(_grossSalary),
+                                          style: tt.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                            color: isDark
+                                                ? Colors.white
+                                                : Colors.black87,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Earnings',
+                                          style: tt.bodySmall?.copyWith(
+                                            color: isDark
+                                                ? Colors.white54
+                                                : Colors.black45,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                            .animate()
+                            .fadeIn(duration: 420.ms, delay: 160.ms)
+                            .slideY(
+                              begin: 0.12,
+                              end: 0,
+                              duration: 420.ms,
+                              delay: 160.ms,
+                              curve: Curves.easeOutCubic,
+                            ),
+
+                        const SizedBox(height: 16),
+
+                        // --- 2. Deductions Graph ---
+                        NeuCard(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.trending_down_rounded,
+                                        color: AppColors.danger,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Deductions Breakdown',
+                                        style: tt.titleLarge,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  StyledDonutChart(
+                                    segments: _deductions
+                                        .map(
+                                          (e) => DonutSegment(
+                                            label: e.label,
+                                            value: e.amount,
+                                            color: e.color,
+                                          ),
+                                        )
+                                        .toList(),
+                                    centerLabel: 'Deductions',
+                                    centerBuilder: (total) => Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          _currencyFormat.format(
+                                            _totalDeductions,
+                                          ),
+                                          style: tt.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                            color: isDark
+                                                ? Colors.white
+                                                : Colors.black87,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Deductions',
+                                          style: tt.bodySmall?.copyWith(
+                                            color: isDark
+                                                ? Colors.white54
+                                                : Colors.black45,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                            .animate()
+                            .fadeIn(duration: 420.ms, delay: 240.ms)
+                            .slideY(
+                              begin: 0.12,
+                              end: 0,
+                              duration: 420.ms,
+                              delay: 240.ms,
+                              curve: Curves.easeOutCubic,
+                            ),
+
+                        const SizedBox(height: 20),
+
+                        // --- Action Buttons ---
+                        Row(
+                              children: [
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 52,
+                                    child: isApplePlatform
+                                        ? CupertinoButton.filled(
+                                            borderRadius: BorderRadius.circular(
+                                              16,
                                             ),
-                                            duration: const Duration(
-                                              milliseconds: 1500,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
                                             ),
-                                            curve: Curves.easeOutCubic,
-                                            builder: (context, value, _) =>
-                                                Text(
-                                                  _currencyFormat.format(value),
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 28,
-                                                    fontWeight: FontWeight.w800,
+                                            onPressed: () {
+                                              HapticFeedback.lightImpact();
+                                              Navigator.push(
+                                                context,
+                                                Motion.pageRoute(
+                                                  PayslipViewerScreen(
+                                                    month:
+                                                        _months[_selectedMonthIndex],
+                                                    year: _selectedYear,
+                                                    payslipId:
+                                                        _selectedPayslip['id']
+                                                            is int
+                                                        ? _selectedPayslip['id']
+                                                        : int.tryParse(
+                                                            _selectedPayslip['id']
+                                                                    ?.toString() ??
+                                                                '',
+                                                          ),
                                                   ),
                                                 ),
+                                              );
+                                            },
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: const [
+                                                Icon(
+                                                  CupertinoIcons.eye,
+                                                  size: 18,
+                                                ),
+                                                SizedBox(width: 6),
+                                                Text(
+                                                  'View Payslip',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 15,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                        : ElevatedButton.icon(
+                                            onPressed: () {
+                                              Navigator.push(
+                                                context,
+                                                Motion.pageRoute(
+                                                  PayslipViewerScreen(
+                                                    month:
+                                                        _months[_selectedMonthIndex],
+                                                    year: _selectedYear,
+                                                    payslipId:
+                                                        _selectedPayslip['id']
+                                                            is int
+                                                        ? _selectedPayslip['id']
+                                                        : int.tryParse(
+                                                            _selectedPayslip['id']
+                                                                    ?.toString() ??
+                                                                '',
+                                                          ),
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                            icon: const Icon(
+                                              Icons.visibility_rounded,
+                                              size: 20,
+                                            ),
+                                            label: const Text('View Payslip'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  AppColors.primary,
+                                              foregroundColor: Colors.white,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
+                                              textStyle: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 15,
+                                              ),
+                                              elevation: 0,
+                                            ),
                                           ),
-                                        ],
-                                      ),
-                                    ),
-                                    Container(
-                                      width: 44,
-                                      height: 44,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.18,
-                                        ),
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                      child: const Icon(
-                                        Icons.account_balance_wallet_rounded,
-                                        color: Colors.white,
-                                        size: 22,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 20),
-                                Row(
-                                  children: [
-                                    _buildEarningsSubItem(
-                                      'Gross Salary',
-                                      _grossSalary,
-                                    ),
-                                    const SizedBox(width: 16),
-                                    _buildEarningsSubItem('Net Pay', _netPay),
-                                    const SizedBox(width: 16),
-                                    _buildEarningsSubItem(
-                                      'Deductions',
-                                      _totalDeductions,
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          )
-                          .animate()
-                          .fadeIn(duration: 420.ms, delay: 40.ms)
-                          .slideY(
-                            begin: 0.12,
-                            end: 0,
-                            duration: 420.ms,
-                            delay: 40.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
-
-                      const SizedBox(height: 16),
-
-                      // --- 1. Earnings Graph ---
-                      NeuCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.trending_up_rounded,
-                                      color: AppColors.success,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Earnings Breakdown',
-                                      style: tt.titleLarge,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                StyledDonutChart(
-                                  segments: _earnings
-                                      .map(
-                                        (e) => DonutSegment(
-                                          label: e.label,
-                                          value: e.amount,
-                                          color: e.color,
-                                        ),
-                                      )
-                                      .toList(),
-                                  centerLabel: 'Earnings',
-                                  centerBuilder: (total) => Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        _currencyFormat.format(_grossSalary),
-                                        style: tt.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.w800,
-                                          color: isDark
-                                              ? Colors.white
-                                              : Colors.black87,
-                                        ),
-                                      ),
-                                      Text(
-                                        'Earnings',
-                                        style: tt.bodySmall?.copyWith(
-                                          color: isDark
-                                              ? Colors.white54
-                                              : Colors.black45,
-                                        ),
-                                      ),
-                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          )
-                          .animate()
-                          .fadeIn(duration: 420.ms, delay: 160.ms)
-                          .slideY(
-                            begin: 0.12,
-                            end: 0,
-                            duration: 420.ms,
-                            delay: 160.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
-
-                      const SizedBox(height: 16),
-
-                      // --- 2. Deductions Graph ---
-                      NeuCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.trending_down_rounded,
-                                      color: AppColors.danger,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Deductions Breakdown',
-                                      style: tt.titleLarge,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                StyledDonutChart(
-                                  segments: _deductions
-                                      .map(
-                                        (e) => DonutSegment(
-                                          label: e.label,
-                                          value: e.amount,
-                                          color: e.color,
-                                        ),
-                                      )
-                                      .toList(),
-                                  centerLabel: 'Deductions',
-                                  centerBuilder: (total) => Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        _currencyFormat.format(
-                                          _totalDeductions,
-                                        ),
-                                        style: tt.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.w800,
-                                          color: isDark
-                                              ? Colors.white
-                                              : Colors.black87,
-                                        ),
-                                      ),
-                                      Text(
-                                        'Deductions',
-                                        style: tt.bodySmall?.copyWith(
-                                          color: isDark
-                                              ? Colors.white54
-                                              : Colors.black45,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                          .animate()
-                          .fadeIn(duration: 420.ms, delay: 240.ms)
-                          .slideY(
-                            begin: 0.12,
-                            end: 0,
-                            duration: 420.ms,
-                            delay: 240.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
-
-                      const SizedBox(height: 20),
-
-                      // --- Action Buttons ---
-                      Row(
-                            children: [
-                              Expanded(
-                                child: SizedBox(
-                                  height: 52,
-                                  child: isApplePlatform
-                                      ? CupertinoButton.filled(
-                                          borderRadius: BorderRadius.circular(
-                                            16,
-                                          ),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 16,
-                                          ),
-                                          onPressed: () {
-                                            HapticFeedback.lightImpact();
-                                            Navigator.push(
-                                              context,
-                                              Motion.pageRoute(
-                                                PayslipViewerScreen(
-                                                  month:
-                                                      _months[_selectedMonthIndex],
-                                                  year: _selectedYear,
-                                                  payslipId:
-                                                      _selectedPayslip['id']
-                                                          is int
-                                                      ? _selectedPayslip['id']
-                                                      : int.tryParse(
-                                                          _selectedPayslip['id']
-                                                                  ?.toString() ??
-                                                              '',
-                                                        ),
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: const [
-                                              Icon(
-                                                CupertinoIcons.eye,
-                                                size: 18,
-                                              ),
-                                              SizedBox(width: 6),
-                                              Text(
-                                                'View Payslip',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 15,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        )
-                                      : ElevatedButton.icon(
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              Motion.pageRoute(
-                                                PayslipViewerScreen(
-                                                  month:
-                                                      _months[_selectedMonthIndex],
-                                                  year: _selectedYear,
-                                                  payslipId:
-                                                      _selectedPayslip['id']
-                                                          is int
-                                                      ? _selectedPayslip['id']
-                                                      : int.tryParse(
-                                                          _selectedPayslip['id']
-                                                                  ?.toString() ??
-                                                              '',
-                                                        ),
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                          icon: const Icon(
-                                            Icons.visibility_rounded,
-                                            size: 20,
-                                          ),
-                                          label: const Text('View Payslip'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppColors.primary,
-                                            foregroundColor: Colors.white,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 52,
+                                    child: isApplePlatform
+                                        ? CupertinoButton(
+                                            borderRadius: BorderRadius.circular(
+                                              16,
                                             ),
-                                            textStyle: const TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 15,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
                                             ),
-                                            elevation: 0,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: SizedBox(
-                                  height: 52,
-                                  child: isApplePlatform
-                                      ? CupertinoButton(
-                                          borderRadius: BorderRadius.circular(
-                                            16,
-                                          ),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 16,
-                                          ),
-                                          color: CupertinoColors.systemFill,
-                                          onPressed: () =>
-                                              _downloadPayslipPdf(),
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                CupertinoIcons.cloud_download,
-                                                size: 18,
-                                                color: AppColors.primary,
-                                              ),
-                                              const SizedBox(width: 6),
-                                              Text(
-                                                'Download PDF',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 15,
+                                            color: CupertinoColors.systemFill,
+                                            onPressed: () =>
+                                                _downloadPayslipPdf(),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  CupertinoIcons.cloud_download,
+                                                  size: 18,
                                                   color: AppColors.primary,
                                                 ),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  'Download PDF',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 15,
+                                                    color: AppColors.primary,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                        : OutlinedButton.icon(
+                                            onPressed: () =>
+                                                _downloadPayslipPdf(),
+                                            icon: const Icon(
+                                              Icons.download_rounded,
+                                              size: 20,
+                                            ),
+                                            label: const Text('Download PDF'),
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor:
+                                                  AppColors.primary,
+                                              side: const BorderSide(
+                                                color: AppColors.primary,
+                                                width: 1.5,
                                               ),
-                                            ],
-                                          ),
-                                        )
-                                      : OutlinedButton.icon(
-                                          onPressed: () =>
-                                              _downloadPayslipPdf(),
-                                          icon: const Icon(
-                                            Icons.download_rounded,
-                                            size: 20,
-                                          ),
-                                          label: const Text('Download PDF'),
-                                          style: OutlinedButton.styleFrom(
-                                            foregroundColor: AppColors.primary,
-                                            side: const BorderSide(
-                                              color: AppColors.primary,
-                                              width: 1.5,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                            ),
-                                            textStyle: const TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 15,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
+                                              textStyle: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 15,
+                                              ),
                                             ),
                                           ),
-                                        ),
+                                  ),
                                 ),
-                              ),
-                            ],
-                          )
-                          .animate()
-                          .fadeIn(duration: 420.ms, delay: 560.ms)
-                          .slideY(
-                            begin: 0.12,
-                            end: 0,
-                            duration: 420.ms,
-                            delay: 560.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
+                              ],
+                            )
+                            .animate()
+                            .fadeIn(duration: 420.ms, delay: 560.ms)
+                            .slideY(
+                              begin: 0.12,
+                              end: 0,
+                              duration: 420.ms,
+                              delay: 560.ms,
+                              curve: Curves.easeOutCubic,
+                            ),
 
-                      const SizedBox(height: 12),
-                      const SizedBox(height: 80),
-                    ], // end else
-                  ],
+                        const SizedBox(height: 12),
+                        const SizedBox(height: 80),
+                      ], // end else
+                    ],
+                  ),
                 ),
               ),
             ),

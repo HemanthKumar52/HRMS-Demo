@@ -7,6 +7,7 @@ import '../../services/notification_service.dart';
 import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/form_fields.dart';
 
 class ShiftChangeScreen extends StatefulWidget {
@@ -142,83 +143,86 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
                 parent: AlwaysScrollableScrollPhysics(),
               )
             : null,
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const FormLabel('Requesting Shift', required: true),
-              formLabelGap,
-              FormDropdown(
-                value: _requestingShift,
-                hint: 'Select shift',
-                items: _shifts,
-                onChanged: (v) => setState(
-                  () => _requestingShift =
-                      v ?? (_shifts.isNotEmpty ? _shifts.first : null),
+        child: ResponsiveCenter(
+          maxWidth: Responsive.formMaxWidth(context),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const FormLabel('Requesting Shift', required: true),
+                formLabelGap,
+                FormDropdown(
+                  value: _requestingShift,
+                  hint: 'Select shift',
+                  items: _shifts,
+                  onChanged: (v) => setState(
+                    () => _requestingShift =
+                        v ?? (_shifts.isNotEmpty ? _shifts.first : null),
+                  ),
                 ),
-              ),
-              formFieldGap,
+                formFieldGap,
 
-              const FormLabel('Requested Date', required: true),
-              formLabelGap,
-              FormDateField(
-                value: formatDate(_requestedDate),
-                hasValue: _requestedDate != null,
-                onTap: () async {
-                  final picked = await pickDate(
-                    context,
-                    initial: _requestedDate,
-                    accentColor: AppColors.secondary,
-                  );
-                  if (picked != null) {
-                    setState(() {
-                      _requestedDate = picked;
-                      if (_requestedTill != null &&
-                          _requestedTill!.isBefore(picked))
-                        _requestedTill = picked;
-                    });
-                  }
-                },
-              ),
-              formFieldGap,
+                const FormLabel('Requested Date', required: true),
+                formLabelGap,
+                FormDateField(
+                  value: formatDate(_requestedDate),
+                  hasValue: _requestedDate != null,
+                  onTap: () async {
+                    final picked = await pickDate(
+                      context,
+                      initial: _requestedDate,
+                      accentColor: AppColors.secondary,
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        _requestedDate = picked;
+                        if (_requestedTill != null &&
+                            _requestedTill!.isBefore(picked))
+                          _requestedTill = picked;
+                      });
+                    }
+                  },
+                ),
+                formFieldGap,
 
-              const FormLabel('Requested Till'),
-              formLabelGap,
-              FormDateField(
-                value: formatDate(_requestedTill),
-                hasValue: _requestedTill != null,
-                onTap: () async {
-                  final picked = await pickDate(
-                    context,
-                    initial: _requestedTill ?? _requestedDate,
-                    accentColor: AppColors.secondary,
-                  );
-                  if (picked != null) setState(() => _requestedTill = picked);
-                },
-              ),
-              formFieldGap,
+                const FormLabel('Requested Till'),
+                formLabelGap,
+                FormDateField(
+                  value: formatDate(_requestedTill),
+                  hasValue: _requestedTill != null,
+                  onTap: () async {
+                    final picked = await pickDate(
+                      context,
+                      initial: _requestedTill ?? _requestedDate,
+                      accentColor: AppColors.secondary,
+                    );
+                    if (picked != null) setState(() => _requestedTill = picked);
+                  },
+                ),
+                formFieldGap,
 
-              const FormLabel('Reason'),
-              formLabelGap,
-              FormInput(
-                controller: _descriptionController,
-                hint: 'Reason',
-                maxLines: 3,
-              ),
-              formFieldGap,
+                const FormLabel('Reason'),
+                formLabelGap,
+                FormInput(
+                  controller: _descriptionController,
+                  hint: 'Reason',
+                  maxLines: 3,
+                ),
+                formFieldGap,
 
-              // Permanent Request toggle
-              _buildToggle(textTheme, isDark),
-              formSectionGap,
+                // Permanent Request toggle
+                _buildToggle(textTheme, isDark),
+                formSectionGap,
 
-              FormActionButtons(
-                isSubmitting: _isSubmitting,
-                onSubmit: _submit,
-                buttonColor: AppColors.secondary,
-              ),
-            ],
+                FormActionButtons(
+                  isSubmitting: _isSubmitting,
+                  onSubmit: _submit,
+                  buttonColor: AppColors.secondary,
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/neu_card.dart';
 
 class EmployeeDetailScreen extends StatefulWidget {
@@ -81,17 +82,19 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
                         parent: AlwaysScrollableScrollPhysics(),
                       )
                     : const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
-                child: Column(
-                  children: [
-                    _buildHeader(theme, isDark),
-                    const SizedBox(height: 20),
-                    _buildWorkInfo(theme, isDark),
-                    const SizedBox(height: 16),
-                    _buildPersonalInfo(theme, isDark),
-                    const SizedBox(height: 16),
-                    _buildContactInfo(theme, isDark),
-                  ],
+                child: ResponsiveCenter(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+                  child: Column(
+                    children: [
+                      _buildHeader(theme, isDark),
+                      const SizedBox(height: 20),
+                      _buildWorkInfo(theme, isDark),
+                      const SizedBox(height: 16),
+                      _buildPersonalInfo(theme, isDark),
+                      const SizedBox(height: 16),
+                      _buildContactInfo(theme, isDark),
+                    ],
+                  ),
                 ),
               ),
             ),

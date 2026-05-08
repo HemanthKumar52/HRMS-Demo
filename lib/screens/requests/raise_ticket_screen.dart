@@ -8,6 +8,7 @@ import '../../services/notification_service.dart';
 import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/employee_cc_field.dart';
 import '../../widgets/form_fields.dart';
 
@@ -151,103 +152,107 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
                 parent: AlwaysScrollableScrollPhysics(),
               )
             : null,
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const FormLabel('Title', required: true),
-              formLabelGap,
-              FormInput(
-                controller: _titleController,
-                hint: 'Title',
-                validator: (v) =>
-                    (v == null || v.isEmpty) ? 'Title is required' : null,
-              ),
-              formFieldGap,
+        child: ResponsiveCenter(
+          maxWidth: Responsive.formMaxWidth(context),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const FormLabel('Title', required: true),
+                formLabelGap,
+                FormInput(
+                  controller: _titleController,
+                  hint: 'Title',
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Title is required' : null,
+                ),
+                formFieldGap,
 
-              const FormLabel('Ticket Type', required: true),
-              formLabelGap,
-              FormDropdown(
-                value: _ticketType,
-                hint: 'Select ticket type',
-                items: _ticketTypes,
-                onChanged: (v) =>
-                    setState(() => _ticketType = v ?? _ticketTypes.first),
-              ),
-              formFieldGap,
+                const FormLabel('Ticket Type', required: true),
+                formLabelGap,
+                FormDropdown(
+                  value: _ticketType,
+                  hint: 'Select ticket type',
+                  items: _ticketTypes,
+                  onChanged: (v) =>
+                      setState(() => _ticketType = v ?? _ticketTypes.first),
+                ),
+                formFieldGap,
 
-              const FormLabel('Priority', required: true),
-              formLabelGap,
-              FormDropdown(
-                value: _priority,
-                hint: 'Select priority',
-                items: _priorities,
-                onChanged: (v) =>
-                    setState(() => _priority = v ?? _priorities.first),
-              ),
-              formFieldGap,
+                const FormLabel('Priority', required: true),
+                formLabelGap,
+                FormDropdown(
+                  value: _priority,
+                  hint: 'Select priority',
+                  items: _priorities,
+                  onChanged: (v) =>
+                      setState(() => _priority = v ?? _priorities.first),
+                ),
+                formFieldGap,
 
-              const FormLabel('Assign to Department'),
-              formLabelGap,
-              FormDropdown(
-                value: _department,
-                hint: 'Select department',
-                items: _departments,
-                onChanged: (v) =>
-                    setState(() => _department = v ?? _departments.first),
-              ),
-              formFieldGap,
+                const FormLabel('Assign to Department'),
+                formLabelGap,
+                FormDropdown(
+                  value: _department,
+                  hint: 'Select department',
+                  items: _departments,
+                  onChanged: (v) =>
+                      setState(() => _department = v ?? _departments.first),
+                ),
+                formFieldGap,
 
-              EmployeeCcField(
-                selected: _ccUsers,
-                onChanged: (next) => setState(() {
-                  _ccUsers
-                    ..clear()
-                    ..addAll(next);
-                }),
-              ),
-              formFieldGap,
+                EmployeeCcField(
+                  selected: _ccUsers,
+                  onChanged: (next) => setState(() {
+                    _ccUsers
+                      ..clear()
+                      ..addAll(next);
+                  }),
+                ),
+                formFieldGap,
 
-              const FormLabel('Reason', required: true),
-              formLabelGap,
-              FormInput(
-                controller: _descriptionController,
-                hint: 'Reason',
-                maxLines: 4,
-                validator: (v) =>
-                    (v == null || v.isEmpty) ? 'Description is required' : null,
-              ),
-              formFieldGap,
+                const FormLabel('Reason', required: true),
+                formLabelGap,
+                FormInput(
+                  controller: _descriptionController,
+                  hint: 'Reason',
+                  maxLines: 4,
+                  validator: (v) => (v == null || v.isEmpty)
+                      ? 'Description is required'
+                      : null,
+                ),
+                formFieldGap,
 
-              FormAttachmentToggle(
-                enabled: _attachmentEnabled,
-                fileName: _attachmentName,
-                onToggle: (v) => setState(() {
-                  _attachmentEnabled = v;
-                  if (!v) _attachmentName = null;
-                }),
-                onPick: () async {
-                  final picker = ImagePicker();
-                  final XFile? file = await picker.pickImage(
-                    source: ImageSource.gallery,
-                    imageQuality: 80,
-                  );
-                  if (file != null) {
-                    setState(() => _attachmentName = file.name);
-                  }
-                },
-                onRemove: () => setState(() => _attachmentName = null),
-              ),
-              formSectionGap,
+                FormAttachmentToggle(
+                  enabled: _attachmentEnabled,
+                  fileName: _attachmentName,
+                  onToggle: (v) => setState(() {
+                    _attachmentEnabled = v;
+                    if (!v) _attachmentName = null;
+                  }),
+                  onPick: () async {
+                    final picker = ImagePicker();
+                    final XFile? file = await picker.pickImage(
+                      source: ImageSource.gallery,
+                      imageQuality: 80,
+                    );
+                    if (file != null) {
+                      setState(() => _attachmentName = file.name);
+                    }
+                  },
+                  onRemove: () => setState(() => _attachmentName = null),
+                ),
+                formSectionGap,
 
-              FormActionButtons(
-                isSubmitting: _isSubmitting,
-                onSubmit: _submit,
-                buttonColor: AppColors.orange,
-              ),
-            ],
+                FormActionButtons(
+                  isSubmitting: _isSubmitting,
+                  onSubmit: _submit,
+                  buttonColor: AppColors.orange,
+                ),
+              ],
+            ),
           ),
         ),
       ),

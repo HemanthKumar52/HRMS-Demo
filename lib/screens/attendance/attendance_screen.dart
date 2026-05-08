@@ -13,6 +13,7 @@ import '../../services/api_service.dart';
 import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/neu_card.dart';
 
 import '../../widgets/native_ios_attendance_view.dart';
@@ -248,314 +249,372 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           parent: AlwaysScrollableScrollPhysics(),
                         )
                       : const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // --- Attendance Carousel (Clock In + Working Hours + Break Hours) ---
-                      _AttendanceCarousel(
-                            provider: provider,
-                            todayLog: _dailyLog.isNotEmpty
-                                ? _dailyLog.first
-                                : null,
-                          )
-                          .animate()
-                          .fadeIn(duration: 420.ms)
-                          .slideY(
-                            begin: 0.12,
-                            end: 0,
-                            duration: 400.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
+                  child: ResponsiveCenter(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // --- Attendance Carousel (Clock In + Working Hours + Break Hours) ---
+                        _AttendanceCarousel(
+                              provider: provider,
+                              todayLog: _dailyLog.isNotEmpty
+                                  ? _dailyLog.first
+                                  : null,
+                            )
+                            .animate()
+                            .fadeIn(duration: 420.ms)
+                            .slideY(
+                              begin: 0.12,
+                              end: 0,
+                              duration: 400.ms,
+                              curve: Curves.easeOutCubic,
+                            ),
 
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 16),
 
-                      // --- Today Punch Status ---
-                      NeuCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.today_rounded,
-                                      color: AppColors.primary,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'Today\'s Punch Status',
+                        // --- Today Punch Status ---
+                        NeuCard(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.today_rounded,
+                                        color: AppColors.primary,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Today\'s Punch Status',
+                                          style: tt.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      _buildStatusBadge(currentStatus, isDark),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Row(
+                                    children: [
+                                      _buildPunchItem(
+                                        icon: Icons.login_rounded,
+                                        label: 'Check In',
+                                        value: punchInTime,
+                                        color: AppColors.success,
+                                        tt: tt,
+                                      ),
+                                      const SizedBox(width: 16),
+                                      _buildPunchItem(
+                                        icon: Icons.logout_rounded,
+                                        label: 'Check Out',
+                                        value: punchOutTime,
+                                        color: AppColors.danger,
+                                        tt: tt,
+                                      ),
+                                      const SizedBox(width: 16),
+                                      _buildPunchItem(
+                                        icon: Icons.timer_outlined,
+                                        label: 'Total Hours',
+                                        value: isPunchedIn && punchTime != null
+                                            ? _formatDuration(
+                                                DateTime.now().difference(
+                                                  punchTime,
+                                                ),
+                                              )
+                                            : '0h 00m',
+                                        color: AppColors.secondary,
+                                        tt: tt,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            )
+                            .animate()
+                            .fadeIn(duration: 420.ms, delay: 80.ms)
+                            .slideY(
+                              begin: 0.12,
+                              end: 0,
+                              duration: 420.ms,
+                              delay: 80.ms,
+                              curve: Curves.easeOutCubic,
+                            ),
+
+                        const SizedBox(height: 16),
+
+                        // --- Calendar Grid (with month navigation that controls everything) ---
+                        NeuCard(
+                              child: Column(
+                                children: [
+                                  // Month navigation arrows
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      isApplePlatform
+                                          ? CupertinoButton(
+                                              padding: EdgeInsets.zero,
+                                              onPressed: _goToPreviousMonth,
+                                              child: const Icon(
+                                                CupertinoIcons.chevron_left,
+                                                size: 20,
+                                              ),
+                                            )
+                                          : IconButton(
+                                              icon: const Icon(
+                                                Icons.chevron_left_rounded,
+                                              ),
+                                              onPressed: _goToPreviousMonth,
+                                            ),
+                                      Text(
+                                        DateFormat(
+                                          'MMMM yyyy',
+                                        ).format(_currentMonth),
                                         style: tt.titleMedium?.copyWith(
                                           fontWeight: FontWeight.w600,
                                         ),
-                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    _buildStatusBadge(currentStatus, isDark),
-                                  ],
-                                ),
-                                const SizedBox(height: 20),
-                                Row(
-                                  children: [
-                                    _buildPunchItem(
-                                      icon: Icons.login_rounded,
-                                      label: 'Check In',
-                                      value: punchInTime,
-                                      color: AppColors.success,
-                                      tt: tt,
-                                    ),
-                                    const SizedBox(width: 16),
-                                    _buildPunchItem(
-                                      icon: Icons.logout_rounded,
-                                      label: 'Check Out',
-                                      value: punchOutTime,
-                                      color: AppColors.danger,
-                                      tt: tt,
-                                    ),
-                                    const SizedBox(width: 16),
-                                    _buildPunchItem(
-                                      icon: Icons.timer_outlined,
-                                      label: 'Total Hours',
-                                      value: isPunchedIn && punchTime != null
-                                          ? _formatDuration(
-                                              DateTime.now().difference(
-                                                punchTime,
+                                      isApplePlatform
+                                          ? CupertinoButton(
+                                              padding: EdgeInsets.zero,
+                                              onPressed: _goToNextMonth,
+                                              child: const Icon(
+                                                CupertinoIcons.chevron_right,
+                                                size: 20,
                                               ),
                                             )
-                                          : '0h 00m',
-                                      color: AppColors.secondary,
-                                      tt: tt,
-                                    ),
-                                  ],
-                                ),
-                              ],
+                                          : IconButton(
+                                              icon: const Icon(
+                                                Icons.chevron_right_rounded,
+                                              ),
+                                              onPressed: _goToNextMonth,
+                                            ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _buildMonthView(tt, isDark),
+                                  const SizedBox(height: 16),
+                                  _buildLegend(tt),
+                                ],
+                              ),
+                            )
+                            .animate()
+                            .fadeIn(duration: 420.ms, delay: 160.ms)
+                            .slideY(
+                              begin: 0.12,
+                              end: 0,
+                              duration: 420.ms,
+                              delay: 160.ms,
+                              curve: Curves.easeOutCubic,
                             ),
-                          )
-                          .animate()
-                          .fadeIn(duration: 420.ms, delay: 80.ms)
-                          .slideY(
-                            begin: 0.12,
-                            end: 0,
-                            duration: 420.ms,
-                            delay: 80.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
 
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 16),
 
-                      // --- Calendar Grid (with month navigation that controls everything) ---
-                      NeuCard(
-                            child: Column(
-                              children: [
-                                // Month navigation arrows
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    isApplePlatform
-                                        ? CupertinoButton(
-                                            padding: EdgeInsets.zero,
-                                            onPressed: _goToPreviousMonth,
-                                            child: const Icon(
-                                              CupertinoIcons.chevron_left,
-                                              size: 20,
-                                            ),
-                                          )
-                                        : IconButton(
-                                            icon: const Icon(
-                                              Icons.chevron_left_rounded,
-                                            ),
-                                            onPressed: _goToPreviousMonth,
-                                          ),
-                                    Text(
-                                      DateFormat(
-                                        'MMMM yyyy',
-                                      ).format(_currentMonth),
-                                      style: tt.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w600,
+                        const SizedBox(height: 16),
+
+                        // --- Summary ---
+                        NeuCard(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.pie_chart_rounded,
+                                        color: AppColors.secondary,
+                                        size: 20,
                                       ),
-                                    ),
-                                    isApplePlatform
-                                        ? CupertinoButton(
-                                            padding: EdgeInsets.zero,
-                                            onPressed: _goToNextMonth,
-                                            child: const Icon(
-                                              CupertinoIcons.chevron_right,
-                                              size: 20,
-                                            ),
-                                          )
-                                        : IconButton(
-                                            icon: const Icon(
-                                              Icons.chevron_right_rounded,
-                                            ),
-                                            onPressed: _goToNextMonth,
-                                          ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                _buildMonthView(tt, isDark),
-                                const SizedBox(height: 16),
-                                _buildLegend(tt),
-                              ],
+                                      const SizedBox(width: 8),
+                                      Text('Summary', style: tt.titleMedium),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      _buildSummaryItem(
+                                        label: 'Working',
+                                        count: _workingDaysCount,
+                                        color: AppColors.success,
+                                        bgColor: AppColors.pastelGreen,
+                                        tt: tt,
+                                        isDark: isDark,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      _buildSummaryItem(
+                                        label: 'Absent',
+                                        count: _absentCount,
+                                        color: AppColors.danger,
+                                        bgColor: AppColors.pastelRed,
+                                        tt: tt,
+                                        isDark: isDark,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      _buildSummaryItem(
+                                        label: 'Leave',
+                                        count: _leaveCount,
+                                        color: AppColors.orange,
+                                        bgColor: AppColors.pastelOrange,
+                                        tt: tt,
+                                        isDark: isDark,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      _buildSummaryItem(
+                                        label: 'Holiday',
+                                        count: _holidayCount,
+                                        color: AppColors.primary,
+                                        bgColor: AppColors.pastelBlue,
+                                        tt: tt,
+                                        isDark: isDark,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            )
+                            .animate()
+                            .fadeIn(duration: 420.ms, delay: 240.ms)
+                            .slideY(
+                              begin: 0.12,
+                              end: 0,
+                              duration: 420.ms,
+                              delay: 240.ms,
+                              curve: Curves.easeOutCubic,
                             ),
-                          )
-                          .animate()
-                          .fadeIn(duration: 420.ms, delay: 160.ms)
-                          .slideY(
-                            begin: 0.12,
-                            end: 0,
-                            duration: 420.ms,
-                            delay: 160.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
 
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 16),
 
-                      const SizedBox(height: 16),
+                        // --- Working Hours Line Chart ---
+                        NeuCard(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.show_chart_rounded,
+                                        color: AppColors.primary,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Working Hours',
+                                        style: tt.titleMedium,
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        DateFormat(
+                                          'MMM yyyy',
+                                        ).format(_currentMonth),
+                                        style: tt.bodySmall,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      _legendDot(AppColors.success, 'Worked'),
+                                      const SizedBox(width: 12),
+                                      _legendDot(
+                                        AppColors.warning,
+                                        'Min Hours',
+                                      ),
+                                      const SizedBox(width: 12),
+                                      _legendDot(AppColors.primary, 'Overtime'),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  SizedBox(
+                                    height: 220,
+                                    child: Builder(
+                                      builder: (_) {
+                                        // Dynamic maxY: must be at least 10 (above min hours 8)
+                                        final maxWorked = _weeklyHours.reduce(
+                                          (a, b) => a > b ? a : b,
+                                        );
+                                        final dynamicMaxY =
+                                            ((maxWorked > 8 ? maxWorked : 8) +
+                                                    2)
+                                                .ceilToDouble();
+                                        // Dynamic Y interval based on range
+                                        final yInterval = dynamicMaxY <= 12
+                                            ? 2.0
+                                            : 4.0;
 
-                      // --- Summary ---
-                      NeuCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.pie_chart_rounded,
-                                      color: AppColors.secondary,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text('Summary', style: tt.titleMedium),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                Row(
-                                  children: [
-                                    _buildSummaryItem(
-                                      label: 'Working',
-                                      count: _workingDaysCount,
-                                      color: AppColors.success,
-                                      bgColor: AppColors.pastelGreen,
-                                      tt: tt,
-                                      isDark: isDark,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    _buildSummaryItem(
-                                      label: 'Absent',
-                                      count: _absentCount,
-                                      color: AppColors.danger,
-                                      bgColor: AppColors.pastelRed,
-                                      tt: tt,
-                                      isDark: isDark,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    _buildSummaryItem(
-                                      label: 'Leave',
-                                      count: _leaveCount,
-                                      color: AppColors.orange,
-                                      bgColor: AppColors.pastelOrange,
-                                      tt: tt,
-                                      isDark: isDark,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    _buildSummaryItem(
-                                      label: 'Holiday',
-                                      count: _holidayCount,
-                                      color: AppColors.primary,
-                                      bgColor: AppColors.pastelBlue,
-                                      tt: tt,
-                                      isDark: isDark,
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          )
-                          .animate()
-                          .fadeIn(duration: 420.ms, delay: 240.ms)
-                          .slideY(
-                            begin: 0.12,
-                            end: 0,
-                            duration: 420.ms,
-                            delay: 240.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
-
-                      const SizedBox(height: 16),
-
-                      // --- Working Hours Line Chart ---
-                      NeuCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.show_chart_rounded,
-                                      color: AppColors.primary,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Working Hours',
-                                      style: tt.titleMedium,
-                                    ),
-                                    const Spacer(),
-                                    Text(
-                                      DateFormat(
-                                        'MMM yyyy',
-                                      ).format(_currentMonth),
-                                      style: tt.bodySmall,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    _legendDot(AppColors.success, 'Worked'),
-                                    const SizedBox(width: 12),
-                                    _legendDot(AppColors.warning, 'Min Hours'),
-                                    const SizedBox(width: 12),
-                                    _legendDot(AppColors.primary, 'Overtime'),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                SizedBox(
-                                  height: 220,
-                                  child: Builder(
-                                    builder: (_) {
-                                      // Dynamic maxY: must be at least 10 (above min hours 8)
-                                      final maxWorked = _weeklyHours.reduce(
-                                        (a, b) => a > b ? a : b,
-                                      );
-                                      final dynamicMaxY =
-                                          ((maxWorked > 8 ? maxWorked : 8) + 2)
-                                              .ceilToDouble();
-                                      // Dynamic Y interval based on range
-                                      final yInterval = dynamicMaxY <= 12
-                                          ? 2.0
-                                          : 4.0;
-
-                                      return LineChart(
-                                        LineChartData(
-                                          minX: 0,
-                                          maxX: 4,
-                                          minY: 0,
-                                          maxY: dynamicMaxY,
-                                          lineTouchData: LineTouchData(
-                                            enabled: true,
-                                            touchTooltipData: LineTouchTooltipData(
-                                              getTooltipColor: (_) => isDark
-                                                  ? AppColors.darkCard
-                                                  : Colors.white,
-                                              getTooltipItems: (spots) =>
-                                                  spots.map((s) {
+                                        return LineChart(
+                                          LineChartData(
+                                            minX: 0,
+                                            maxX: 4,
+                                            minY: 0,
+                                            maxY: dynamicMaxY,
+                                            lineTouchData: LineTouchData(
+                                              enabled: true,
+                                              touchTooltipData: LineTouchTooltipData(
+                                                getTooltipColor: (_) => isDark
+                                                    ? AppColors.darkCard
+                                                    : Colors.white,
+                                                getTooltipItems: (spots) =>
+                                                    spots.map((s) {
+                                                      const days = [
+                                                        'Mon',
+                                                        'Tue',
+                                                        'Wed',
+                                                        'Thu',
+                                                        'Fri',
+                                                      ];
+                                                      final day =
+                                                          s.x.toInt() <
+                                                              days.length
+                                                          ? days[s.x.toInt()]
+                                                          : '';
+                                                      final label =
+                                                          s.barIndex == 0
+                                                          ? 'Worked'
+                                                          : (s.barIndex == 1
+                                                                ? 'Min'
+                                                                : 'OT');
+                                                      return LineTooltipItem(
+                                                        '$day: ${s.y.toStringAsFixed(1)}h ($label)',
+                                                        TextStyle(
+                                                          color:
+                                                              s.bar.color ??
+                                                              (isDark
+                                                                  ? Colors.white
+                                                                  : Colors
+                                                                        .black87),
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          fontSize: 11,
+                                                        ),
+                                                      );
+                                                    }).toList(),
+                                              ),
+                                            ),
+                                            titlesData: FlTitlesData(
+                                              show: true,
+                                              bottomTitles: AxisTitles(
+                                                axisNameWidget: Text(
+                                                  'Day',
+                                                  style: tt.bodySmall?.copyWith(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: isDark
+                                                        ? Colors.white54
+                                                        : Colors.grey.shade600,
+                                                  ),
+                                                ),
+                                                axisNameSize: 22,
+                                                sideTitles: SideTitles(
+                                                  showTitles: true,
+                                                  interval: 1,
+                                                  getTitlesWidget: (value, meta) {
                                                     const days = [
                                                       'Mon',
                                                       'Tue',
@@ -563,357 +622,374 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                                       'Thu',
                                                       'Fri',
                                                     ];
-                                                    final day =
-                                                        s.x.toInt() <
-                                                            days.length
-                                                        ? days[s.x.toInt()]
-                                                        : '';
-                                                    final label =
-                                                        s.barIndex == 0
-                                                        ? 'Worked'
-                                                        : (s.barIndex == 1
-                                                              ? 'Min'
-                                                              : 'OT');
-                                                    return LineTooltipItem(
-                                                      '$day: ${s.y.toStringAsFixed(1)}h ($label)',
-                                                      TextStyle(
-                                                        color:
-                                                            s.bar.color ??
-                                                            (isDark
-                                                                ? Colors.white
-                                                                : Colors
-                                                                      .black87),
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        fontSize: 11,
+                                                    final idx = value.toInt();
+                                                    if (idx < 0 ||
+                                                        idx >= days.length ||
+                                                        value != idx.toDouble())
+                                                      return const SizedBox.shrink();
+                                                    return Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                            top: 8,
+                                                          ),
+                                                      child: Text(
+                                                        days[idx],
+                                                        style: tt.bodySmall
+                                                            ?.copyWith(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                              fontSize: 11,
+                                                              color: isDark
+                                                                  ? Colors
+                                                                        .white70
+                                                                  : Colors
+                                                                        .black87,
+                                                            ),
                                                       ),
                                                     );
-                                                  }).toList(),
-                                            ),
-                                          ),
-                                          titlesData: FlTitlesData(
-                                            show: true,
-                                            bottomTitles: AxisTitles(
-                                              axisNameWidget: Text(
-                                                'Day',
-                                                style: tt.bodySmall?.copyWith(
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: isDark
-                                                      ? Colors.white54
-                                                      : Colors.grey.shade600,
+                                                  },
+                                                  reservedSize: 28,
                                                 ),
                                               ),
-                                              axisNameSize: 22,
-                                              sideTitles: SideTitles(
-                                                showTitles: true,
-                                                interval: 1,
-                                                getTitlesWidget: (value, meta) {
-                                                  const days = [
-                                                    'Mon',
-                                                    'Tue',
-                                                    'Wed',
-                                                    'Thu',
-                                                    'Fri',
-                                                  ];
-                                                  final idx = value.toInt();
-                                                  if (idx < 0 ||
-                                                      idx >= days.length ||
-                                                      value != idx.toDouble())
-                                                    return const SizedBox.shrink();
-                                                  return Padding(
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                          top: 8,
-                                                        ),
-                                                    child: Text(
-                                                      days[idx],
-                                                      style: tt.bodySmall
-                                                          ?.copyWith(
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            fontSize: 11,
-                                                            color: isDark
-                                                                ? Colors.white70
-                                                                : Colors
-                                                                      .black87,
+                                              leftTitles: AxisTitles(
+                                                axisNameWidget: Text(
+                                                  'Hours',
+                                                  style: tt.bodySmall?.copyWith(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: isDark
+                                                        ? Colors.white54
+                                                        : Colors.grey.shade600,
+                                                  ),
+                                                ),
+                                                axisNameSize: 22,
+                                                sideTitles: SideTitles(
+                                                  showTitles: true,
+                                                  reservedSize: 32,
+                                                  interval: yInterval,
+                                                  getTitlesWidget: (value, meta) {
+                                                    if (value >= meta.max)
+                                                      return const SizedBox.shrink();
+                                                    return Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                            right: 6,
                                                           ),
-                                                    ),
-                                                  );
-                                                },
-                                                reservedSize: 28,
-                                              ),
-                                            ),
-                                            leftTitles: AxisTitles(
-                                              axisNameWidget: Text(
-                                                'Hours',
-                                                style: tt.bodySmall?.copyWith(
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: isDark
-                                                      ? Colors.white54
-                                                      : Colors.grey.shade600,
+                                                      child: Text(
+                                                        '${value.toInt()}h',
+                                                        style: tt.bodySmall
+                                                            ?.copyWith(
+                                                              fontSize: 10,
+                                                              color: isDark
+                                                                  ? Colors
+                                                                        .white70
+                                                                  : Colors
+                                                                        .black87,
+                                                            ),
+                                                        textAlign:
+                                                            TextAlign.right,
+                                                      ),
+                                                    );
+                                                  },
                                                 ),
                                               ),
-                                              axisNameSize: 22,
-                                              sideTitles: SideTitles(
-                                                showTitles: true,
-                                                reservedSize: 32,
-                                                interval: yInterval,
-                                                getTitlesWidget: (value, meta) {
-                                                  if (value >= meta.max)
-                                                    return const SizedBox.shrink();
-                                                  return Padding(
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                          right: 6,
-                                                        ),
-                                                    child: Text(
-                                                      '${value.toInt()}h',
-                                                      style: tt.bodySmall
-                                                          ?.copyWith(
-                                                            fontSize: 10,
-                                                            color: isDark
-                                                                ? Colors.white70
-                                                                : Colors
-                                                                      .black87,
+                                              topTitles: const AxisTitles(
+                                                sideTitles: SideTitles(
+                                                  showTitles: false,
+                                                ),
+                                              ),
+                                              rightTitles: const AxisTitles(
+                                                sideTitles: SideTitles(
+                                                  showTitles: false,
+                                                ),
+                                              ),
+                                            ),
+                                            gridData: FlGridData(
+                                              show: true,
+                                              drawVerticalLine: false,
+                                              horizontalInterval: yInterval,
+                                              getDrawingHorizontalLine:
+                                                  (value) => FlLine(
+                                                    color: isDark
+                                                        ? Colors.white
+                                                              .withValues(
+                                                                alpha: 0.08,
+                                                              )
+                                                        : Colors.grey
+                                                              .withValues(
+                                                                alpha: 0.15,
+                                                              ),
+                                                    strokeWidth: 1,
+                                                  ),
+                                            ),
+                                            borderData: FlBorderData(
+                                              show: false,
+                                            ),
+                                            lineBarsData: [
+                                              // Worked hours line (green)
+                                              LineChartBarData(
+                                                spots: List.generate(
+                                                  5,
+                                                  (i) => FlSpot(
+                                                    i.toDouble(),
+                                                    _weeklyHours[i],
+                                                  ),
+                                                ),
+                                                isCurved: true,
+                                                curveSmoothness: 0.3,
+                                                color: AppColors.success,
+                                                barWidth: 3,
+                                                isStrokeCapRound: true,
+                                                dotData: FlDotData(
+                                                  show: true,
+                                                  getDotPainter:
+                                                      (
+                                                        spot,
+                                                        percent,
+                                                        bar,
+                                                        index,
+                                                      ) => FlDotCirclePainter(
+                                                        radius: 4,
+                                                        color: Colors.white,
+                                                        strokeWidth: 2.5,
+                                                        strokeColor:
+                                                            AppColors.success,
+                                                      ),
+                                                ),
+                                                belowBarData: BarAreaData(
+                                                  show: true,
+                                                  gradient: LinearGradient(
+                                                    begin: Alignment.topCenter,
+                                                    end: Alignment.bottomCenter,
+                                                    colors: [
+                                                      AppColors.success
+                                                          .withValues(
+                                                            alpha: 0.15,
                                                           ),
-                                                      textAlign:
-                                                          TextAlign.right,
-                                                    ),
+                                                      AppColors.success
+                                                          .withValues(
+                                                            alpha: 0.01,
+                                                          ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                              // Min hours reference line (orange dashed)
+                                              LineChartBarData(
+                                                spots: List.generate(
+                                                  5,
+                                                  (i) =>
+                                                      FlSpot(i.toDouble(), 8),
+                                                ),
+                                                isCurved: false,
+                                                color: AppColors.warning,
+                                                barWidth: 1.5,
+                                                dotData: const FlDotData(
+                                                  show: false,
+                                                ),
+                                                dashArray: [6, 4],
+                                              ),
+                                              // Overtime line (primary/blue)
+                                              LineChartBarData(
+                                                spots: List.generate(5, (i) {
+                                                  final ot =
+                                                      (_weeklyHours[i] - 8)
+                                                          .clamp(0.0, 24.0);
+                                                  return FlSpot(
+                                                    i.toDouble(),
+                                                    ot,
                                                   );
-                                                },
+                                                }),
+                                                isCurved: true,
+                                                curveSmoothness: 0.3,
+                                                color: AppColors.primary,
+                                                barWidth: 2,
+                                                isStrokeCapRound: true,
+                                                dotData: FlDotData(
+                                                  show: true,
+                                                  getDotPainter:
+                                                      (
+                                                        spot,
+                                                        percent,
+                                                        bar,
+                                                        index,
+                                                      ) => FlDotCirclePainter(
+                                                        radius: 3,
+                                                        color: Colors.white,
+                                                        strokeWidth: 2,
+                                                        strokeColor:
+                                                            AppColors.primary,
+                                                      ),
+                                                ),
                                               ),
-                                            ),
-                                            topTitles: const AxisTitles(
-                                              sideTitles: SideTitles(
-                                                showTitles: false,
-                                              ),
-                                            ),
-                                            rightTitles: const AxisTitles(
-                                              sideTitles: SideTitles(
-                                                showTitles: false,
-                                              ),
-                                            ),
+                                            ],
                                           ),
-                                          gridData: FlGridData(
-                                            show: true,
-                                            drawVerticalLine: false,
-                                            horizontalInterval: yInterval,
-                                            getDrawingHorizontalLine: (value) =>
-                                                FlLine(
-                                                  color: isDark
-                                                      ? Colors.white.withValues(
-                                                          alpha: 0.08,
-                                                        )
-                                                      : Colors.grey.withValues(
-                                                          alpha: 0.15,
-                                                        ),
-                                                  strokeWidth: 1,
-                                                ),
+                                          duration: const Duration(
+                                            milliseconds: 800,
                                           ),
-                                          borderData: FlBorderData(show: false),
-                                          lineBarsData: [
-                                            // Worked hours line (green)
-                                            LineChartBarData(
-                                              spots: List.generate(
-                                                5,
-                                                (i) => FlSpot(
-                                                  i.toDouble(),
-                                                  _weeklyHours[i],
-                                                ),
-                                              ),
-                                              isCurved: true,
-                                              curveSmoothness: 0.3,
-                                              color: AppColors.success,
-                                              barWidth: 3,
-                                              isStrokeCapRound: true,
-                                              dotData: FlDotData(
-                                                show: true,
-                                                getDotPainter:
-                                                    (
-                                                      spot,
-                                                      percent,
-                                                      bar,
-                                                      index,
-                                                    ) => FlDotCirclePainter(
-                                                      radius: 4,
-                                                      color: Colors.white,
-                                                      strokeWidth: 2.5,
-                                                      strokeColor:
-                                                          AppColors.success,
-                                                    ),
-                                              ),
-                                              belowBarData: BarAreaData(
-                                                show: true,
-                                                gradient: LinearGradient(
-                                                  begin: Alignment.topCenter,
-                                                  end: Alignment.bottomCenter,
-                                                  colors: [
-                                                    AppColors.success
-                                                        .withValues(
-                                                          alpha: 0.15,
-                                                        ),
-                                                    AppColors.success
-                                                        .withValues(
-                                                          alpha: 0.01,
-                                                        ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                            // Min hours reference line (orange dashed)
-                                            LineChartBarData(
-                                              spots: List.generate(
-                                                5,
-                                                (i) => FlSpot(i.toDouble(), 8),
-                                              ),
-                                              isCurved: false,
-                                              color: AppColors.warning,
-                                              barWidth: 1.5,
-                                              dotData: const FlDotData(
-                                                show: false,
-                                              ),
-                                              dashArray: [6, 4],
-                                            ),
-                                            // Overtime line (primary/blue)
-                                            LineChartBarData(
-                                              spots: List.generate(5, (i) {
-                                                final ot = (_weeklyHours[i] - 8)
-                                                    .clamp(0.0, 24.0);
-                                                return FlSpot(i.toDouble(), ot);
-                                              }),
-                                              isCurved: true,
-                                              curveSmoothness: 0.3,
-                                              color: AppColors.primary,
-                                              barWidth: 2,
-                                              isStrokeCapRound: true,
-                                              dotData: FlDotData(
-                                                show: true,
-                                                getDotPainter:
-                                                    (
-                                                      spot,
-                                                      percent,
-                                                      bar,
-                                                      index,
-                                                    ) => FlDotCirclePainter(
-                                                      radius: 3,
-                                                      color: Colors.white,
-                                                      strokeWidth: 2,
-                                                      strokeColor:
-                                                          AppColors.primary,
-                                                    ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        duration: const Duration(
-                                          milliseconds: 800,
-                                        ),
-                                        curve: Curves.easeInOutCubic,
-                                      );
-                                    },
+                                          curve: Curves.easeInOutCubic,
+                                        );
+                                      },
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
+                            )
+                            .animate()
+                            .fadeIn(duration: 420.ms, delay: 320.ms)
+                            .slideY(
+                              begin: 0.12,
+                              end: 0,
+                              duration: 420.ms,
+                              delay: 320.ms,
+                              curve: Curves.easeOutCubic,
                             ),
-                          )
-                          .animate()
-                          .fadeIn(duration: 420.ms, delay: 320.ms)
-                          .slideY(
-                            begin: 0.12,
-                            end: 0,
-                            duration: 420.ms,
-                            delay: 320.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
 
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 16),
 
-                      // --- Daily Work Time Logs (Line Chart) ---
-                      NeuCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.show_chart_rounded,
-                                      color: AppColors.secondary,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Daily Work Time',
-                                      style: tt.titleMedium,
-                                    ),
-                                    const Spacer(),
-                                    Text(
-                                      'This Week',
-                                      style: tt.bodySmall,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    _legendDot(
-                                      AppColors.primary,
-                                      'Worked Hours',
-                                    ),
-                                    const SizedBox(width: 12),
-                                    _legendDot(
-                                      AppColors.warning.withValues(alpha: 0.5),
-                                      'Min Hours (8h)',
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                SizedBox(
-                                  height: 200,
-                                  child:
-                                      _punchData.isEmpty &&
-                                          _weeklyHours.every((h) => h == 0)
-                                      ? Center(
-                                          child: Text(
-                                            'No work time data this week',
-                                            style: tt.bodyMedium?.copyWith(
-                                              color: isDark
-                                                  ? Colors.white38
-                                                  : Colors.black38,
+                        // --- Daily Work Time Logs (Line Chart) ---
+                        NeuCard(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.show_chart_rounded,
+                                        color: AppColors.secondary,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Daily Work Time',
+                                        style: tt.titleMedium,
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        'This Week',
+                                        style: tt.bodySmall,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      _legendDot(
+                                        AppColors.primary,
+                                        'Worked Hours',
+                                      ),
+                                      const SizedBox(width: 12),
+                                      _legendDot(
+                                        AppColors.warning.withValues(
+                                          alpha: 0.5,
+                                        ),
+                                        'Min Hours (8h)',
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  SizedBox(
+                                    height: 200,
+                                    child:
+                                        _punchData.isEmpty &&
+                                            _weeklyHours.every((h) => h == 0)
+                                        ? Center(
+                                            child: Text(
+                                              'No work time data this week',
+                                              style: tt.bodyMedium?.copyWith(
+                                                color: isDark
+                                                    ? Colors.white38
+                                                    : Colors.black38,
+                                              ),
                                             ),
-                                          ),
-                                        )
-                                      : Builder(
-                                          builder: (_) {
-                                            final dwMaxWorked = _weeklyHours
-                                                .reduce(
-                                                  (a, b) => a > b ? a : b,
-                                                );
-                                            final dwMaxY =
-                                                ((dwMaxWorked > 8
-                                                            ? dwMaxWorked
-                                                            : 8) +
-                                                        2)
-                                                    .ceilToDouble();
-                                            final dwYInterval = dwMaxY <= 12
-                                                ? 2.0
-                                                : 4.0;
-                                            return LineChart(
-                                              LineChartData(
-                                                minX: 0,
-                                                maxX: 4,
-                                                minY: 0,
-                                                maxY: dwMaxY,
-                                                lineTouchData: LineTouchData(
-                                                  enabled: true,
-                                                  touchTooltipData: LineTouchTooltipData(
-                                                    getTooltipColor: (_) =>
-                                                        isDark
-                                                        ? AppColors.darkCard
-                                                        : Colors.white,
-                                                    getTooltipItems: (spots) =>
-                                                        spots.map((s) {
+                                          )
+                                        : Builder(
+                                            builder: (_) {
+                                              final dwMaxWorked = _weeklyHours
+                                                  .reduce(
+                                                    (a, b) => a > b ? a : b,
+                                                  );
+                                              final dwMaxY =
+                                                  ((dwMaxWorked > 8
+                                                              ? dwMaxWorked
+                                                              : 8) +
+                                                          2)
+                                                      .ceilToDouble();
+                                              final dwYInterval = dwMaxY <= 12
+                                                  ? 2.0
+                                                  : 4.0;
+                                              return LineChart(
+                                                LineChartData(
+                                                  minX: 0,
+                                                  maxX: 4,
+                                                  minY: 0,
+                                                  maxY: dwMaxY,
+                                                  lineTouchData: LineTouchData(
+                                                    enabled: true,
+                                                    touchTooltipData: LineTouchTooltipData(
+                                                      getTooltipColor: (_) =>
+                                                          isDark
+                                                          ? AppColors.darkCard
+                                                          : Colors.white,
+                                                      getTooltipItems:
+                                                          (spots) => spots.map((
+                                                            s,
+                                                          ) {
+                                                            const days = [
+                                                              'Mon',
+                                                              'Tue',
+                                                              'Wed',
+                                                              'Thu',
+                                                              'Fri',
+                                                            ];
+                                                            final day =
+                                                                s.x.toInt() <
+                                                                    days.length
+                                                                ? days[s.x
+                                                                      .toInt()]
+                                                                : '';
+                                                            return LineTooltipItem(
+                                                              '$day\n${s.y.toStringAsFixed(1)}h',
+                                                              TextStyle(
+                                                                color: isDark
+                                                                    ? Colors
+                                                                          .white
+                                                                    : Colors
+                                                                          .black87,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                                fontSize: 12,
+                                                              ),
+                                                            );
+                                                          }).toList(),
+                                                    ),
+                                                  ),
+                                                  titlesData: FlTitlesData(
+                                                    show: true,
+                                                    bottomTitles: AxisTitles(
+                                                      axisNameWidget: Text(
+                                                        'Day',
+                                                        style: tt.bodySmall
+                                                            ?.copyWith(
+                                                              fontSize: 10,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                              color: isDark
+                                                                  ? Colors
+                                                                        .white54
+                                                                  : Colors
+                                                                        .grey
+                                                                        .shade600,
+                                                            ),
+                                                      ),
+                                                      axisNameSize: 22,
+                                                      sideTitles: SideTitles(
+                                                        showTitles: true,
+                                                        interval: 1,
+                                                        getTitlesWidget: (value, meta) {
                                                           const days = [
                                                             'Mon',
                                                             'Tue',
@@ -921,506 +997,481 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                                             'Thu',
                                                             'Fri',
                                                           ];
-                                                          final day =
-                                                              s.x.toInt() <
-                                                                  days.length
-                                                              ? days[s.x
-                                                                    .toInt()]
-                                                              : '';
-                                                          return LineTooltipItem(
-                                                            '$day\n${s.y.toStringAsFixed(1)}h',
-                                                            TextStyle(
-                                                              color: isDark
-                                                                  ? Colors.white
-                                                                  : Colors
-                                                                        .black87,
+                                                          final idx = value
+                                                              .toInt();
+                                                          if (idx < 0 ||
+                                                              idx >=
+                                                                  days.length ||
+                                                              value !=
+                                                                  idx.toDouble())
+                                                            return const SizedBox.shrink();
+                                                          return Padding(
+                                                            padding:
+                                                                const EdgeInsets.only(
+                                                                  top: 8,
+                                                                ),
+                                                            child: Text(
+                                                              days[idx],
+                                                              style: tt.bodySmall?.copyWith(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                                fontSize: 11,
+                                                                color: isDark
+                                                                    ? Colors
+                                                                          .white70
+                                                                    : Colors
+                                                                          .black87,
+                                                              ),
+                                                            ),
+                                                          );
+                                                        },
+                                                        reservedSize: 28,
+                                                      ),
+                                                    ),
+                                                    leftTitles: AxisTitles(
+                                                      axisNameWidget: Text(
+                                                        'Hours',
+                                                        style: tt.bodySmall
+                                                            ?.copyWith(
+                                                              fontSize: 10,
                                                               fontWeight:
                                                                   FontWeight
                                                                       .w600,
-                                                              fontSize: 12,
+                                                              color: isDark
+                                                                  ? Colors
+                                                                        .white54
+                                                                  : Colors
+                                                                        .grey
+                                                                        .shade600,
+                                                            ),
+                                                      ),
+                                                      axisNameSize: 22,
+                                                      sideTitles: SideTitles(
+                                                        showTitles: true,
+                                                        reservedSize: 32,
+                                                        interval: dwYInterval,
+                                                        getTitlesWidget: (value, meta) {
+                                                          if (value >= meta.max)
+                                                            return const SizedBox.shrink();
+                                                          return Padding(
+                                                            padding:
+                                                                const EdgeInsets.only(
+                                                                  right: 6,
+                                                                ),
+                                                            child: Text(
+                                                              '${value.toInt()}h',
+                                                              style: tt
+                                                                  .bodySmall
+                                                                  ?.copyWith(
+                                                                    fontSize:
+                                                                        10,
+                                                                    color:
+                                                                        isDark
+                                                                        ? Colors
+                                                                              .white70
+                                                                        : Colors
+                                                                              .black87,
+                                                                  ),
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .right,
                                                             ),
                                                           );
-                                                        }).toList(),
-                                                  ),
-                                                ),
-                                                titlesData: FlTitlesData(
-                                                  show: true,
-                                                  bottomTitles: AxisTitles(
-                                                    axisNameWidget: Text(
-                                                      'Day',
-                                                      style: tt.bodySmall
-                                                          ?.copyWith(
-                                                            fontSize: 10,
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            color: isDark
-                                                                ? Colors.white54
-                                                                : Colors
-                                                                      .grey
-                                                                      .shade600,
-                                                          ),
+                                                        },
+                                                      ),
                                                     ),
-                                                    axisNameSize: 22,
-                                                    sideTitles: SideTitles(
-                                                      showTitles: true,
-                                                      interval: 1,
-                                                      getTitlesWidget: (value, meta) {
-                                                        const days = [
-                                                          'Mon',
-                                                          'Tue',
-                                                          'Wed',
-                                                          'Thu',
-                                                          'Fri',
-                                                        ];
-                                                        final idx = value
-                                                            .toInt();
-                                                        if (idx < 0 ||
-                                                            idx >=
-                                                                days.length ||
-                                                            value !=
-                                                                idx.toDouble())
-                                                          return const SizedBox.shrink();
-                                                        return Padding(
-                                                          padding:
-                                                              const EdgeInsets.only(
-                                                                top: 8,
+                                                    topTitles: const AxisTitles(
+                                                      sideTitles: SideTitles(
+                                                        showTitles: false,
+                                                      ),
+                                                    ),
+                                                    rightTitles:
+                                                        const AxisTitles(
+                                                          sideTitles:
+                                                              SideTitles(
+                                                                showTitles:
+                                                                    false,
                                                               ),
-                                                          child: Text(
-                                                            days[idx],
-                                                            style: tt.bodySmall
-                                                                ?.copyWith(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w600,
-                                                                  fontSize: 11,
-                                                                  color: isDark
-                                                                      ? Colors
-                                                                            .white70
-                                                                      : Colors
-                                                                            .black87,
-                                                                ),
-                                                          ),
-                                                        );
-                                                      },
-                                                      reservedSize: 28,
-                                                    ),
+                                                        ),
                                                   ),
-                                                  leftTitles: AxisTitles(
-                                                    axisNameWidget: Text(
-                                                      'Hours',
-                                                      style: tt.bodySmall
-                                                          ?.copyWith(
-                                                            fontSize: 10,
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            color: isDark
-                                                                ? Colors.white54
-                                                                : Colors
-                                                                      .grey
-                                                                      .shade600,
-                                                          ),
-                                                    ),
-                                                    axisNameSize: 22,
-                                                    sideTitles: SideTitles(
-                                                      showTitles: true,
-                                                      reservedSize: 32,
-                                                      interval: dwYInterval,
-                                                      getTitlesWidget: (value, meta) {
-                                                        if (value >= meta.max)
-                                                          return const SizedBox.shrink();
-                                                        return Padding(
-                                                          padding:
-                                                              const EdgeInsets.only(
-                                                                right: 6,
-                                                              ),
-                                                          child: Text(
-                                                            '${value.toInt()}h',
-                                                            style: tt.bodySmall
-                                                                ?.copyWith(
-                                                                  fontSize: 10,
-                                                                  color: isDark
-                                                                      ? Colors
-                                                                            .white70
-                                                                      : Colors
-                                                                            .black87,
-                                                                ),
-                                                            textAlign:
-                                                                TextAlign.right,
-                                                          ),
-                                                        );
-                                                      },
-                                                    ),
+                                                  gridData: FlGridData(
+                                                    show: true,
+                                                    drawVerticalLine: false,
+                                                    horizontalInterval:
+                                                        dwYInterval,
+                                                    getDrawingHorizontalLine:
+                                                        (value) => FlLine(
+                                                          color: isDark
+                                                              ? Colors.white
+                                                                    .withValues(
+                                                                      alpha:
+                                                                          0.08,
+                                                                    )
+                                                              : Colors.grey
+                                                                    .withValues(
+                                                                      alpha:
+                                                                          0.15,
+                                                                    ),
+                                                          strokeWidth: 1,
+                                                        ),
                                                   ),
-                                                  topTitles: const AxisTitles(
-                                                    sideTitles: SideTitles(
-                                                      showTitles: false,
-                                                    ),
+                                                  borderData: FlBorderData(
+                                                    show: false,
                                                   ),
-                                                  rightTitles: const AxisTitles(
-                                                    sideTitles: SideTitles(
-                                                      showTitles: false,
-                                                    ),
-                                                  ),
-                                                ),
-                                                gridData: FlGridData(
-                                                  show: true,
-                                                  drawVerticalLine: false,
-                                                  horizontalInterval:
-                                                      dwYInterval,
-                                                  getDrawingHorizontalLine:
-                                                      (value) => FlLine(
-                                                        color: isDark
-                                                            ? Colors.white
-                                                                  .withValues(
-                                                                    alpha: 0.08,
-                                                                  )
-                                                            : Colors.grey
-                                                                  .withValues(
-                                                                    alpha: 0.15,
-                                                                  ),
-                                                        strokeWidth: 1,
+                                                  lineBarsData: [
+                                                    // Min hours reference line (8h)
+                                                    LineChartBarData(
+                                                      spots: List.generate(
+                                                        5,
+                                                        (i) => FlSpot(
+                                                          i.toDouble(),
+                                                          8,
+                                                        ),
                                                       ),
-                                                ),
-                                                borderData: FlBorderData(
-                                                  show: false,
-                                                ),
-                                                lineBarsData: [
-                                                  // Min hours reference line (8h)
-                                                  LineChartBarData(
-                                                    spots: List.generate(
-                                                      5,
-                                                      (i) => FlSpot(
-                                                        i.toDouble(),
-                                                        8,
+                                                      isCurved: false,
+                                                      color: AppColors.warning
+                                                          .withValues(
+                                                            alpha: 0.4,
+                                                          ),
+                                                      barWidth: 1.5,
+                                                      dotData: const FlDotData(
+                                                        show: false,
                                                       ),
+                                                      dashArray: [6, 4],
                                                     ),
-                                                    isCurved: false,
-                                                    color: AppColors.warning
-                                                        .withValues(alpha: 0.4),
-                                                    barWidth: 1.5,
-                                                    dotData: const FlDotData(
-                                                      show: false,
-                                                    ),
-                                                    dashArray: [6, 4],
-                                                  ),
-                                                  // Actual worked hours
-                                                  LineChartBarData(
-                                                    spots: List.generate(
-                                                      5,
-                                                      (i) => FlSpot(
-                                                        i.toDouble(),
-                                                        _weeklyHours[i],
+                                                    // Actual worked hours
+                                                    LineChartBarData(
+                                                      spots: List.generate(
+                                                        5,
+                                                        (i) => FlSpot(
+                                                          i.toDouble(),
+                                                          _weeklyHours[i],
+                                                        ),
                                                       ),
-                                                    ),
-                                                    isCurved: true,
-                                                    curveSmoothness: 0.35,
-                                                    color: AppColors.primary,
-                                                    barWidth: 3,
-                                                    isStrokeCapRound: true,
-                                                    dotData: FlDotData(
-                                                      show: true,
-                                                      getDotPainter:
-                                                          (
-                                                            spot,
-                                                            percent,
-                                                            bar,
-                                                            index,
-                                                          ) => FlDotCirclePainter(
-                                                            radius: 4,
-                                                            color: Colors.white,
-                                                            strokeWidth: 2.5,
-                                                            strokeColor:
+                                                      isCurved: true,
+                                                      curveSmoothness: 0.35,
+                                                      color: AppColors.primary,
+                                                      barWidth: 3,
+                                                      isStrokeCapRound: true,
+                                                      dotData: FlDotData(
+                                                        show: true,
+                                                        getDotPainter:
+                                                            (
+                                                              spot,
+                                                              percent,
+                                                              bar,
+                                                              index,
+                                                            ) => FlDotCirclePainter(
+                                                              radius: 4,
+                                                              color:
+                                                                  Colors.white,
+                                                              strokeWidth: 2.5,
+                                                              strokeColor:
+                                                                  AppColors
+                                                                      .primary,
+                                                            ),
+                                                      ),
+                                                      belowBarData: BarAreaData(
+                                                        show: true,
+                                                        gradient:
+                                                            LinearGradient(
+                                                              begin: Alignment
+                                                                  .topCenter,
+                                                              end: Alignment
+                                                                  .bottomCenter,
+                                                              colors: [
                                                                 AppColors
-                                                                    .primary,
-                                                          ),
-                                                    ),
-                                                    belowBarData: BarAreaData(
-                                                      show: true,
-                                                      gradient: LinearGradient(
-                                                        begin:
-                                                            Alignment.topCenter,
-                                                        end: Alignment
-                                                            .bottomCenter,
-                                                        colors: [
-                                                          AppColors.primary
-                                                              .withValues(
-                                                                alpha: 0.25,
-                                                              ),
-                                                          AppColors.primary
-                                                              .withValues(
-                                                                alpha: 0.02,
-                                                              ),
-                                                        ],
+                                                                    .primary
+                                                                    .withValues(
+                                                                      alpha:
+                                                                          0.25,
+                                                                    ),
+                                                                AppColors
+                                                                    .primary
+                                                                    .withValues(
+                                                                      alpha:
+                                                                          0.02,
+                                                                    ),
+                                                              ],
+                                                            ),
                                                       ),
                                                     ),
-                                                  ),
-                                                ],
-                                              ),
-                                              duration: const Duration(
-                                                milliseconds: 800,
-                                              ),
-                                              curve: Curves.easeInOutCubic,
-                                            );
-                                          },
-                                        ),
-                                ),
-                              ],
-                            ),
-                          )
-                          .animate()
-                          .fadeIn(duration: 420.ms, delay: 400.ms)
-                          .slideY(
-                            begin: 0.12,
-                            end: 0,
-                            duration: 420.ms,
-                            delay: 400.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
-
-                      const SizedBox(height: 16),
-
-                      // --- Monthly Attendance Bar Chart ---
-                      NeuCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.bar_chart_rounded,
-                                      color: AppColors.primary,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Monthly Attendance',
-                                      style: tt.titleMedium,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    _legendDot(AppColors.success, 'Working'),
-                                    const SizedBox(width: 12),
-                                    _legendDot(AppColors.danger, 'Absent'),
-                                    const SizedBox(width: 12),
-                                    _legendDot(AppColors.orange, 'Leave'),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                SizedBox(
-                                  height: 240,
-                                  child: BarChart(
-                                    BarChartData(
-                                      alignment: BarChartAlignment.spaceAround,
-                                      maxY:
-                                          ([
-                                                    _workingDaysCount,
-                                                    _absentCount,
-                                                    _leaveCount,
-                                                  ].reduce(
-                                                    (a, b) => a > b ? a : b,
-                                                  ) +
-                                                  3)
-                                              .toDouble()
-                                              .clamp(5, 35),
-                                      barTouchData: BarTouchData(
-                                        enabled: true,
-                                      ),
-                                      titlesData: FlTitlesData(
-                                        show: true,
-                                        bottomTitles: AxisTitles(
-                                          axisNameWidget: Text(
-                                            'Status',
-                                            style: tt.bodySmall?.copyWith(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w600,
-                                              color: isDark
-                                                  ? Colors.white54
-                                                  : Colors.grey.shade600,
-                                            ),
-                                          ),
-                                          axisNameSize: 22,
-                                          sideTitles: SideTitles(
-                                            showTitles: true,
-                                            getTitlesWidget: (value, meta) {
-                                              final labels = [
-                                                'Working',
-                                                'Absent',
-                                                'Leave',
-                                              ];
-                                              if (value.toInt() >=
-                                                  labels.length)
-                                                return const SizedBox.shrink();
-                                              return Padding(
-                                                padding: const EdgeInsets.only(
-                                                  top: 8,
+                                                  ],
                                                 ),
-                                                child: Text(
-                                                  labels[value.toInt()],
-                                                  style: tt.bodySmall?.copyWith(
-                                                    fontWeight: FontWeight.w600,
-                                                    fontSize: 11,
-                                                    color: isDark
-                                                        ? Colors.white70
-                                                        : Colors.black87,
-                                                  ),
+                                                duration: const Duration(
+                                                  milliseconds: 800,
                                                 ),
-                                              );
-                                            },
-                                            reservedSize: 28,
-                                          ),
-                                        ),
-                                        leftTitles: AxisTitles(
-                                          axisNameWidget: Text(
-                                            'Days',
-                                            style: tt.bodySmall?.copyWith(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w600,
-                                              color: isDark
-                                                  ? Colors.white54
-                                                  : Colors.grey.shade600,
-                                            ),
-                                          ),
-                                          axisNameSize: 18,
-                                          sideTitles: SideTitles(
-                                            showTitles: true,
-                                            reservedSize: 32,
-                                            interval: 5,
-                                            getTitlesWidget: (value, meta) {
-                                              if (value == meta.max ||
-                                                  value % 5 != 0)
-                                                return const SizedBox.shrink();
-                                              return Padding(
-                                                padding: const EdgeInsets.only(
-                                                  right: 4,
-                                                ),
-                                                child: Text(
-                                                  '${value.toInt()}',
-                                                  style: tt.bodySmall?.copyWith(
-                                                    fontSize: 10,
-                                                  ),
-                                                ),
+                                                curve: Curves.easeInOutCubic,
                                               );
                                             },
                                           ),
-                                        ),
-                                        topTitles: const AxisTitles(
-                                          sideTitles: SideTitles(
-                                            showTitles: false,
-                                          ),
-                                        ),
-                                        rightTitles: const AxisTitles(
-                                          sideTitles: SideTitles(
-                                            showTitles: false,
-                                          ),
-                                        ),
-                                      ),
-                                      gridData: FlGridData(
-                                        show: true,
-                                        drawVerticalLine: false,
-                                        horizontalInterval: 1,
-                                        getDrawingHorizontalLine: (value) =>
-                                            FlLine(
-                                              color: isDark
-                                                  ? Colors.white.withValues(
-                                                      alpha: 0.06,
-                                                    )
-                                                  : Colors.black.withValues(
-                                                      alpha: 0.06,
-                                                    ),
-                                              strokeWidth: 1,
-                                            ),
-                                      ),
-                                      borderData: FlBorderData(show: false),
-                                      barGroups: [
-                                        BarChartGroupData(
-                                          x: 0,
-                                          barRods: [
-                                            BarChartRodData(
-                                              toY: _workingDaysCount.toDouble(),
-                                              width: 24,
-                                              borderRadius:
-                                                  const BorderRadius.vertical(
-                                                    top: Radius.circular(4),
-                                                  ),
-                                              color: AppColors.success,
-                                            ),
-                                          ],
-                                        ),
-                                        BarChartGroupData(
-                                          x: 1,
-                                          barRods: [
-                                            BarChartRodData(
-                                              toY: _absentCount.toDouble(),
-                                              width: 24,
-                                              borderRadius:
-                                                  const BorderRadius.vertical(
-                                                    top: Radius.circular(4),
-                                                  ),
-                                              color: AppColors.danger,
-                                            ),
-                                          ],
-                                        ),
-                                        BarChartGroupData(
-                                          x: 2,
-                                          barRods: [
-                                            BarChartRodData(
-                                              toY: _leaveCount.toDouble(),
-                                              width: 24,
-                                              borderRadius:
-                                                  const BorderRadius.vertical(
-                                                    top: Radius.circular(4),
-                                                  ),
-                                              color: AppColors.orange,
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    duration: const Duration(
-                                      milliseconds: 800,
-                                    ),
-                                    curve: Curves.easeInOutCubic,
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
+                            )
+                            .animate()
+                            .fadeIn(duration: 420.ms, delay: 400.ms)
+                            .slideY(
+                              begin: 0.12,
+                              end: 0,
+                              duration: 420.ms,
+                              delay: 400.ms,
+                              curve: Curves.easeOutCubic,
                             ),
-                          )
-                          .animate()
-                          .fadeIn(duration: 420.ms, delay: 480.ms)
-                          .slideY(
-                            begin: 0.12,
-                            end: 0,
-                            duration: 420.ms,
-                            delay: 480.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
 
-                      // ── Attendance Log Table ──
-                      const SizedBox(height: 8),
-                      Text(
-                            'Attendance Log',
-                            style: tt.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
+                        const SizedBox(height: 16),
+
+                        // --- Monthly Attendance Bar Chart ---
+                        NeuCard(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.bar_chart_rounded,
+                                        color: AppColors.primary,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Monthly Attendance',
+                                        style: tt.titleMedium,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      _legendDot(AppColors.success, 'Working'),
+                                      const SizedBox(width: 12),
+                                      _legendDot(AppColors.danger, 'Absent'),
+                                      const SizedBox(width: 12),
+                                      _legendDot(AppColors.orange, 'Leave'),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  SizedBox(
+                                    height: 240,
+                                    child: BarChart(
+                                      BarChartData(
+                                        alignment:
+                                            BarChartAlignment.spaceAround,
+                                        maxY:
+                                            ([
+                                                      _workingDaysCount,
+                                                      _absentCount,
+                                                      _leaveCount,
+                                                    ].reduce(
+                                                      (a, b) => a > b ? a : b,
+                                                    ) +
+                                                    3)
+                                                .toDouble()
+                                                .clamp(5, 35),
+                                        barTouchData: BarTouchData(
+                                          enabled: true,
+                                        ),
+                                        titlesData: FlTitlesData(
+                                          show: true,
+                                          bottomTitles: AxisTitles(
+                                            axisNameWidget: Text(
+                                              'Status',
+                                              style: tt.bodySmall?.copyWith(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w600,
+                                                color: isDark
+                                                    ? Colors.white54
+                                                    : Colors.grey.shade600,
+                                              ),
+                                            ),
+                                            axisNameSize: 22,
+                                            sideTitles: SideTitles(
+                                              showTitles: true,
+                                              getTitlesWidget: (value, meta) {
+                                                final labels = [
+                                                  'Working',
+                                                  'Absent',
+                                                  'Leave',
+                                                ];
+                                                if (value.toInt() >=
+                                                    labels.length)
+                                                  return const SizedBox.shrink();
+                                                return Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        top: 8,
+                                                      ),
+                                                  child: Text(
+                                                    labels[value.toInt()],
+                                                    style: tt.bodySmall
+                                                        ?.copyWith(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          fontSize: 11,
+                                                          color: isDark
+                                                              ? Colors.white70
+                                                              : Colors.black87,
+                                                        ),
+                                                  ),
+                                                );
+                                              },
+                                              reservedSize: 28,
+                                            ),
+                                          ),
+                                          leftTitles: AxisTitles(
+                                            axisNameWidget: Text(
+                                              'Days',
+                                              style: tt.bodySmall?.copyWith(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w600,
+                                                color: isDark
+                                                    ? Colors.white54
+                                                    : Colors.grey.shade600,
+                                              ),
+                                            ),
+                                            axisNameSize: 18,
+                                            sideTitles: SideTitles(
+                                              showTitles: true,
+                                              reservedSize: 32,
+                                              interval: 5,
+                                              getTitlesWidget: (value, meta) {
+                                                if (value == meta.max ||
+                                                    value % 5 != 0)
+                                                  return const SizedBox.shrink();
+                                                return Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        right: 4,
+                                                      ),
+                                                  child: Text(
+                                                    '${value.toInt()}',
+                                                    style: tt.bodySmall
+                                                        ?.copyWith(
+                                                          fontSize: 10,
+                                                        ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                          topTitles: const AxisTitles(
+                                            sideTitles: SideTitles(
+                                              showTitles: false,
+                                            ),
+                                          ),
+                                          rightTitles: const AxisTitles(
+                                            sideTitles: SideTitles(
+                                              showTitles: false,
+                                            ),
+                                          ),
+                                        ),
+                                        gridData: FlGridData(
+                                          show: true,
+                                          drawVerticalLine: false,
+                                          horizontalInterval: 1,
+                                          getDrawingHorizontalLine: (value) =>
+                                              FlLine(
+                                                color: isDark
+                                                    ? Colors.white.withValues(
+                                                        alpha: 0.06,
+                                                      )
+                                                    : Colors.black.withValues(
+                                                        alpha: 0.06,
+                                                      ),
+                                                strokeWidth: 1,
+                                              ),
+                                        ),
+                                        borderData: FlBorderData(show: false),
+                                        barGroups: [
+                                          BarChartGroupData(
+                                            x: 0,
+                                            barRods: [
+                                              BarChartRodData(
+                                                toY: _workingDaysCount
+                                                    .toDouble(),
+                                                width: 24,
+                                                borderRadius:
+                                                    const BorderRadius.vertical(
+                                                      top: Radius.circular(4),
+                                                    ),
+                                                color: AppColors.success,
+                                              ),
+                                            ],
+                                          ),
+                                          BarChartGroupData(
+                                            x: 1,
+                                            barRods: [
+                                              BarChartRodData(
+                                                toY: _absentCount.toDouble(),
+                                                width: 24,
+                                                borderRadius:
+                                                    const BorderRadius.vertical(
+                                                      top: Radius.circular(4),
+                                                    ),
+                                                color: AppColors.danger,
+                                              ),
+                                            ],
+                                          ),
+                                          BarChartGroupData(
+                                            x: 2,
+                                            barRods: [
+                                              BarChartRodData(
+                                                toY: _leaveCount.toDouble(),
+                                                width: 24,
+                                                borderRadius:
+                                                    const BorderRadius.vertical(
+                                                      top: Radius.circular(4),
+                                                    ),
+                                                color: AppColors.orange,
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      duration: const Duration(
+                                        milliseconds: 800,
+                                      ),
+                                      curve: Curves.easeInOutCubic,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                            .animate()
+                            .fadeIn(duration: 420.ms, delay: 480.ms)
+                            .slideY(
+                              begin: 0.12,
+                              end: 0,
+                              duration: 420.ms,
+                              delay: 480.ms,
+                              curve: Curves.easeOutCubic,
                             ),
-                          )
-                          .animate()
-                          .fadeIn(duration: 420.ms, delay: 560.ms)
-                          .slideY(
-                            begin: 0.12,
-                            end: 0,
-                            duration: 420.ms,
-                            delay: 560.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
-                      const SizedBox(height: 12),
-                      _buildAttendanceLogTable(tt, isDark),
 
-                      const SizedBox(height: 12),
-                      const SizedBox(height: 80),
-                    ],
+                        // ── Attendance Log Table ──
+                        const SizedBox(height: 8),
+                        Text(
+                              'Attendance Log',
+                              style: tt.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            )
+                            .animate()
+                            .fadeIn(duration: 420.ms, delay: 560.ms)
+                            .slideY(
+                              begin: 0.12,
+                              end: 0,
+                              duration: 420.ms,
+                              delay: 560.ms,
+                              curve: Curves.easeOutCubic,
+                            ),
+                        const SizedBox(height: 12),
+                        _buildAttendanceLogTable(tt, isDark),
+
+                        const SizedBox(height: 12),
+                        const SizedBox(height: 80),
+                      ],
+                    ),
                   ),
                 ),
               ),

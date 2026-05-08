@@ -12,6 +12,7 @@ import '../../services/api_service.dart';
 import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/status_chip.dart';
 import 'apply_leave_screen.dart';
@@ -549,170 +550,172 @@ class _RequestsScreenState extends State<RequestsScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Column(
-        children: [
-          // Inline title row with filter icon
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 12, 0),
-            child: Row(
-              children: [
-                Text(
-                  tabTitles[safeIndex],
-                  style: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const Spacer(),
-                isApplePlatform
-                    ? CupertinoButton(
-                        padding: EdgeInsets.zero,
-                        onPressed: _showFilterSheet,
-                        child: Badge(
-                          isLabelVisible: _activeFilter != 'All',
-                          smallSize: 8,
-                          backgroundColor: AppColors.primary,
-                          child: Icon(
-                            CupertinoIcons.line_horizontal_3_decrease,
-                            size: 22,
-                            color: AdaptiveColors.primaryText(context),
-                          ),
-                        ),
-                      )
-                    : IconButton(
-                        icon: Badge(
-                          isLabelVisible: _activeFilter != 'All',
-                          smallSize: 8,
-                          backgroundColor: AppColors.primary,
-                          child: const Icon(
-                            Icons.filter_list_rounded,
-                            size: 22,
-                          ),
-                        ),
-                        onPressed: _showFilterSheet,
-                        visualDensity: VisualDensity.compact,
-                      ),
-              ],
-            ),
-          ),
-
-          // Scrollable tab bar / iOS segmented control
-          if (isApplePlatform)
+      body: ResponsiveCenter(
+        child: Column(
+          children: [
+            // Inline title row with filter icon
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-              child: SizedBox(
-                width: double.infinity,
-                child: CupertinoSlidingSegmentedControl<int>(
-                  groupValue: safeIndex,
-                  onValueChanged: (val) {
-                    if (val == null) return;
-                    HapticFeedback.selectionClick();
-                    provider.setRequestsTabIndex(val);
-                  },
-                  children: {
-                    for (var i = 0; i < tabTitles.length; i++)
-                      i: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        child: Text(
-                          tabTitles[i],
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: safeIndex == i
-                                ? FontWeight.w600
-                                : FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                  },
-                ),
-              ),
-            )
-          else
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+              padding: const EdgeInsets.fromLTRB(20, 4, 12, 0),
               child: Row(
-                children: isManagerOrHr
-                    ? [
-                        _buildTab(
-                          'Approvals',
-                          Icons.fact_check_rounded,
-                          0,
-                          safeIndex,
-                          isDark,
-                          provider,
-                          count: _employeeRequests.length,
-                        ),
-                        const SizedBox(width: 10),
-                        _buildTab(
-                          'Requested',
-                          Icons.history_rounded,
-                          1,
-                          safeIndex,
-                          isDark,
-                          provider,
-                          count: _myRequests.length,
-                        ),
-                        const SizedBox(width: 10),
-                        _buildTab(
-                          'Request',
-                          Icons.add_circle_outline_rounded,
-                          2,
-                          safeIndex,
-                          isDark,
-                          provider,
-                        ),
-                      ]
-                    : [
-                        _buildTab(
-                          'Requested',
-                          Icons.history_rounded,
-                          0,
-                          safeIndex,
-                          isDark,
-                          provider,
-                          count: _requests.length,
-                        ),
-                        const SizedBox(width: 10),
-                        _buildTab(
-                          'Request',
-                          Icons.add_circle_outline_rounded,
-                          1,
-                          safeIndex,
-                          isDark,
-                          provider,
-                        ),
-                      ],
-              ),
-            ),
-
-          // Content based on selected chip (with pull-to-refresh)
-          Expanded(
-            child: _isLoading
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: SkeletonList(itemCount: 5, showCircle: false),
-                  )
-                : RefreshIndicator(
-                    onRefresh: _loadRequests,
-                    color: AppColors.primary,
-                    displacement: 40,
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      switchInCurve: Curves.easeOut,
-                      switchOutCurve: Curves.easeIn,
-                      child: _buildTabContent(
-                        safeIndex,
-                        isManagerOrHr,
-                        textTheme,
-                        isDark,
-                      ),
+                children: [
+                  Text(
+                    tabTitles[safeIndex],
+                    style: textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-          ),
-        ],
+                  const Spacer(),
+                  isApplePlatform
+                      ? CupertinoButton(
+                          padding: EdgeInsets.zero,
+                          onPressed: _showFilterSheet,
+                          child: Badge(
+                            isLabelVisible: _activeFilter != 'All',
+                            smallSize: 8,
+                            backgroundColor: AppColors.primary,
+                            child: Icon(
+                              CupertinoIcons.line_horizontal_3_decrease,
+                              size: 22,
+                              color: AdaptiveColors.primaryText(context),
+                            ),
+                          ),
+                        )
+                      : IconButton(
+                          icon: Badge(
+                            isLabelVisible: _activeFilter != 'All',
+                            smallSize: 8,
+                            backgroundColor: AppColors.primary,
+                            child: const Icon(
+                              Icons.filter_list_rounded,
+                              size: 22,
+                            ),
+                          ),
+                          onPressed: _showFilterSheet,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                ],
+              ),
+            ),
+
+            // Scrollable tab bar / iOS segmented control
+            if (isApplePlatform)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: CupertinoSlidingSegmentedControl<int>(
+                    groupValue: safeIndex,
+                    onValueChanged: (val) {
+                      if (val == null) return;
+                      HapticFeedback.selectionClick();
+                      provider.setRequestsTabIndex(val);
+                    },
+                    children: {
+                      for (var i = 0; i < tabTitles.length; i++)
+                        i: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          child: Text(
+                            tabTitles[i],
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: safeIndex == i
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                    },
+                  ),
+                ),
+              )
+            else
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+                child: Row(
+                  children: isManagerOrHr
+                      ? [
+                          _buildTab(
+                            'Approvals',
+                            Icons.fact_check_rounded,
+                            0,
+                            safeIndex,
+                            isDark,
+                            provider,
+                            count: _employeeRequests.length,
+                          ),
+                          const SizedBox(width: 10),
+                          _buildTab(
+                            'Requested',
+                            Icons.history_rounded,
+                            1,
+                            safeIndex,
+                            isDark,
+                            provider,
+                            count: _myRequests.length,
+                          ),
+                          const SizedBox(width: 10),
+                          _buildTab(
+                            'Request',
+                            Icons.add_circle_outline_rounded,
+                            2,
+                            safeIndex,
+                            isDark,
+                            provider,
+                          ),
+                        ]
+                      : [
+                          _buildTab(
+                            'Requested',
+                            Icons.history_rounded,
+                            0,
+                            safeIndex,
+                            isDark,
+                            provider,
+                            count: _requests.length,
+                          ),
+                          const SizedBox(width: 10),
+                          _buildTab(
+                            'Request',
+                            Icons.add_circle_outline_rounded,
+                            1,
+                            safeIndex,
+                            isDark,
+                            provider,
+                          ),
+                        ],
+                ),
+              ),
+
+            // Content based on selected chip (with pull-to-refresh)
+            Expanded(
+              child: _isLoading
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: SkeletonList(itemCount: 5, showCircle: false),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _loadRequests,
+                      color: AppColors.primary,
+                      displacement: 40,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        child: _buildTabContent(
+                          safeIndex,
+                          isManagerOrHr,
+                          textTheme,
+                          isDark,
+                        ),
+                      ),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

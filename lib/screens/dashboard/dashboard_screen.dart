@@ -42,9 +42,9 @@ class DashboardScreen extends StatelessWidget {
 
     final gridCols = Responsive.gridColumns(
       context,
-      phoneCols: 3,
-      tabletCols: 4,
-      desktopCols: 6,
+      phone: 3,
+      tablet: 4,
+      desktop: 6,
     );
     return SingleChildScrollView(
       physics: isApplePlatform

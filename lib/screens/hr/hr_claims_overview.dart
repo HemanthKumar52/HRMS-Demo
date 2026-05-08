@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/styled_donut_chart.dart';
 
@@ -36,111 +37,113 @@ class _HrClaimsOverviewState extends State<HrClaimsOverview>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Column(
-      children: [
-        // Stats Row
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-          child:
-              Row(
-                    children: [
-                      Expanded(
-                        child: _ClaimStatCard(
-                          label: 'Pending',
-                          value: '23',
-                          amount: '₹9,58,000',
-                          color: AppColors.warning,
+    return ResponsiveCenter(
+      child: Column(
+        children: [
+          // Stats Row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            child:
+                Row(
+                      children: [
+                        Expanded(
+                          child: _ClaimStatCard(
+                            label: 'Pending',
+                            value: '23',
+                            amount: '₹9,58,000',
+                            color: AppColors.warning,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _ClaimStatCard(
-                          label: 'Approved',
-                          value: '156',
-                          amount: '₹65,42,000',
-                          color: AppColors.success,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _ClaimStatCard(
+                            label: 'Approved',
+                            value: '156',
+                            amount: '₹65,42,000',
+                            color: AppColors.success,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _ClaimStatCard(
-                          label: 'Disbursed',
-                          value: '142',
-                          amount: '₹60,78,000',
-                          color: AppColors.primary,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _ClaimStatCard(
+                            label: 'Disbursed',
+                            value: '142',
+                            amount: '₹60,78,000',
+                            color: AppColors.primary,
+                          ),
                         ),
-                      ),
-                    ],
-                  )
-                  .animate()
-                  .fadeIn(duration: 420.ms)
-                  .slideY(
-                    begin: 0.12,
-                    end: 0,
-                    duration: 400.ms,
-                    curve: Curves.easeOutCubic,
-                  ),
-        ),
-        const SizedBox(height: 16),
-
-        // Tab Bar
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child:
-              NeuCard(
-                    padding: const EdgeInsets.all(4),
-                    child: TabBar(
-                      controller: _tabController,
-                      indicator: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      labelColor: Colors.white,
-                      unselectedLabelColor: isDark
-                          ? AppColors.darkSubtext
-                          : AppColors.lightSubtext,
-                      labelStyle: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                      dividerColor: Colors.transparent,
-                      tabs: const [
-                        Tab(text: 'Pending'),
-                        Tab(text: 'Approved'),
-                        Tab(text: 'Disbursed'),
                       ],
+                    )
+                    .animate()
+                    .fadeIn(duration: 420.ms)
+                    .slideY(
+                      begin: 0.12,
+                      end: 0,
+                      duration: 400.ms,
+                      curve: Curves.easeOutCubic,
                     ),
-                  )
-                  .animate()
-                  .fadeIn(duration: 420.ms, delay: 80.ms)
-                  .slideY(
-                    begin: 0.12,
-                    end: 0,
-                    duration: 420.ms,
-                    delay: 80.ms,
-                    curve: Curves.easeOutCubic,
-                  ),
-        ),
-        const SizedBox(height: 12),
-
-        // Tab Content
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildClaimsList(
-                _pendingClaims,
-                theme,
-                isDark,
-                showActions: true,
-              ),
-              _buildClaimsList(_approvedClaims, theme, isDark),
-              _buildClaimsList(_disbursedClaims, theme, isDark),
-            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+
+          // Tab Bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child:
+                NeuCard(
+                      padding: const EdgeInsets.all(4),
+                      child: TabBar(
+                        controller: _tabController,
+                        indicator: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        labelColor: Colors.white,
+                        unselectedLabelColor: isDark
+                            ? AppColors.darkSubtext
+                            : AppColors.lightSubtext,
+                        labelStyle: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                        dividerColor: Colors.transparent,
+                        tabs: const [
+                          Tab(text: 'Pending'),
+                          Tab(text: 'Approved'),
+                          Tab(text: 'Disbursed'),
+                        ],
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(duration: 420.ms, delay: 80.ms)
+                    .slideY(
+                      begin: 0.12,
+                      end: 0,
+                      duration: 420.ms,
+                      delay: 80.ms,
+                      curve: Curves.easeOutCubic,
+                    ),
+          ),
+          const SizedBox(height: 12),
+
+          // Tab Content
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildClaimsList(
+                  _pendingClaims,
+                  theme,
+                  isDark,
+                  showActions: true,
+                ),
+                _buildClaimsList(_approvedClaims, theme, isDark),
+                _buildClaimsList(_disbursedClaims, theme, isDark),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

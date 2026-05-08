@@ -8,6 +8,7 @@ import '../../services/notification_service.dart';
 import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/employee_cc_field.dart';
 import '../../widgets/form_fields.dart';
 import '../../widgets/neu_card.dart';
@@ -162,149 +163,152 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
                 parent: AlwaysScrollableScrollPhysics(),
               )
             : null,
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const FormLabel('Type', required: true),
-              formLabelGap,
-              FormDropdown(
-                value: _selectedType,
-                hint: 'Select type',
-                items: _claimTypes,
-                onChanged: (v) =>
-                    setState(() => _selectedType = v ?? _claimTypes.first),
-              ),
-              formFieldGap,
+        child: ResponsiveCenter(
+          maxWidth: Responsive.formMaxWidth(context),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const FormLabel('Type', required: true),
+                formLabelGap,
+                FormDropdown(
+                  value: _selectedType,
+                  hint: 'Select type',
+                  items: _claimTypes,
+                  onChanged: (v) =>
+                      setState(() => _selectedType = v ?? _claimTypes.first),
+                ),
+                formFieldGap,
 
-              const FormLabel('Date'),
-              formLabelGap,
-              FormDateField(
-                value: formatDate(_date),
-                hasValue: _date != null,
-                onTap: () async {
-                  final picked = await pickDate(
-                    context,
-                    initial: _date,
-                    accentColor: AppColors.success,
-                  );
-                  if (picked != null) setState(() => _date = picked);
-                },
-              ),
-              formFieldGap,
-
-              const FormLabel('Title', required: true),
-              formLabelGap,
-              FormInput(
-                controller: _titleController,
-                hint: 'Title',
-                validator: (v) =>
-                    (v == null || v.isEmpty) ? 'Title is required' : null,
-              ),
-              formFieldGap,
-
-              const FormLabel('Reason', required: true),
-              formLabelGap,
-              FormInput(
-                controller: _descriptionController,
-                hint: 'Reason',
-                maxLines: 4,
-              ),
-              formFieldGap,
-
-              const FormLabel('Upload Images'),
-              formLabelGap,
-              if (_images.isNotEmpty) ...[
-                Column(
-                  children: _images.asMap().entries.map((entry) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: NeuCard(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.image_rounded,
-                              size: 18,
-                              color: AppColors.success,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                entry.value.name,
-                                style: textTheme.bodySmall,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            GestureDetector(
-                              onTap: () =>
-                                  setState(() => _images.removeAt(entry.key)),
-                              child: const Icon(
-                                Icons.close_rounded,
-                                size: 16,
-                                color: AppColors.danger,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                const FormLabel('Date'),
+                formLabelGap,
+                FormDateField(
+                  value: formatDate(_date),
+                  hasValue: _date != null,
+                  onTap: () async {
+                    final picked = await pickDate(
+                      context,
+                      initial: _date,
+                      accentColor: AppColors.success,
                     );
-                  }).toList(),
+                    if (picked != null) setState(() => _date = picked);
+                  },
                 ),
-                const SizedBox(height: 4),
-              ],
-              NeuCard(
-                onTap: _addImage,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
+                formFieldGap,
+
+                const FormLabel('Title', required: true),
+                formLabelGap,
+                FormInput(
+                  controller: _titleController,
+                  hint: 'Title',
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Title is required' : null,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.add_photo_alternate_rounded,
-                      size: 22,
-                      color: isDark
-                          ? AppColors.darkSubtext
-                          : AppColors.lightSubtext,
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Add Image',
-                      style: textTheme.bodyMedium?.copyWith(
+                formFieldGap,
+
+                const FormLabel('Reason', required: true),
+                formLabelGap,
+                FormInput(
+                  controller: _descriptionController,
+                  hint: 'Reason',
+                  maxLines: 4,
+                ),
+                formFieldGap,
+
+                const FormLabel('Upload Images'),
+                formLabelGap,
+                if (_images.isNotEmpty) ...[
+                  Column(
+                    children: _images.asMap().entries.map((entry) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: NeuCard(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.image_rounded,
+                                size: 18,
+                                color: AppColors.success,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  entry.value.name,
+                                  style: textTheme.bodySmall,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () =>
+                                    setState(() => _images.removeAt(entry.key)),
+                                child: const Icon(
+                                  Icons.close_rounded,
+                                  size: 16,
+                                  color: AppColors.danger,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 4),
+                ],
+                NeuCard(
+                  onTap: _addImage,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.add_photo_alternate_rounded,
+                        size: 22,
                         color: isDark
                             ? AppColors.darkSubtext
                             : AppColors.lightSubtext,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 10),
+                      Text(
+                        'Add Image',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: isDark
+                              ? AppColors.darkSubtext
+                              : AppColors.lightSubtext,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              formSectionGap,
+                formSectionGap,
 
-              EmployeeCcField(
-                selected: _ccUsers,
-                onChanged: (next) => setState(() {
-                  _ccUsers
-                    ..clear()
-                    ..addAll(next);
-                }),
-              ),
-              formSectionGap,
+                EmployeeCcField(
+                  selected: _ccUsers,
+                  onChanged: (next) => setState(() {
+                    _ccUsers
+                      ..clear()
+                      ..addAll(next);
+                  }),
+                ),
+                formSectionGap,
 
-              FormActionButtons(
-                isSubmitting: _isSubmitting,
-                onSubmit: _submit,
-                buttonColor: AppColors.success,
-              ),
-            ],
+                FormActionButtons(
+                  isSubmitting: _isSubmitting,
+                  onSubmit: _submit,
+                  buttonColor: AppColors.success,
+                ),
+              ],
+            ),
           ),
         ),
       ),

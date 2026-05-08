@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/request_action_dialog.dart';
 import '../../widgets/status_chip.dart';
@@ -56,69 +57,71 @@ class _ApprovalsScreenState extends State<ApprovalsScreen>
         title: 'Approvals',
         showBackButton: true,
       ),
-      body: Column(
-        children: [
-          // Tab Bar
-          Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                child: NeuCard(
-                  padding: const EdgeInsets.all(4),
-                  child: TabBar(
-                    controller: _tabController,
-                    isScrollable: true,
-                    tabAlignment: TabAlignment.start,
-                    indicator: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(16),
+      body: ResponsiveCenter(
+        child: Column(
+          children: [
+            // Tab Bar
+            Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: NeuCard(
+                    padding: const EdgeInsets.all(4),
+                    child: TabBar(
+                      controller: _tabController,
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
+                      indicator: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: isDark
+                          ? AppColors.darkSubtext
+                          : AppColors.lightSubtext,
+                      labelStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      unselectedLabelStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      dividerHeight: 0,
+                      tabs: const [
+                        Tab(text: 'Leave'),
+                        Tab(text: 'Claims'),
+                        Tab(text: 'Tickets'),
+                        Tab(text: 'Work Type'),
+                        Tab(text: 'Regularization'),
+                      ],
                     ),
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    labelColor: Colors.white,
-                    unselectedLabelColor: isDark
-                        ? AppColors.darkSubtext
-                        : AppColors.lightSubtext,
-                    labelStyle: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    unselectedLabelStyle: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    dividerHeight: 0,
-                    tabs: const [
-                      Tab(text: 'Leave'),
-                      Tab(text: 'Claims'),
-                      Tab(text: 'Tickets'),
-                      Tab(text: 'Work Type'),
-                      Tab(text: 'Regularization'),
-                    ],
                   ),
+                )
+                .animate()
+                .fadeIn(duration: 420.ms)
+                .slideY(
+                  begin: 0.12,
+                  end: 0,
+                  duration: 400.ms,
+                  curve: Curves.easeOutCubic,
                 ),
-              )
-              .animate()
-              .fadeIn(duration: 420.ms)
-              .slideY(
-                begin: 0.12,
-                end: 0,
-                duration: 400.ms,
-                curve: Curves.easeOutCubic,
-              ),
-          const SizedBox(height: 8),
+            const SizedBox(height: 8),
 
-          // Tab Views
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: const [
-                _RequestsTab(typeFilter: 'Leave'),
-                _RequestsTab(typeFilter: 'Claims'),
-                _RequestsTab(typeFilter: 'Tickets'),
-                _RequestsTab(typeFilter: 'Work Type Requests'),
-                _RequestsTab(typeFilter: 'Attendance Requests'),
-              ],
+            // Tab Views
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: const [
+                  _RequestsTab(typeFilter: 'Leave'),
+                  _RequestsTab(typeFilter: 'Claims'),
+                  _RequestsTab(typeFilter: 'Tickets'),
+                  _RequestsTab(typeFilter: 'Work Type Requests'),
+                  _RequestsTab(typeFilter: 'Attendance Requests'),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

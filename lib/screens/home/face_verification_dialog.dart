@@ -7,6 +7,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/app_provider.dart';
@@ -113,6 +114,14 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
   // ── Verification flow ────────────────────────────────────────────────────
 
   Future<void> _startVerification() async {
+    // Request location permission upfront so GPS is ready by capture time
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        await Geolocator.requestPermission();
+      }
+    } catch (_) {}
+
     setState(() {
       _stage = _Stage.preview;
       _statusMessage = 'Look directly into the camera';

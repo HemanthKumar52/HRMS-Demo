@@ -5,6 +5,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/styled_donut_chart.dart';
 
 class AnalyticsScreen extends StatefulWidget {
@@ -96,138 +97,140 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   parent: AlwaysScrollableScrollPhysics(),
                 )
               : const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Period Selector
-              _buildPeriodSelector(isDark)
-                  .animate()
-                  .fadeIn(duration: 420.ms)
-                  .slideY(
-                    begin: 0.12,
-                    end: 0,
-                    duration: 400.ms,
-                    curve: Curves.easeOutCubic,
-                  ),
-              const SizedBox(height: 20),
-
-              // Headcount Overview
-              Text(
-                    'Headcount Overview',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+          child: ResponsiveCenter(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Period Selector
+                _buildPeriodSelector(isDark)
+                    .animate()
+                    .fadeIn(duration: 420.ms)
+                    .slideY(
+                      begin: 0.12,
+                      end: 0,
+                      duration: 400.ms,
+                      curve: Curves.easeOutCubic,
                     ),
-                  )
-                  .animate()
-                  .fadeIn(duration: 420.ms, delay: 80.ms)
-                  .slideY(
-                    begin: 0.12,
-                    end: 0,
-                    duration: 420.ms,
-                    delay: 80.ms,
-                    curve: Curves.easeOutCubic,
-                  ),
-              const SizedBox(height: 12),
-              _buildHeadcountChart(isDark)
-                  .animate()
-                  .fadeIn(duration: 420.ms, delay: 160.ms)
-                  .slideY(
-                    begin: 0.12,
-                    end: 0,
-                    duration: 420.ms,
-                    delay: 160.ms,
-                    curve: Curves.easeOutCubic,
-                  ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-              // Attendance Trend
-              Text(
-                    'Attendance Trend',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                // Headcount Overview
+                Text(
+                      'Headcount Overview',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(duration: 420.ms, delay: 80.ms)
+                    .slideY(
+                      begin: 0.12,
+                      end: 0,
+                      duration: 420.ms,
+                      delay: 80.ms,
+                      curve: Curves.easeOutCubic,
                     ),
-                  )
-                  .animate()
-                  .fadeIn(duration: 420.ms, delay: 240.ms)
-                  .slideY(
-                    begin: 0.12,
-                    end: 0,
-                    duration: 420.ms,
-                    delay: 240.ms,
-                    curve: Curves.easeOutCubic,
-                  ),
-              const SizedBox(height: 12),
-              _buildAttendanceTrendChart(isDark)
-                  .animate()
-                  .fadeIn(duration: 420.ms, delay: 320.ms)
-                  .slideY(
-                    begin: 0.12,
-                    end: 0,
-                    duration: 420.ms,
-                    delay: 320.ms,
-                    curve: Curves.easeOutCubic,
-                  ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 12),
+                _buildHeadcountChart(isDark)
+                    .animate()
+                    .fadeIn(duration: 420.ms, delay: 160.ms)
+                    .slideY(
+                      begin: 0.12,
+                      end: 0,
+                      duration: 420.ms,
+                      delay: 160.ms,
+                      curve: Curves.easeOutCubic,
+                    ),
+                const SizedBox(height: 24),
 
-              // Department Distribution
-              Text(
-                    'Department Distribution',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                // Attendance Trend
+                Text(
+                      'Attendance Trend',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(duration: 420.ms, delay: 240.ms)
+                    .slideY(
+                      begin: 0.12,
+                      end: 0,
+                      duration: 420.ms,
+                      delay: 240.ms,
+                      curve: Curves.easeOutCubic,
                     ),
-                  )
-                  .animate()
-                  .fadeIn(duration: 420.ms, delay: 400.ms)
-                  .slideY(
-                    begin: 0.12,
-                    end: 0,
-                    duration: 420.ms,
-                    delay: 400.ms,
-                    curve: Curves.easeOutCubic,
-                  ),
-              const SizedBox(height: 12),
-              _buildDepartmentPieChart(isDark)
-                  .animate()
-                  .fadeIn(duration: 420.ms, delay: 480.ms)
-                  .slideY(
-                    begin: 0.12,
-                    end: 0,
-                    duration: 420.ms,
-                    delay: 480.ms,
-                    curve: Curves.easeOutCubic,
-                  ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 12),
+                _buildAttendanceTrendChart(isDark)
+                    .animate()
+                    .fadeIn(duration: 420.ms, delay: 320.ms)
+                    .slideY(
+                      begin: 0.12,
+                      end: 0,
+                      duration: 420.ms,
+                      delay: 320.ms,
+                      curve: Curves.easeOutCubic,
+                    ),
+                const SizedBox(height: 24),
 
-              // Key Metrics
-              Text(
-                    'Key Metrics',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                // Department Distribution
+                Text(
+                      'Department Distribution',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(duration: 420.ms, delay: 400.ms)
+                    .slideY(
+                      begin: 0.12,
+                      end: 0,
+                      duration: 420.ms,
+                      delay: 400.ms,
+                      curve: Curves.easeOutCubic,
                     ),
-                  )
-                  .animate()
-                  .fadeIn(duration: 420.ms, delay: 560.ms)
-                  .slideY(
-                    begin: 0.12,
-                    end: 0,
-                    duration: 420.ms,
-                    delay: 560.ms,
-                    curve: Curves.easeOutCubic,
-                  ),
-              const SizedBox(height: 12),
-              _buildKeyMetrics(theme, isDark)
-                  .animate()
-                  .fadeIn(duration: 420.ms, delay: 640.ms)
-                  .slideY(
-                    begin: 0.12,
-                    end: 0,
-                    duration: 420.ms,
-                    delay: 640.ms,
-                    curve: Curves.easeOutCubic,
-                  ),
-              const SizedBox(height: 20),
-            ],
+                const SizedBox(height: 12),
+                _buildDepartmentPieChart(isDark)
+                    .animate()
+                    .fadeIn(duration: 420.ms, delay: 480.ms)
+                    .slideY(
+                      begin: 0.12,
+                      end: 0,
+                      duration: 420.ms,
+                      delay: 480.ms,
+                      curve: Curves.easeOutCubic,
+                    ),
+                const SizedBox(height: 24),
+
+                // Key Metrics
+                Text(
+                      'Key Metrics',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(duration: 420.ms, delay: 560.ms)
+                    .slideY(
+                      begin: 0.12,
+                      end: 0,
+                      duration: 420.ms,
+                      delay: 560.ms,
+                      curve: Curves.easeOutCubic,
+                    ),
+                const SizedBox(height: 12),
+                _buildKeyMetrics(theme, isDark)
+                    .animate()
+                    .fadeIn(duration: 420.ms, delay: 640.ms)
+                    .slideY(
+                      begin: 0.12,
+                      end: 0,
+                      duration: 420.ms,
+                      delay: 640.ms,
+                      curve: Curves.easeOutCubic,
+                    ),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
