@@ -1839,7 +1839,7 @@ class _LeaveTypeChip extends StatelessWidget {
     final headline = isUnpaid ? used : remaining;
     final progressValue = isUnpaid ? (used > 0 ? 1.0 : 0.0) : (used / total);
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       decoration: BoxDecoration(
         color: isDark
             ? color.withValues(alpha: 0.12)
@@ -1875,7 +1875,7 @@ class _LeaveTypeChip extends StatelessWidget {
               color: color,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: TweenAnimationBuilder<double>(
@@ -1890,7 +1890,7 @@ class _LeaveTypeChip extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             isUnpaid ? '$used taken' : '$used/$total used',
             style: TextStyle(fontSize: 9, color: color.withValues(alpha: 0.7)),
