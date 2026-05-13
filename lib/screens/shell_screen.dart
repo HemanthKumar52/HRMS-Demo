@@ -18,6 +18,7 @@ import '../utils/platform_adaptive.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/dynamic_island.dart';
 import '../widgets/feedback_popup.dart';
+import '../widgets/native_ios_views.dart';
 import 'developer_mode_blocked_screen.dart';
 import 'attendance/attendance_screen.dart';
 import 'dashboard/dashboard_screen.dart';
@@ -168,22 +169,21 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   ) {
     return Scaffold(
       backgroundColor: AdaptiveColors.background(context),
-      // ── Liquid Glass App Bar ──
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(52),
         child: ClipRect(
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
             child: Container(
               decoration: BoxDecoration(
                 color: isDark
-                    ? Colors.black.withValues(alpha: 0.55)
-                    : Colors.white.withValues(alpha: 0.7),
+                    ? Colors.black.withValues(alpha: 0.4)
+                    : Colors.white.withValues(alpha: 0.5),
                 border: Border(
                   bottom: BorderSide(
                     color: isDark
-                        ? Colors.white.withValues(alpha: 0.08)
-                        : Colors.black.withValues(alpha: 0.06),
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.white.withValues(alpha: 0.6),
                     width: 0.5,
                   ),
                 ),
@@ -236,6 +236,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           ),
         ),
       ),
+      extendBody: true,
       body: Stack(
         children: [
           IndexedStack(
@@ -245,37 +246,52 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           const DynamicIslandOverlay(),
         ],
       ),
-      // ── Liquid Glass Bottom Nav ──
-      bottomNavigationBar: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.black.withValues(alpha: 0.5)
-                  : Colors.white.withValues(alpha: 0.65),
-              border: Border(
-                top: BorderSide(
+      // ── Floating Liquid Glass Tab Bar (iOS 26 style) ──
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
+              child: Container(
+                height: 70,
+                decoration: BoxDecoration(
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.08)
-                      : Colors.black.withValues(alpha: 0.06),
-                  width: 0.5,
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.white.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.15)
+                        : Colors.white.withValues(alpha: 0.8),
+                    width: 0.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(
+                        alpha: isDark ? 0.3 : 0.08,
+                      ),
+                      blurRadius: 24,
+                      offset: const Offset(0, 4),
+                      spreadRadius: -2,
+                    ),
+                  ],
                 ),
-              ),
-            ),
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 6, bottom: 2),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: List.generate(4, (index) {
-                    final isActive = provider.bottomNavIndex == index;
                     final icons = [
+                      CupertinoIcons.square_grid_2x2,
+                      CupertinoIcons.doc_text,
+                      CupertinoIcons.hand_raised,
+                      CupertinoIcons.doc_plaintext,
+                    ];
+                    final activeIcons = [
                       CupertinoIcons.square_grid_2x2_fill,
                       CupertinoIcons.doc_text_fill,
                       CupertinoIcons.hand_raised_fill,
-                      CupertinoIcons.doc_text,
+                      CupertinoIcons.doc_plaintext,
                     ];
                     final labels = [
                       'Dashboard',
@@ -283,43 +299,17 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
                       'Attendance',
                       'Payslip',
                     ];
-                    return CupertinoButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () {
-                        HapticFeedback.selectionClick();
-                        provider.setBottomNavIndex(index);
-                      },
-                      child: SizedBox(
-                        width: 70,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              icons[index],
-                              size: 22,
-                              color: isActive
-                                  ? AppColors.primary
-                                  : (isDark
-                                        ? Colors.white.withValues(alpha: 0.4)
-                                        : Colors.grey.shade500),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              labels[index],
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: isActive
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
-                                color: isActive
-                                    ? AppColors.primary
-                                    : (isDark
-                                          ? Colors.white.withValues(alpha: 0.4)
-                                          : Colors.grey.shade500),
-                              ),
-                            ),
-                          ],
-                        ),
+                    return Expanded(
+                      child: _TelegramNavItem(
+                        icon: icons[index],
+                        activeIcon: activeIcons[index],
+                        label: labels[index],
+                        isActive: provider.bottomNavIndex == index,
+                        isDark: isDark,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          provider.setBottomNavIndex(index);
+                        },
                       ),
                     );
                   }),
@@ -991,6 +981,132 @@ class _NotifItem extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Telegram-style nav item with blue fill that scales from center outward.
+class _TelegramNavItem extends StatefulWidget {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final bool isActive;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _TelegramNavItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.isActive,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  State<_TelegramNavItem> createState() => _TelegramNavItemState();
+}
+
+class _TelegramNavItemState extends State<_TelegramNavItem>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnim;
+  late Animation<double> _fadeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _scaleAnim = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+    );
+    _fadeAnim = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    );
+    if (widget.isActive) _controller.value = 1.0;
+  }
+
+  @override
+  void didUpdateWidget(covariant _TelegramNavItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) {
+      _controller.forward(from: 0.0);
+    } else if (!widget.isActive && oldWidget.isActive) {
+      _controller.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  static const _activeBlue = Color(0xFF2AABEE);
+
+  @override
+  Widget build(BuildContext context) {
+    final inactiveColor = widget.isDark
+        ? Colors.white.withValues(alpha: 0.4)
+        : Colors.black.withValues(alpha: 0.35);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                // Blue pill background — scales from center
+                Transform.scale(
+                  scale: _scaleAnim.value,
+                  child: FadeTransition(
+                    opacity: _fadeAnim,
+                    child: Container(
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: _activeBlue,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                  ),
+                ),
+                // Icon + label
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      widget.isActive ? widget.activeIcon : widget.icon,
+                      size: 22,
+                      color: widget.isActive ? Colors.white : inactiveColor,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.label,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: widget.isActive
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                        color: widget.isActive ? Colors.white : inactiveColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

@@ -11,6 +11,8 @@ import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
 import '../../utils/responsive.dart';
+import '../../widgets/ios_screen_wrapper.dart';
+import '../../widgets/native_ios_views.dart';
 import '../../widgets/neu_card.dart';
 
 import '../../services/api_service.dart';
@@ -28,6 +30,91 @@ import 'org_chart_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    if (shouldUseNativeIOS) {
+      return _NativeIOSDashboard();
+    }
+    return const _DartDashboard();
+  }
+}
+
+class _NativeIOSDashboard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<AppProvider>();
+    return IOSScreenWrapper(
+      iosViewType: NativeViewTypes.dashboard,
+      iosParams: _buildParams(provider),
+      onChannelReady: (channel) {
+        // Send updated data whenever provider changes
+        channel.invokeMethod('updateData', _buildParams(provider));
+      },
+      onNavigate: (screen, args) {
+        switch (screen) {
+          case 'attendance':
+            provider.setBottomNavIndex(2);
+            break;
+          case 'requests':
+            provider.setBottomNavIndex(1);
+            break;
+          case 'adminPanel':
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AdminPanelScreen()),
+            );
+            break;
+        }
+      },
+      dartChild: const _DartDashboard(),
+    );
+  }
+
+  Map<String, dynamic> _buildParams(AppProvider provider) {
+    return {
+      'userName': provider.userName,
+      'isPunchedIn': provider.isPunchedIn,
+      'punchInTime': provider.punchInTime != null
+          ? '${provider.punchInTime!.hour}:${provider.punchInTime!.minute.toString().padLeft(2, '0')}'
+          : '--:--',
+      'workedHours': provider.isPunchedIn && provider.punchInTime != null
+          ? '${DateTime.now().difference(provider.punchInTime!).inHours}h ${DateTime.now().difference(provider.punchInTime!).inMinutes.remainder(60)}m'
+          : '0h 0m',
+      'leaveBalances': provider.leaveBalances
+          .map(
+            (lb) => {
+              'type': lb['label'] ?? 'Leave',
+              'used': lb['used'] ?? 0,
+              'total': lb['total'] ?? 0,
+            },
+          )
+          .toList(),
+      'announcements': provider.announcements
+          .map(
+            (a) => {
+              'title': a['title'] ?? '',
+              'body': a['subtitle'] ?? '',
+            },
+          )
+          .toList(),
+    };
+  }
+}
+
+String _stripHtml(String html) {
+  return html
+      .replaceAll(RegExp(r'<[^>]*>'), '')
+      .replaceAll('&nbsp;', ' ')
+      .replaceAll('&amp;', '&')
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&quot;', '"')
+      .trim();
+}
+
+class _DartDashboard extends StatelessWidget {
+  const _DartDashboard();
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +171,7 @@ class DashboardScreen extends StatelessWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   crossAxisCount: gridCols,
-                  childAspectRatio: 1.35,
+                  childAspectRatio: 1.05,
                   mainAxisSpacing: 8,
                   crossAxisSpacing: 8,
                   children: [
@@ -467,7 +554,7 @@ class DashboardScreen extends StatelessWidget {
                                 crossAxisCount: 3,
                                 mainAxisSpacing: 10,
                                 crossAxisSpacing: 10,
-                                childAspectRatio: 1.15,
+                                childAspectRatio: 1.0,
                               ),
                           itemCount: provider.leaveBalances.length,
                           itemBuilder: (context, i) {
@@ -585,7 +672,7 @@ class DashboardScreen extends StatelessWidget {
                             children: [
                               _AnnouncementItem(
                                 title: a['title'] ?? 'Announcement',
-                                subtitle: a['subtitle'] ?? '',
+                                subtitle: _stripHtml(a['subtitle'] ?? ''),
                                 icon: Icons.campaign_rounded,
                               ),
                               const Divider(height: 16),
@@ -1760,6 +1847,8 @@ class _LeaveTypeChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           TweenAnimationBuilder<int>(
             tween: IntTween(begin: 0, end: headline),

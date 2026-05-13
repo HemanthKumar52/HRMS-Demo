@@ -13,6 +13,8 @@ import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
 import '../../utils/responsive.dart';
+import '../../widgets/ios_screen_wrapper.dart';
+import '../../widgets/native_ios_views.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/status_chip.dart';
 import 'apply_leave_screen.dart';
@@ -548,6 +550,125 @@ class _RequestsScreenState extends State<RequestsScreen> {
 
     final safeIndex = chipIndex.clamp(0, tabTitles.length - 1);
 
+    if (shouldUseNativeIOS) {
+      return IOSScreenWrapper(
+        iosViewType: NativeViewTypes.requests,
+        iosParams: {
+          'requests': _requests
+              .map(
+                (r) => {
+                  'id': r['id'],
+                  'type': r['type'],
+                  'title': r['title'],
+                  'status': r['status'],
+                  'appliedDate': r['appliedDate'],
+                  'created_date': r['created_date'],
+                  'employeeName': r['employeeName'],
+                },
+              )
+              .toList(),
+          'employeeRequests': _employeeRequests
+              .map(
+                (r) => {
+                  'id': r['id'],
+                  'type': r['type'],
+                  'title': r['title'],
+                  'status': r['status'],
+                  'appliedDate': r['appliedDate'],
+                  'created_date': r['created_date'],
+                  'employeeName': r['employeeName'],
+                },
+              )
+              .toList(),
+          'selectedTabIndex': safeIndex,
+          'isManagerOrHr': isManagerOrHr,
+          'activeFilter': _activeFilter,
+        },
+        onNavigate: (screen, args) {
+          switch (screen) {
+            case 'applyLeave':
+              Navigator.push(
+                context,
+                Motion.pageRoute(const ApplyLeaveScreen()),
+              ).then((_) => _loadRequests());
+              break;
+            case 'submitClaim':
+              Navigator.push(
+                context,
+                Motion.pageRoute(const SubmitClaimScreen()),
+              ).then((_) => _loadRequests());
+              break;
+            case 'raiseTicket':
+              Navigator.push(
+                context,
+                Motion.pageRoute(const RaiseTicketScreen()),
+              ).then((_) => _loadRequests());
+              break;
+            case 'shiftChange':
+              Navigator.push(
+                context,
+                Motion.pageRoute(const ShiftChangeScreen()),
+              ).then((_) => _loadRequests());
+              break;
+            case 'workTypeRequest':
+              Navigator.push(
+                context,
+                Motion.pageRoute(const WorkTypeRequestScreen()),
+              ).then((_) => _loadRequests());
+              break;
+            case 'attendanceRequest':
+              Navigator.push(
+                context,
+                Motion.pageRoute(const AttendanceRequestScreen()),
+              ).then((_) => _loadRequests());
+              break;
+            case 'assetRequest':
+              Navigator.push(
+                context,
+                Motion.pageRoute(const AssetRequestScreen()),
+              ).then((_) => _loadRequests());
+              break;
+            case 'requestDetail':
+              final requestData = args ?? {};
+              Navigator.push(
+                context,
+                Motion.pageRoute(RequestDetailScreen(requestData: requestData)),
+              ).then((_) => _loadRequests());
+              break;
+          }
+        },
+        dartChild: _buildDartScaffold(
+          context,
+          textTheme,
+          isDark,
+          provider,
+          tabTitles,
+          safeIndex,
+          isManagerOrHr,
+        ),
+      );
+    }
+
+    return _buildDartScaffold(
+      context,
+      textTheme,
+      isDark,
+      provider,
+      tabTitles,
+      safeIndex,
+      isManagerOrHr,
+    );
+  }
+
+  Widget _buildDartScaffold(
+    BuildContext context,
+    TextTheme textTheme,
+    bool isDark,
+    AppProvider provider,
+    List<String> tabTitles,
+    int safeIndex,
+    bool isManagerOrHr,
+  ) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: ResponsiveCenter(

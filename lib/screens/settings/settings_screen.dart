@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/adaptive_colors.dart';
+import '../../widgets/ios_screen_wrapper.dart';
+import '../../widgets/native_ios_views.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/adaptive_list.dart';
 import '../../providers/theme_provider.dart';
@@ -90,6 +92,85 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    if (shouldUseNativeIOS) {
+      return IOSScreenWrapper(
+        iosViewType: NativeViewTypes.settings,
+        iosParams: {
+          'themeMode': themeProvider.themeMode.name,
+          'notificationsEnabled': _notificationsEnabled,
+          'isFaceEnrolled': _isFaceEnrolled,
+          'appLockEnabled': _appLockEnabled,
+          'deviceSupportsLock': _deviceSupportsLock,
+          'appVersion': _appVersion,
+          'userName': appProvider.userName,
+          'role': appProvider.role.name,
+        },
+        onNavigate: (screen, args) {
+          switch (screen) {
+            case 'faceEnrollment':
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const FaceEnrollmentScreen()),
+              );
+              break;
+            case 'orgChart':
+              Navigator.push(
+                context,
+                adaptivePageRoute(child: const OrgChartScreen()),
+              );
+              break;
+            case 'setThemeLight':
+              themeProvider.setTheme(AppThemeMode.light);
+              break;
+            case 'setThemeDark':
+              themeProvider.setTheme(AppThemeMode.dark);
+              break;
+            case 'toggleNotifications':
+              _setNotificationsEnabled(!_notificationsEnabled);
+              break;
+            case 'toggleAppLock':
+              _toggleAppLock(!_appLockEnabled);
+              break;
+            case 'syncData':
+              context.read<AppProvider>().fetchDashboardData();
+              break;
+            case 'about':
+              _showAboutPopup(context);
+              break;
+            case 'privacyPolicy':
+              _showPrivacyPolicy(context);
+              break;
+            case 'termsOfService':
+              _showTermsOfService(context);
+              break;
+          }
+        },
+        dartChild: _buildDartScaffold(
+          context,
+          themeProvider,
+          appProvider,
+          theme,
+          isDark,
+        ),
+      );
+    }
+
+    return _buildDartScaffold(
+      context,
+      themeProvider,
+      appProvider,
+      theme,
+      isDark,
+    );
+  }
+
+  Widget _buildDartScaffold(
+    BuildContext context,
+    ThemeProvider themeProvider,
+    AppProvider appProvider,
+    ThemeData theme,
+    bool isDark,
+  ) {
     return Scaffold(
       appBar: adaptiveAppBar(
         context: context,

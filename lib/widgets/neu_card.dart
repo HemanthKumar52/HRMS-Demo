@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -65,18 +67,36 @@ class _NeuCardState extends State<NeuCard> with TickerProviderStateMixin {
   }
 
   Widget _buildIOSCard(BuildContext context) {
-    final cardChild = AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      decoration: BoxDecoration(
-        color: AdaptiveColors.cardBackground(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AdaptiveColors.separator(context),
-          width: 0.5,
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+    final cardChild = ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Container(
+          decoration: BoxDecoration(
+            // Translucent glass fill
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.white.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : Colors.white.withValues(alpha: 0.7),
+              width: 0.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: widget.padding,
+          child: widget.child,
         ),
       ),
-      padding: widget.padding,
-      child: widget.child,
     );
 
     if (widget.onTap == null) return cardChild;

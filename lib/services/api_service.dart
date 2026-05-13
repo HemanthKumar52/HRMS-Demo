@@ -33,11 +33,11 @@ class ApiService {
     if (kReleaseMode) {
       return 'https://$_prodHost/v1';
     }
-    // Debug builds → local unified Django server (port 8001).
+    // Debug builds → local mobile API server (port 8000).
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8001/v1';
+      return 'http://10.0.2.2:8000/v1';
     }
-    return 'http://127.0.0.1:8001/v1';
+    return 'http://127.0.0.1:8000/v1';
   }
 
   /// Web backend URL — now same server as mobile API (unified).
@@ -51,9 +51,9 @@ class ApiService {
       return 'https://$_prodHost/api';
     }
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8001/api';
+      return 'http://10.0.2.2:8000/api';
     }
-    return 'http://127.0.0.1:8001/api';
+    return 'http://127.0.0.1:8000/api';
   }
 
   /// JWT token for the web backend (separate from mobile backend token).

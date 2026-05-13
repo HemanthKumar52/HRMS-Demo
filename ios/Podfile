@@ -39,5 +39,17 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+
+    # Allow ML Kit pods to build for iOS 26 simulators by excluding arm64
+    # simulator slices (they only ship x86_64 for sim).
+    mlkit_pods = [
+      'GoogleMLKit', 'MLImage', 'MLKitCommon', 'MLKitVision',
+      'MLKitFaceDetection',
+    ]
+    if mlkit_pods.any? { |name| target.name.include?(name) }
+      target.build_configurations.each do |config|
+        config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+      end
+    end
   end
 end

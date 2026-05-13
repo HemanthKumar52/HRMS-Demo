@@ -9,7 +9,6 @@ import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
-import '../../utils/responsive.dart';
 import '../../widgets/neu_card.dart';
 import '../manager/approvals_screen.dart';
 
@@ -101,11 +100,9 @@ class _AdminCommandCenterScreenState extends State<AdminCommandCenterScreen> {
           : RefreshIndicator(
               color: AppColors.primary,
               onRefresh: _load,
-              child: ResponsiveCenter(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
-                  children: _buildSections(theme, isDark),
-                ),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+                children: _buildSections(theme, isDark),
               ),
             ),
     );

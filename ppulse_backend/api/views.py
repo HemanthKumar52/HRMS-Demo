@@ -1,3 +1,4 @@
+import re
 from calendar import monthrange
 from datetime import date, datetime, timedelta
 
@@ -292,7 +293,7 @@ def _issue_tokens(user):
 
 
 class LoginThrottle(throttling.AnonRateThrottle):
-    rate = '5/minute'
+    rate = '30/minute'
 
 
 class AuthView(APIView):
@@ -2875,14 +2876,18 @@ class PayslipsView(APIView):
         if not employee:
             return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        month = int(request.query_params.get('month', datetime.now().month))
-        year = int(request.query_params.get('year', datetime.now().year))
+        month = request.query_params.get('month')
+        year = request.query_params.get('year')
 
-        start = date(year, month, 1)
-        end = date(year, month, monthrange(year, month)[1])
-        payslip = Payslip.objects.filter(
-            employee_id_id=employee.id, start_date__gte=start, start_date__lte=end
-        ).first()
+        if month and year:
+            start = date(int(year), int(month), 1)
+            end = date(int(year), int(month), monthrange(int(year), int(month))[1])
+            payslip = Payslip.objects.filter(
+                employee_id_id=employee.id, start_date__gte=start, start_date__lte=end
+            ).first()
+        else:
+            # Return the latest payslip if no month/year specified
+            payslip = Payslip.objects.filter(employee_id_id=employee.id).order_by('-start_date').first()
 
         if not payslip:
             return Response({'error': 'Payslip not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -2890,8 +2895,8 @@ class PayslipsView(APIView):
         return Response(
             {
                 'id': payslip.id,
-                'month': payslip.month,
-                'year': payslip.year,
+                'month': payslip.start_date.month,
+                'year': payslip.start_date.year,
                 'gross_pay': float(payslip.gross_pay or 0),
                 'net_pay': float(payslip.net_pay or 0),
                 'basic_pay': float(payslip.basic_pay or 0),
@@ -2954,7 +2959,7 @@ class PayslipHTMLView(APIView):
     """Proxy payslip HTML directly from the web app — exact same template.
     No local generation — everything comes from web."""
 
-    WEB_BASE = 'http://127.0.0.1:8000'
+    WEB_BASE = 'http://127.0.0.1:8001'
 
     def _web_session(self, username):
         """Create an authenticated session on the web backend."""
@@ -2965,7 +2970,7 @@ class PayslipHTMLView(APIView):
         csrf = login_page.cookies.get('csrftoken', '')
         session.post(
             f'{self.WEB_BASE}/login/',
-            data={'username': username, 'password': 'Ppulse@123', 'csrfmiddlewaretoken': csrf},
+            data={'username': username, 'password': 'admin', 'csrfmiddlewaretoken': csrf},
             headers={'Referer': f'{self.WEB_BASE}/login/'},
             timeout=5,
         )
@@ -3083,7 +3088,7 @@ body {{ margin: 0; padding: 8px; background: #fff; font-family: Arial, Helvetica
 class PayslipPDFView(APIView):
     """Fetch payslip PDF from the web app's DRF API."""
 
-    WEB_BASE = 'http://127.0.0.1:8000'
+    WEB_BASE = 'http://127.0.0.1:8001'
 
     def get(self, request, pk):
         import requests as _req
@@ -4111,8 +4116,10 @@ class DashboardAnnouncementsView(APIView):
                     {
                         'id': str(a.id),
                         'title': a.title,
-                        'subtitle': a.subtitle or '',
-                        'icon': a.icon or 'announcement',
+                        'subtitle': re.sub(r'<[^>]+>', '', (a.description or ''))
+                        .replace('&nbsp;', ' ')
+                        .strip(),
+                        'icon': 'announcement',
                     }
                     for a in announcements
                 ]

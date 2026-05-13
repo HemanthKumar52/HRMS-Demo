@@ -14,6 +14,8 @@ import '../../widgets/styled_donut_chart.dart';
 
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:open_filex/open_filex.dart';
+import '../../widgets/ios_screen_wrapper.dart';
+import '../../widgets/native_ios_views.dart';
 import 'payslip_viewer_screen.dart';
 import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
@@ -451,6 +453,67 @@ class _PayslipScreenState extends State<PayslipScreen> {
     final tt = Theme.of(context).textTheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    if (shouldUseNativeIOS) {
+      return IOSScreenWrapper(
+        iosViewType: NativeViewTypes.payslip,
+        iosParams: {
+          'selectedMonth': _months[_selectedMonthIndex],
+          'selectedYear': _selectedYear,
+          'grossPay': _grossSalary,
+          'netPay': _netPay,
+          'totalDeductions': _totalDeductions,
+          'basicPay': _basicPay,
+          'hasPayslip': _selectedPayslip.isNotEmpty,
+          'payslipId': _selectedPayslip['id'],
+          'earnings': _earnings
+              .map((e) => {'label': e.label, 'amount': e.amount})
+              .toList(),
+          'deductions': _deductions
+              .map((e) => {'label': e.label, 'amount': e.amount})
+              .toList(),
+          'employees': _employees,
+          'selectedEmployee': _selectedEmployee,
+        },
+        onNavigate: (screen, args) {
+          switch (screen) {
+            case 'previousMonth':
+              _goToPreviousMonth();
+              break;
+            case 'nextMonth':
+              _goToNextMonth();
+              break;
+            case 'viewPayslip':
+              Navigator.push(
+                context,
+                Motion.pageRoute(
+                  PayslipViewerScreen(
+                    month: _months[_selectedMonthIndex],
+                    year: _selectedYear,
+                    payslipId: _selectedPayslip['id'] is int
+                        ? _selectedPayslip['id']
+                        : int.tryParse(
+                            _selectedPayslip['id']?.toString() ?? '',
+                          ),
+                  ),
+                ),
+              );
+              break;
+            case 'downloadPdf':
+              _downloadPayslipPdf();
+              break;
+            case 'refresh':
+              _loadPayslips();
+              break;
+          }
+        },
+        dartChild: _buildDartScaffold(context, tt, isDark),
+      );
+    }
+
+    return _buildDartScaffold(context, tt, isDark);
+  }
+
+  Widget _buildDartScaffold(BuildContext context, TextTheme tt, bool isDark) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: _isLoading

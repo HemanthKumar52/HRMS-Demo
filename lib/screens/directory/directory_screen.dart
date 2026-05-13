@@ -6,7 +6,6 @@ import '../../animations/skeleton_loading.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
-import '../../utils/responsive.dart';
 import '../../widgets/neu_card.dart';
 import 'employee_detail_screen.dart';
 
@@ -114,240 +113,235 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         title: 'Directory',
         showBackButton: true,
       ),
-      body: ResponsiveCenter(
-        child: Column(
-          children: [
-            // Search bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-              child: isApplePlatform
-                  ? CupertinoSearchTextField(
-                      placeholder: 'Search by name, email, department...',
+      body: Column(
+        children: [
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+            child: isApplePlatform
+                ? CupertinoSearchTextField(
+                    placeholder: 'Search by name, email, department...',
+                    onChanged: (v) => setState(() => _searchQuery = v),
+                  )
+                : Container(
+                    decoration: NeuDecoration.card(context, radius: 16),
+                    child: TextField(
                       onChanged: (v) => setState(() => _searchQuery = v),
-                    )
-                  : Container(
-                      decoration: NeuDecoration.card(context, radius: 16),
-                      child: TextField(
-                        onChanged: (v) => setState(() => _searchQuery = v),
-                        style: theme.textTheme.bodyLarge,
-                        decoration: InputDecoration(
-                          hintText: 'Search by name, email, department...',
-                          hintStyle: theme.textTheme.bodyMedium,
-                          prefixIcon: Icon(
-                            Icons.search_rounded,
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.4)
-                                : Colors.black.withValues(alpha: 0.3),
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
+                      style: theme.textTheme.bodyLarge,
+                      decoration: InputDecoration(
+                        hintText: 'Search by name, email, department...',
+                        hintStyle: theme.textTheme.bodyMedium,
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.4)
+                              : Colors.black.withValues(alpha: 0.3),
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
                         ),
                       ),
                     ),
-            ),
-
-            // Info text
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Your reporting team & key contacts',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w500,
                   ),
+          ),
+
+          // Info text
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Your reporting team & key contacts',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+          ),
+          const SizedBox(height: 8),
 
-            // Employee list
-            Expanded(
-              child: _isLoading
-                  ? SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: SkeletonList(itemCount: 5, showCircle: true),
-                    )
-                  : _filtered.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.search_off_rounded,
-                            size: 48,
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.2)
-                                : Colors.black.withValues(alpha: 0.15),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No team members found',
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
-                      itemCount: _filtered.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        final emp = _filtered[index];
-                        return GestureDetector(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => EmployeeDetailScreen(
-                                  employeeId: emp.id,
-                                  name: emp.name,
-                                  initials: emp.initials,
-                                  color: emp.color,
-                                ),
+          // Employee list
+          Expanded(
+            child: _isLoading
+                ? SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: SkeletonList(itemCount: 5, showCircle: true),
+                  )
+                : _filtered.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.search_off_rounded,
+                          size: 48,
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.2)
+                              : Colors.black.withValues(alpha: 0.15),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No team members found',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
+                    itemCount: _filtered.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final emp = _filtered[index];
+                      return GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => EmployeeDetailScreen(
+                                employeeId: emp.id,
+                                name: emp.name,
+                                initials: emp.initials,
+                                color: emp.color,
                               ),
-                            );
-                          },
-                          child:
-                              NeuCard(
-                                    padding: const EdgeInsets.all(14),
-                                    child: Row(
-                                      children: [
-                                        CircleAvatar(
-                                          radius: 24,
-                                          backgroundColor: emp.color.withValues(
-                                            alpha: 0.15,
-                                          ),
-                                          child: Text(
-                                            emp.initials,
-                                            style: theme.textTheme.titleMedium
-                                                ?.copyWith(
-                                                  color: emp.color,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                          ),
+                            ),
+                          );
+                        },
+                        child:
+                            NeuCard(
+                                  padding: const EdgeInsets.all(14),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 24,
+                                        backgroundColor: emp.color.withValues(
+                                          alpha: 0.15,
                                         ),
-                                        const SizedBox(width: 14),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                children: [
-                                                  Expanded(
-                                                    child: Text(
-                                                      emp.name,
-                                                      style: theme
-                                                          .textTheme
-                                                          .bodyLarge
-                                                          ?.copyWith(
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                  // Designation badge — right top corner
-                                                  if (emp
-                                                      .designation
-                                                      .isNotEmpty)
-                                                    Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 8,
-                                                            vertical: 3,
-                                                          ),
-                                                      decoration: BoxDecoration(
-                                                        color: isDark
-                                                            ? Colors.white
-                                                                  .withValues(
-                                                                    alpha: 0.08,
-                                                                  )
-                                                            : Colors.grey
-                                                                  .withValues(
-                                                                    alpha: 0.1,
-                                                                  ),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              6,
-                                                            ),
-                                                      ),
-                                                      child: Text(
-                                                        emp.designation,
-                                                        style: theme
-                                                            .textTheme
-                                                            .bodySmall
-                                                            ?.copyWith(
-                                                              fontSize: 10,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w600,
-                                                            ),
-                                                      ),
-                                                    ),
-                                                ],
+                                        child: Text(
+                                          emp.initials,
+                                          style: theme.textTheme.titleMedium
+                                              ?.copyWith(
+                                                color: emp.color,
+                                                fontWeight: FontWeight.w700,
                                               ),
-                                              if (emp.role.isNotEmpty) ...[
-                                                const SizedBox(height: 6),
-                                                Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 2,
-                                                      ),
-                                                  decoration: BoxDecoration(
-                                                    color: _roleColor(
-                                                      emp.role,
-                                                    ).withValues(alpha: 0.1),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          6,
-                                                        ),
-                                                  ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(
                                                   child: Text(
-                                                    emp.role,
+                                                    emp.name,
                                                     style: theme
                                                         .textTheme
-                                                        .bodySmall
+                                                        .bodyLarge
                                                         ?.copyWith(
-                                                          fontSize: 10,
-                                                          color: _roleColor(
-                                                            emp.role,
-                                                          ),
                                                           fontWeight:
                                                               FontWeight.w600,
                                                         ),
                                                   ),
                                                 ),
+                                                // Designation badge — right top corner
+                                                if (emp.designation.isNotEmpty)
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 8,
+                                                          vertical: 3,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: isDark
+                                                          ? Colors.white
+                                                                .withValues(
+                                                                  alpha: 0.08,
+                                                                )
+                                                          : Colors.grey
+                                                                .withValues(
+                                                                  alpha: 0.1,
+                                                                ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            6,
+                                                          ),
+                                                    ),
+                                                    child: Text(
+                                                      emp.designation,
+                                                      style: theme
+                                                          .textTheme
+                                                          .bodySmall
+                                                          ?.copyWith(
+                                                            fontSize: 10,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
+                                                    ),
+                                                  ),
                                               ],
+                                            ),
+                                            if (emp.role.isNotEmpty) ...[
+                                              const SizedBox(height: 6),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 2,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: _roleColor(
+                                                    emp.role,
+                                                  ).withValues(alpha: 0.1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                        6,
+                                                      ),
+                                                ),
+                                                child: Text(
+                                                  emp.role,
+                                                  style: theme
+                                                      .textTheme
+                                                      .bodySmall
+                                                      ?.copyWith(
+                                                        fontSize: 10,
+                                                        color: _roleColor(
+                                                          emp.role,
+                                                        ),
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                ),
+                                              ),
                                             ],
-                                          ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
-                                  )
-                                  .animate()
-                                  .fadeIn(
-                                    duration: 350.ms,
-                                    delay: (index * 60).ms,
-                                  )
-                                  .slideX(
-                                    begin: 0.05,
-                                    end: 0,
-                                    duration: 350.ms,
-                                    delay: (index * 60).ms,
-                                    curve: Curves.easeOutCubic,
+                                      ),
+                                    ],
                                   ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
+                                )
+                                .animate()
+                                .fadeIn(
+                                  duration: 350.ms,
+                                  delay: (index * 60).ms,
+                                )
+                                .slideX(
+                                  begin: 0.05,
+                                  end: 0,
+                                  duration: 350.ms,
+                                  delay: (index * 60).ms,
+                                  curve: Curves.easeOutCubic,
+                                ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }

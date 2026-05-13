@@ -16,7 +16,9 @@ import '../../utils/platform_adaptive.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/neu_card.dart';
 
+import '../../widgets/ios_screen_wrapper.dart';
 import '../../widgets/native_ios_attendance_view.dart';
+import '../../widgets/native_ios_views.dart';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
@@ -217,6 +219,73 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final punchOutTime = '--:--';
     final currentStatus = isPunchedIn ? 'Checked In' : 'Not Checked In';
 
+    if (shouldUseNativeIOS) {
+      return IOSScreenWrapper(
+        iosViewType: NativeViewTypes.attendance,
+        iosParams: {
+          'isPunchedIn': isPunchedIn,
+          'punchInTime': punchInTime,
+          'punchOutTime': punchOutTime,
+          'currentStatus': currentStatus,
+          'workingDays': _workingDaysCount,
+          'absentDays': _absentCount,
+          'leaveDays': _leaveCount,
+          'holidays': _holidayCount,
+          'currentMonth': DateFormat('MMMM yyyy').format(_currentMonth),
+          'weeklyHours': _weeklyHours,
+          'dailyLog': _dailyLog.take(10).toList(),
+        },
+        onNavigate: (screen, args) {
+          switch (screen) {
+            case 'previousMonth':
+              _goToPreviousMonth();
+              break;
+            case 'nextMonth':
+              _goToNextMonth();
+              break;
+            case 'refresh':
+              _loadAttendanceData();
+              break;
+          }
+        },
+        dartChild: _buildDartScaffold(
+          context,
+          tt,
+          isDark,
+          provider,
+          isPunchedIn,
+          punchTime,
+          punchInTime,
+          punchOutTime,
+          currentStatus,
+        ),
+      );
+    }
+
+    return _buildDartScaffold(
+      context,
+      tt,
+      isDark,
+      provider,
+      isPunchedIn,
+      punchTime,
+      punchInTime,
+      punchOutTime,
+      currentStatus,
+    );
+  }
+
+  Widget _buildDartScaffold(
+    BuildContext context,
+    TextTheme tt,
+    bool isDark,
+    AppProvider provider,
+    bool isPunchedIn,
+    DateTime? punchTime,
+    String punchInTime,
+    String punchOutTime,
+    String currentStatus,
+  ) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: RefreshIndicator(

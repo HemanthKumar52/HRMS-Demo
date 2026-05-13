@@ -73,15 +73,22 @@ if os.environ.get('DATABASE_URL'):
     DATABASES = {
         'default': dj_database_url.config(conn_max_age=600),
     }
+elif os.environ.get('DB_ENGINE', '').endswith('sqlite3'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.environ.get('DB_NAME', str(BASE_DIR / 'db.sqlite3')),
+        }
+    }
 else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'kaaspro_hrms_local',
-            'USER': 'postgres',
-            'PASSWORD': 'admin',
-            'HOST': 'localhost',
-            'PORT': '5432',
+            'NAME': os.environ.get('DB_NAME', 'kaaspro_hrms_local'),
+            'USER': os.environ.get('DB_USER', 'postgres'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', 'admin'),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
         }
     }
 
@@ -120,14 +127,14 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '5/minute',  # Login attempts: 5 per minute for unauthenticated
-        'user': '60/minute',  # Authenticated API calls: 60 per minute
-        'login': '5/minute',  # Login-specific: 5 attempts per minute
+        'anon': '30/minute',  # Unauthenticated (includes token refresh)
+        'user': '120/minute',  # Authenticated API calls
+        'login': '10/minute',  # Login-specific
     },
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,

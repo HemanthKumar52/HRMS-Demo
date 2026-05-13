@@ -1,9 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-/// Always false on main — unified Material UI.
-/// Native SwiftUI for iOS is on the `ios-styled-2` branch.
+/// Disabled — unified Material UI for both platforms.
 bool get isApplePlatform => false;
 
 // ─── App Bar ────────────────────────────────────────────────────────────

@@ -8,7 +8,6 @@ import '../../services/notification_service.dart';
 import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
-import '../../utils/responsive.dart';
 import '../../widgets/employee_cc_field.dart';
 import '../../widgets/form_fields.dart';
 
@@ -213,161 +212,156 @@ class _AttendanceRequestScreenState extends State<AttendanceRequestScreen> {
                 parent: AlwaysScrollableScrollPhysics(),
               )
             : null,
-        child: ResponsiveCenter(
-          maxWidth: Responsive.formMaxWidth(context),
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const FormLabel('Date of Regularization', required: true),
-                formLabelGap,
-                FormDateField(
-                  value: formatDate(_attendanceDate),
-                  hasValue: _attendanceDate != null,
-                  onTap: () async {
-                    final picked = await pickDate(
-                      context,
-                      initial: _attendanceDate,
-                      accentColor: AppColors.warning,
-                    );
-                    if (picked != null)
-                      setState(() => _attendanceDate = picked);
-                  },
-                ),
-                formFieldGap,
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const FormLabel('Date of Regularization', required: true),
+              formLabelGap,
+              FormDateField(
+                value: formatDate(_attendanceDate),
+                hasValue: _attendanceDate != null,
+                onTap: () async {
+                  final picked = await pickDate(
+                    context,
+                    initial: _attendanceDate,
+                    accentColor: AppColors.warning,
+                  );
+                  if (picked != null) setState(() => _attendanceDate = picked);
+                },
+              ),
+              formFieldGap,
 
-                const FormLabel('Attendance Type', required: true),
+              const FormLabel('Attendance Type', required: true),
+              formLabelGap,
+              FormDropdown(
+                value: _attendanceType,
+                hint: 'Select type',
+                items: _attendanceTypes,
+                onChanged: (v) => setState(() {
+                  _attendanceType = v ?? _attendanceTypes.first;
+                  if (!_needsTimes) {
+                    _requestedCheckIn = null;
+                    _requestedCheckOut = null;
+                  }
+                }),
+              ),
+              formFieldGap,
+
+              if (_isWrongShift) ...[
+                const FormLabel('Correct Shift'),
                 formLabelGap,
                 FormDropdown(
-                  value: _attendanceType,
-                  hint: 'Select type',
-                  items: _attendanceTypes,
-                  onChanged: (v) => setState(() {
-                    _attendanceType = v ?? _attendanceTypes.first;
-                    if (!_needsTimes) {
-                      _requestedCheckIn = null;
-                      _requestedCheckOut = null;
-                    }
-                  }),
+                  value: _selectedShift,
+                  hint: 'Select shift',
+                  items: _shifts,
+                  onChanged: (v) => setState(() => _selectedShift = v),
                 ),
                 formFieldGap,
-
-                if (_isWrongShift) ...[
-                  const FormLabel('Correct Shift'),
-                  formLabelGap,
-                  FormDropdown(
-                    value: _selectedShift,
-                    hint: 'Select shift',
-                    items: _shifts,
-                    onChanged: (v) => setState(() => _selectedShift = v),
-                  ),
-                  formFieldGap,
-                ],
-
-                if (_needsTimes) ...[
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const FormLabel('Requested Check-in'),
-                            formLabelGap,
-                            FormTimeField(
-                              value: formatTime(_requestedCheckIn),
-                              hasValue: _requestedCheckIn != null,
-                              onTap: () async {
-                                final picked = await pickTime(
-                                  context,
-                                  initial: _requestedCheckIn,
-                                );
-                                if (picked != null)
-                                  setState(() => _requestedCheckIn = picked);
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const FormLabel('Requested Check-out'),
-                            formLabelGap,
-                            FormTimeField(
-                              value: formatTime(_requestedCheckOut),
-                              hasValue: _requestedCheckOut != null,
-                              onTap: () async {
-                                final picked = await pickTime(
-                                  context,
-                                  initial: _requestedCheckOut,
-                                );
-                                if (picked != null)
-                                  setState(() => _requestedCheckOut = picked);
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  formFieldGap,
-                ],
-
-                const FormLabel('Reason / Justification', required: true),
-                formLabelGap,
-                FormInput(
-                  controller: _reasonController,
-                  hint: 'e.g., Client meeting outside, system issue...',
-                  maxLines: 3,
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty)
-                      return 'Reason is required';
-                    return null;
-                  },
-                ),
-                formFieldGap,
-
-                FormAttachmentToggle(
-                  enabled: _attachmentEnabled,
-                  fileName: _attachmentName,
-                  onToggle: (v) => setState(() {
-                    _attachmentEnabled = v;
-                    if (!v) _attachmentName = null;
-                  }),
-                  onPick: () async {
-                    final picker = ImagePicker();
-                    final XFile? file = await picker.pickImage(
-                      source: ImageSource.gallery,
-                      imageQuality: 80,
-                    );
-                    if (file != null)
-                      setState(() => _attachmentName = file.name);
-                  },
-                  onRemove: () => setState(() => _attachmentName = null),
-                ),
-                formSectionGap,
-
-                EmployeeCcField(
-                  selected: _ccUsers,
-                  onChanged: (next) => setState(() {
-                    _ccUsers
-                      ..clear()
-                      ..addAll(next);
-                  }),
-                ),
-                formSectionGap,
-
-                FormActionButtons(
-                  isSubmitting: _isSubmitting,
-                  onSubmit: _submit,
-                  buttonColor: AppColors.warning,
-                ),
               ],
-            ),
+
+              if (_needsTimes) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const FormLabel('Requested Check-in'),
+                          formLabelGap,
+                          FormTimeField(
+                            value: formatTime(_requestedCheckIn),
+                            hasValue: _requestedCheckIn != null,
+                            onTap: () async {
+                              final picked = await pickTime(
+                                context,
+                                initial: _requestedCheckIn,
+                              );
+                              if (picked != null)
+                                setState(() => _requestedCheckIn = picked);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const FormLabel('Requested Check-out'),
+                          formLabelGap,
+                          FormTimeField(
+                            value: formatTime(_requestedCheckOut),
+                            hasValue: _requestedCheckOut != null,
+                            onTap: () async {
+                              final picked = await pickTime(
+                                context,
+                                initial: _requestedCheckOut,
+                              );
+                              if (picked != null)
+                                setState(() => _requestedCheckOut = picked);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                formFieldGap,
+              ],
+
+              const FormLabel('Reason / Justification', required: true),
+              formLabelGap,
+              FormInput(
+                controller: _reasonController,
+                hint: 'e.g., Client meeting outside, system issue...',
+                maxLines: 3,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty)
+                    return 'Reason is required';
+                  return null;
+                },
+              ),
+              formFieldGap,
+
+              FormAttachmentToggle(
+                enabled: _attachmentEnabled,
+                fileName: _attachmentName,
+                onToggle: (v) => setState(() {
+                  _attachmentEnabled = v;
+                  if (!v) _attachmentName = null;
+                }),
+                onPick: () async {
+                  final picker = ImagePicker();
+                  final XFile? file = await picker.pickImage(
+                    source: ImageSource.gallery,
+                    imageQuality: 80,
+                  );
+                  if (file != null) setState(() => _attachmentName = file.name);
+                },
+                onRemove: () => setState(() => _attachmentName = null),
+              ),
+              formSectionGap,
+
+              EmployeeCcField(
+                selected: _ccUsers,
+                onChanged: (next) => setState(() {
+                  _ccUsers
+                    ..clear()
+                    ..addAll(next);
+                }),
+              ),
+              formSectionGap,
+
+              FormActionButtons(
+                isSubmitting: _isSubmitting,
+                onSubmit: _submit,
+                buttonColor: AppColors.warning,
+              ),
+            ],
           ),
         ),
       ),
