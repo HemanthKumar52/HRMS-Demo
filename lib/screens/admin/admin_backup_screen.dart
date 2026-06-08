@@ -136,6 +136,7 @@ class _AdminBackupScreenState extends State<AdminBackupScreen> {
                                   alpha: 0.12,
                                 ),
                                 borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.success.withValues(alpha: 0.4), width: 1.2),
                               ),
                               child: const Icon(
                                 Icons.backup_rounded,

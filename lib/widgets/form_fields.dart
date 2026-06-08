@@ -193,35 +193,114 @@ class FormDropdown extends StatelessWidget {
     TextTheme textTheme,
     bool isDark,
   ) {
-    return NeuCard(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      child: DropdownButtonFormField<String>(
-        initialValue: value,
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: textTheme.bodyMedium?.copyWith(
-            color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
-          ),
-          filled: false,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 12,
+    // A tappable field that opens a BORDERED bottom-sheet list (the native
+    // dropdown menu can't take a border).
+    return GestureDetector(
+      onTap: () => _showAndroidPicker(context, textTheme, isDark),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.18)
+                : Colors.black.withValues(alpha: 0.15),
+            width: 1.2,
           ),
         ),
-        items: items
-            .map(
-              (item) => DropdownMenuItem(
-                value: item,
-                child: Text(item, style: textTheme.bodyLarge),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                value ?? (hint ?? 'Select'),
+                style: value != null
+                    ? textTheme.bodyLarge
+                    : textTheme.bodyMedium?.copyWith(
+                        color: isDark
+                            ? AppColors.darkSubtext
+                            : AppColors.lightSubtext,
+                      ),
               ),
-            )
-            .toList(),
-        onChanged: onChanged,
-        validator: validator,
-        dropdownColor: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(14),
-        icon: const Icon(Icons.keyboard_arrow_down_rounded),
+            ),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAndroidPicker(
+    BuildContext context,
+    TextTheme textTheme,
+    bool isDark,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        margin: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+        decoration: BoxDecoration(
+          color: Theme.of(ctx).cardColor,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.18)
+                : Colors.black.withValues(alpha: 0.12),
+            width: 1.3,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white24 : Colors.black26,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: items.map((item) {
+                  final selected = item == value;
+                  return InkWell(
+                    onTap: () {
+                      onChanged(item);
+                      Navigator.pop(ctx);
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 15,
+                      ),
+                      color: selected
+                          ? AppColors.primary.withValues(alpha: 0.12)
+                          : null,
+                      child: Text(
+                        item,
+                        style: textTheme.bodyLarge?.copyWith(
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: selected ? AppColors.primary : null,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
@@ -690,7 +769,8 @@ class FormActionButtons extends StatelessWidget {
                     ? AppColors.darkText
                     : AppColors.lightText,
                 side: BorderSide(
-                  color: isDark ? Colors.white24 : Colors.black26,
+                  color: isDark ? Colors.white38 : Colors.black38,
+                  width: 1.3,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -719,6 +799,10 @@ class FormActionButtons extends StatelessWidget {
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.35),
+                    width: 1.3,
+                  ),
                 ),
                 elevation: 0,
               ),

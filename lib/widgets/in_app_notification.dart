@@ -167,6 +167,7 @@ class _NotificationBannerState extends State<_NotificationBanner>
                       decoration: BoxDecoration(
                         color: widget.color.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: widget.color.withValues(alpha: 0.4), width: 1.2),
                       ),
                       child: Icon(
                         widget.icon ??

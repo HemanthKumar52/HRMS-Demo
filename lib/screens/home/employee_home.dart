@@ -99,6 +99,7 @@ class EmployeeHome extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: AppColors.pastelBlue,
                                 borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.primary.withValues(alpha: 0.45), width: 1.2),
                               ),
                               child: const Icon(
                                 Icons.event_available,
@@ -146,6 +147,7 @@ class EmployeeHome extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: AppColors.pastelGreen,
                                 borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.success.withValues(alpha: 0.45), width: 1.2),
                               ),
                               child: const Icon(
                                 Icons.trending_up,
@@ -209,6 +211,7 @@ class EmployeeHome extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: AppColors.pastelPurple,
                               borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.secondary.withValues(alpha: 0.45), width: 1.2),
                             ),
                             child: const Icon(
                               Icons.calendar_month,
@@ -298,6 +301,7 @@ class EmployeeHome extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: AppColors.pastelOrange,
                                 borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.orange.withValues(alpha: 0.45), width: 1.2),
                               ),
                               child: const Icon(
                                 Icons.history,
@@ -402,6 +406,7 @@ class EmployeeHome extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: AppColors.pastelBlue,
                               borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.primary.withValues(alpha: 0.45), width: 1.2),
                             ),
                             child: const Icon(
                               Icons.account_tree_rounded,
@@ -1149,6 +1154,7 @@ class _ActivityItem extends StatelessWidget {
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.12),
+            border: Border.all(color: color.withValues(alpha: 0.4), width: 1.2),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: color, size: 18),
@@ -1244,6 +1250,7 @@ class _QuickActionState extends State<_QuickAction> {
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: widget.color.withValues(alpha: 0.12),
+                      border: Border.all(color: widget.color.withValues(alpha: 0.4), width: 1.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(widget.icon, color: widget.color, size: 22),

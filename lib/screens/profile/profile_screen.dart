@@ -142,6 +142,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.45),
+                    width: 1.2,
+                  ),
                 ),
                 child: Text(
                   _val(p['employee_id'], provider.employeeId),
@@ -207,6 +211,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ? Colors.white.withValues(alpha: 0.05)
                       : const Color(0xFFF0F0F0),
                   borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.15)
+                        : Colors.black.withValues(alpha: 0.10),
+                    width: 1.2,
+                  ),
                 ),
                 child: TabBar(
                   controller: _tabController,
@@ -215,6 +225,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                   indicator: BoxDecoration(
                     color: AppColors.primary,
                     borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.35),
+                      width: 1.2,
+                    ),
                   ),
                   labelColor: Colors.white,
                   unselectedLabelColor: isDark

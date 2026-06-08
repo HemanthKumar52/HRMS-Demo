@@ -156,6 +156,7 @@ class _AdminHolidaysScreenState extends State<AdminHolidaysScreen> {
                           decoration: BoxDecoration(
                             color: AppColors.warning.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.warning.withValues(alpha: 0.4), width: 1.2),
                           ),
                           child: const Icon(
                             Icons.celebration_rounded,

@@ -166,17 +166,26 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
                             padding: const EdgeInsets.all(14),
                             child: Row(
                               children: [
-                                CircleAvatar(
-                                  radius: 22,
-                                  backgroundColor: color.withValues(
-                                    alpha: 0.15,
+                                Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: color.withValues(alpha: 0.5),
+                                      width: 1.5,
+                                    ),
                                   ),
-                                  child: Text(
-                                    initials,
-                                    style: TextStyle(
-                                      color: color,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 14,
+                                  child: CircleAvatar(
+                                    radius: 22,
+                                    backgroundColor: color.withValues(
+                                      alpha: 0.15,
+                                    ),
+                                    child: Text(
+                                      initials,
+                                      style: TextStyle(
+                                        color: color,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -241,6 +250,12 @@ class _MyTeamScreenState extends State<MyTeamScreen> {
                                       status,
                                     ).withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: _statusColor(
+                                        status,
+                                      ).withValues(alpha: 0.45),
+                                      width: 1,
+                                    ),
                                   ),
                                   child: Text(
                                     _statusLabel(status),

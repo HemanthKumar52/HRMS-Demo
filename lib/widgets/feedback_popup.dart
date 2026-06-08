@@ -145,6 +145,10 @@ class _FeedbackSheetState extends State<_FeedbackSheet> {
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.12),
               shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.45),
+                width: 1.4,
+              ),
             ),
             child: const Icon(
               Icons.rate_review_rounded,
@@ -250,6 +254,10 @@ class _FeedbackSheetState extends State<_FeedbackSheet> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
+                      side: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.35),
+                        width: 1.3,
+                      ),
                     ),
                   ),
                   child: _submitting

@@ -453,10 +453,21 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           width: 38,
           height: 38,
           decoration: isDark
-              ? null
+              ? BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.05),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    width: 1.2,
+                  ),
+                )
               : BoxDecoration(
                   shape: BoxShape.circle,
                   color: const Color(0xFFE4E8EE),
+                  border: Border.all(
+                    color: Colors.black.withValues(alpha: 0.10),
+                    width: 1.2,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: const Color(0xFFBEC3CE).withValues(alpha: 0.5),
@@ -533,6 +544,12 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.25)
+              : Colors.black.withValues(alpha: 0.12),
+          width: 1.5,
+        ),
         gradient: hasAvatar
             ? null
             : const LinearGradient(
@@ -948,6 +965,7 @@ class _NotifItem extends StatelessWidget {
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.withValues(alpha: 0.4), width: 1.2),
             ),
             child: Icon(icon, color: color, size: 20),
           ),

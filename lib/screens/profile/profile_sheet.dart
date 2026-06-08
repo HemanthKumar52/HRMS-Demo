@@ -262,25 +262,35 @@ Widget _buildAvatar(AppProvider provider, ThemeData theme, double radius) {
       .take(2)
       .join();
 
-  if (hasAvatar) {
-    return CircleAvatar(
-      radius: radius,
-      backgroundImage: NetworkImage(avatarUrl),
-      onBackgroundImageError: (_, __) {},
-      child: null,
-    );
-  }
-  return CircleAvatar(
-    radius: radius,
-    backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-    child: Text(
-      initials,
-      style: theme.textTheme.headlineLarge?.copyWith(
-        color: AppColors.primary,
-        fontWeight: FontWeight.w700,
-        fontSize: radius * 0.6,
+  final avatar = hasAvatar
+      ? CircleAvatar(
+          radius: radius,
+          backgroundImage: NetworkImage(avatarUrl),
+          onBackgroundImageError: (_, __) {},
+          child: null,
+        )
+      : CircleAvatar(
+          radius: radius,
+          backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+          child: Text(
+            initials,
+            style: theme.textTheme.headlineLarge?.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w700,
+              fontSize: radius * 0.6,
+            ),
+          ),
+        );
+  // Bordered ring around the avatar.
+  return Container(
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      border: Border.all(
+        color: AppColors.primary.withValues(alpha: 0.5),
+        width: 2,
       ),
     ),
+    child: avatar,
   );
 }
 
@@ -459,6 +469,12 @@ class _MenuItem extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: (color ?? AppColors.primary).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: (color ?? AppColors.primary).withValues(
+                        alpha: 0.45,
+                      ),
+                      width: 1.2,
+                    ),
                   ),
                   child: Icon(icon, color: itemColor, size: 20),
                 ),

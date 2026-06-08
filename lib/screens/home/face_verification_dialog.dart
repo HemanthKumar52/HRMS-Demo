@@ -498,7 +498,15 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
 
     return Dialog(
       backgroundColor: theme.cardColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(
+          color: theme.brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.18)
+              : Colors.black.withValues(alpha: 0.12),
+          width: 1.3,
+        ),
+      ),
       child: SizedBox(
         width: _scannerSize + 50,
         child: Padding(
@@ -563,6 +571,10 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(context),
                         style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                            color: Color(0xFF3B82F6),
+                            width: 1.3,
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -580,6 +592,10 @@ class _FaceVerificationDialogState extends State<FaceVerificationDialog>
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                              color: Colors.white.withValues(alpha: 0.35),
+                              width: 1.3,
+                            ),
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           elevation: 0,

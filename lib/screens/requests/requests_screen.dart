@@ -932,6 +932,14 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     ? Colors.white.withValues(alpha: 0.06)
                     : const Color(0xFFE4E8EE)),
           borderRadius: BorderRadius.circular(50),
+          border: Border.all(
+            color: isActive
+                ? Colors.white.withValues(alpha: 0.35)
+                : (isDark
+                      ? Colors.white.withValues(alpha: 0.18)
+                      : Colors.black.withValues(alpha: 0.12)),
+            width: 1.2,
+          ),
           boxShadow: isActive
               ? [
                   BoxShadow(
@@ -1276,6 +1284,12 @@ class _RequestsScreenState extends State<RequestsScreen> {
                           alpha: 0.12,
                         ),
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: (request['color'] as Color).withValues(
+                            alpha: 0.45,
+                          ),
+                          width: 1.2,
+                        ),
                       ),
                       child: Icon(
                         request['icon'] as IconData,
@@ -1507,6 +1521,7 @@ class _RequestTypeTileState extends State<_RequestTypeTile> {
                       decoration: BoxDecoration(
                         color: color.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: color.withValues(alpha: 0.45), width: 1.2),
                       ),
                       child: Icon(
                         widget.type['icon'] as IconData,

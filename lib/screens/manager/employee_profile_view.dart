@@ -225,6 +225,7 @@ class _AttendanceSummarySection extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.pastelBlue,
                   borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.2),
                 ),
                 child: const Icon(
                   Icons.bar_chart_rounded,
@@ -425,6 +426,7 @@ class _LeaveHistorySection extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.pastelPurple,
                   borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.secondary.withValues(alpha: 0.4), width: 1.2),
                 ),
                 child: const Icon(
                   Icons.event_note,
@@ -548,6 +550,7 @@ class _PerformanceNotesSection extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.pastelGreen,
                   borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.success.withValues(alpha: 0.4), width: 1.2),
                 ),
                 child: const Icon(
                   Icons.star_border_rounded,

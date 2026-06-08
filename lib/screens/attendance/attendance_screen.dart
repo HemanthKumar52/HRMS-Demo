@@ -484,6 +484,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                     alpha: 0.12,
                                   ),
                                   borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.45,
+                                    ),
+                                    width: 1.2,
+                                  ),
                                 ),
                                 child: Icon(
                                   isApplePlatform
@@ -728,7 +734,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                             : Colors.black.withValues(
                                                 alpha: 0.10,
                                               );
-                                        return RadarChart(
+                                        return TweenAnimationBuilder<double>(
+                                          tween: Tween(begin: 0.0, end: 1.0),
+                                          duration: const Duration(
+                                            milliseconds: 900,
+                                          ),
+                                          curve: Curves.easeOutCubic,
+                                          builder: (context, _t, __) =>
+                                              RadarChart(
                                           RadarChartData(
                                             radarShape: RadarShape.polygon,
                                             dataSets: [
@@ -737,7 +750,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                                 dataEntries: [
                                                   for (int i = 0; i < 5; i++)
                                                     RadarEntry(
-                                                      value: worked[i],
+                                                      value: worked[i] * _t,
                                                     ),
                                                 ],
                                                 fillColor: AppColors.success
@@ -765,8 +778,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                                 dataEntries: [
                                                   for (int i = 0; i < 5; i++)
                                                     RadarEntry(
-                                                      value: (worked[i] - 8)
-                                                          .clamp(0.0, 24.0),
+                                                      value:
+                                                          (worked[i] - 8)
+                                                              .clamp(
+                                                                0.0,
+                                                                24.0,
+                                                              ) *
+                                                          _t,
                                                     ),
                                                 ],
                                                 fillColor: AppColors.primary
@@ -815,10 +833,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                               enabled: false,
                                             ),
                                           ),
-                                          duration: const Duration(
-                                            milliseconds: 600,
-                                          ),
-                                          curve: Curves.easeOutCubic,
+                                          duration: Duration.zero,
+                                        ),
                                         );
                                       },
                                     ),
@@ -1525,24 +1541,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               curve: Curves.easeOutCubic,
                             ),
 
-                        // ── Attendance Log Table ──
-                        const SizedBox(height: 8),
-                        Text(
-                              'Attendance Log',
-                              style: tt.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            )
-                            .animate()
-                            .fadeIn(duration: 420.ms, delay: 560.ms)
-                            .slideY(
-                              begin: 0.12,
-                              end: 0,
-                              duration: 420.ms,
-                              delay: 560.ms,
-                              curve: Curves.easeOutCubic,
-                            ),
-                        const SizedBox(height: 12),
+                        // ── Attendance Log (header + table in one card) ──
+                        const SizedBox(height: 16),
                         _buildAttendanceLogTable(tt, isDark),
 
                         const SizedBox(height: 12),
@@ -1557,18 +1557,56 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _buildAttendanceLogTable(TextTheme tt, bool isDark) {
-    if (_dailyLog.isEmpty) {
-      return NeuCard(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Text(
-              'No attendance records this month',
-              style: tt.bodyMedium?.copyWith(
-                color: isDark ? AppColors.darkSubtext : AppColors.lightSubtext,
+    final header = Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.45),
+                width: 1.2,
               ),
             ),
+            child: const Icon(
+              Icons.fact_check_rounded,
+              color: AppColors.primary,
+              size: 19,
+            ),
           ),
+          const SizedBox(width: 10),
+          Text(
+            'Attendance Log',
+            style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+    if (_dailyLog.isEmpty) {
+      return NeuCard(
+        padding: EdgeInsets.zero,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            header,
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                child: Text(
+                  'No attendance records this month',
+                  style: tt.bodyMedium?.copyWith(
+                    color: isDark
+                        ? AppColors.darkSubtext
+                        : AppColors.lightSubtext,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -1604,21 +1642,31 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(18),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Table(
-                    border: TableBorder(
-                      verticalInside: BorderSide(color: borderColor, width: 1),
-                      horizontalInside: BorderSide(
-                        color: borderColor,
-                        width: 0.5,
-                      ),
-                      top: BorderSide(color: borderColor, width: 0.5),
-                      bottom: BorderSide(color: borderColor, width: 0.5),
-                      left: BorderSide.none,
-                      right: BorderSide.none,
-                    ),
+                header,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Table(
+                        border: TableBorder(
+                          verticalInside: BorderSide(
+                            color: borderColor,
+                            width: 1,
+                          ),
+                          horizontalInside: BorderSide(
+                            color: borderColor,
+                            width: 0.5,
+                          ),
+                          top: BorderSide(color: borderColor, width: 1),
+                          bottom: BorderSide(color: borderColor, width: 1),
+                          left: BorderSide(color: borderColor, width: 1),
+                          right: BorderSide(color: borderColor, width: 1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                     defaultColumnWidth: const FixedColumnWidth(90),
                     columnWidths: const {
                       0: FixedColumnWidth(100), // Date
@@ -1713,6 +1761,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                         );
                       }),
                     ],
+                  ),
+                    ),
                   ),
                 ),
                 // Pagination controls
@@ -1956,6 +2006,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         decoration: BoxDecoration(
           color: isDark ? color.withValues(alpha: 0.12) : bgColor,
           borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: color.withValues(alpha: 0.4),
+            width: 1.2,
+          ),
         ),
         child: Column(
           children: [

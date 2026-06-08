@@ -278,6 +278,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           decoration: BoxDecoration(
                             color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.2),
                           ),
                           child: const Icon(
                             Icons.notifications_outlined,
@@ -341,6 +342,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           decoration: BoxDecoration(
                             color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.2),
                           ),
                           child: const Icon(
                             Icons.face_retouching_natural,
@@ -389,6 +391,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           decoration: BoxDecoration(
                             color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.2),
                           ),
                           child: const Icon(
                             Icons.lock_outline,
@@ -1375,6 +1378,7 @@ class _SettingsRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.2),
             ),
             child: Icon(icon, color: AppColors.primary, size: 20),
           ),

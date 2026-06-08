@@ -143,6 +143,7 @@ class _AdminCommandCenterScreenState extends State<AdminCommandCenterScreen> {
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.2),
             ),
             child: const Icon(
               Icons.shield_moon_outlined,
@@ -219,6 +220,7 @@ class _AdminCommandCenterScreenState extends State<AdminCommandCenterScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.success.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.success.withValues(alpha: 0.4), width: 1.2),
                       ),
                       child: const Icon(
                         Icons.verified_outlined,

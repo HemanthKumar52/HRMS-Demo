@@ -795,6 +795,12 @@ class _PayslipScreenState extends State<PayslipScreen> {
                                           borderRadius: BorderRadius.circular(
                                             14,
                                           ),
+                                          border: Border.all(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.4,
+                                            ),
+                                            width: 1.2,
+                                          ),
                                         ),
                                         child: const Icon(
                                           Icons.account_balance_wallet_rounded,

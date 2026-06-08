@@ -140,6 +140,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.2),
             ),
             child: const Icon(
               Icons.lock_reset_rounded,

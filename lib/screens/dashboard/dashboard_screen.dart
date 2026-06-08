@@ -279,6 +279,7 @@ class _DartDashboard extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: AppColors.danger.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppColors.danger.withValues(alpha: 0.45), width: 1.2),
                             ),
                             child: const Icon(
                               Icons.shield_moon_outlined,
@@ -384,6 +385,7 @@ class _DartDashboard extends StatelessWidget {
                                   decoration: BoxDecoration(
                                     color: AppColors.pastelBlue,
                                     borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.45), width: 1.2),
                                   ),
                                   child: const Icon(
                                     Icons.event_available,
@@ -431,6 +433,7 @@ class _DartDashboard extends StatelessWidget {
                                   decoration: BoxDecoration(
                                     color: AppColors.pastelGreen,
                                     borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: AppColors.success.withValues(alpha: 0.45), width: 1.2),
                                   ),
                                   child: const Icon(
                                     Icons.trending_up,
@@ -499,6 +502,7 @@ class _DartDashboard extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: AppColors.pastelPurple,
                               borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.secondary.withValues(alpha: 0.45), width: 1.2),
                             ),
                             child: const Icon(
                               Icons.calendar_month,
@@ -637,6 +641,7 @@ class _DartDashboard extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: AppColors.pastelOrange,
                               borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.orange.withValues(alpha: 0.45), width: 1.2),
                             ),
                             child: const Icon(
                               Icons.campaign_rounded,
@@ -847,6 +852,7 @@ class _ManagerInsightsSection extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.45), width: 1.2),
                   ),
                   child: const Icon(
                     Icons.admin_panel_settings_rounded,
@@ -886,6 +892,7 @@ class _ManagerInsightsSection extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: AppColors.pastelRed,
                           borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.danger.withValues(alpha: 0.45), width: 1.2),
                         ),
                         child: const Icon(
                           Icons.pending_actions_rounded,
@@ -1007,6 +1014,7 @@ class _TeamAttendanceCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.pastelGreen,
                     borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.success.withValues(alpha: 0.45), width: 1.2),
                   ),
                   child: const Icon(
                     Icons.groups_rounded,
@@ -1228,6 +1236,7 @@ class _PerformanceSectionState extends State<_PerformanceSection> {
                         decoration: BoxDecoration(
                           color: AppColors.pastelPurple,
                           borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.secondary.withValues(alpha: 0.45), width: 1.2),
                         ),
                         child: const Icon(
                           Icons.analytics_rounded,
@@ -1421,6 +1430,7 @@ class _HrAnalyticsSectionState extends State<_HrAnalyticsSection> {
                         decoration: BoxDecoration(
                           color: AppColors.pastelPurple,
                           borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.secondary.withValues(alpha: 0.45), width: 1.2),
                         ),
                         child: const Icon(
                           Icons.pie_chart_rounded,
@@ -1483,6 +1493,7 @@ class _HrAnalyticsSectionState extends State<_HrAnalyticsSection> {
                         decoration: BoxDecoration(
                           color: AppColors.pastelGreen,
                           borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.success.withValues(alpha: 0.45), width: 1.2),
                         ),
                         child: const Icon(
                           Icons.schedule_rounded,
@@ -1674,9 +1685,18 @@ class _AttendanceTimerCardState extends State<_AttendanceTimerCard> {
               const SizedBox(height: 24),
 
               // Circular progress ring
-              SizedBox(
+              Container(
                 width: 180,
                 height: 180,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.12)
+                        : Colors.black.withValues(alpha: 0.10),
+                    width: 1.2,
+                  ),
+                ),
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
@@ -1820,6 +1840,10 @@ class _AttendanceTimerCardState extends State<_AttendanceTimerCard> {
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
+                        side: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.35),
+                          width: 1.2,
+                        ),
                       ),
                       elevation: 0,
                     ),
@@ -1997,12 +2021,13 @@ class _ActivityItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.12),
+            border: Border.all(color: color.withValues(alpha: 0.4), width: 1.2),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: color, size: 18),
@@ -2024,7 +2049,14 @@ class _ActivityItem extends StatelessWidget {
             ],
           ),
         ),
-        Text(time, style: theme.textTheme.bodySmall?.copyWith(fontSize: 10)),
+        Text(
+          time,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: AppColors.warning,
+          ),
+        ),
       ],
     );
   }
@@ -2080,6 +2112,10 @@ class _QuickActionState extends State<_QuickAction> {
                     decoration: BoxDecoration(
                       color: widget.color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: widget.color.withValues(alpha: 0.7),
+                        width: 1.4,
+                      ),
                     ),
                     child: Icon(widget.icon, color: widget.color, size: 20),
                   )

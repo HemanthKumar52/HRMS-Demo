@@ -13,6 +13,7 @@ import 'dart:convert';
 import '../../services/secure_token_service.dart';
 import '../../animations/motion.dart';
 import '../../animations/shake_animation.dart';
+import '../../widgets/ppulse_logo.dart';
 import '../../providers/app_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/punch_metadata_service.dart';
@@ -91,6 +92,8 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _login() async {
+    // Dismiss the keyboard before showing the "Signing in…" screen.
+    FocusScope.of(context).unfocus();
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
     if (username.isEmpty || password.isEmpty) {
@@ -468,32 +471,20 @@ class _LoginScreenState extends State<LoginScreen>
                                       final glow =
                                           12 + _pulseController.value * 16;
                                       return Container(
-                                        width: 72,
-                                        height: 72,
+                                        padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          gradient: const LinearGradient(
-                                            begin: Alignment.topCenter,
-                                            end: Alignment.bottomCenter,
-                                            colors: [
-                                              Color(0xFF9B6DFF),
-                                              Color(0xFF6B3FA0),
-                                            ],
-                                          ),
                                           boxShadow: [
                                             BoxShadow(
                                               color: const Color(
                                                 0xFF9B6DFF,
                                               ).withValues(alpha: 0.4),
-                                              blurRadius: glow,
+                                              blurRadius: glow + 14,
+                                              spreadRadius: 2,
                                             ),
                                           ],
                                         ),
-                                        child: const Icon(
-                                          Icons.person,
-                                          color: Colors.white,
-                                          size: 36,
-                                        ),
+                                        child: const PpulseLogo(size: 76),
                                       );
                                     },
                                   )
@@ -840,27 +831,18 @@ class _LoginScreenState extends State<LoginScreen>
                 builder: (_, __) {
                   final glow = 16 + _pulseController.value * 20;
                   return Container(
-                    width: 72,
-                    height: 72,
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Color(0xFF9B6DFF), Color(0xFF6B3FA0)],
-                      ),
                       boxShadow: [
                         BoxShadow(
                           color: const Color(0xFF9B6DFF).withValues(alpha: 0.4),
-                          blurRadius: glow,
+                          blurRadius: glow + 14,
+                          spreadRadius: 2,
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.person,
-                      color: Colors.white,
-                      size: 36,
-                    ),
+                    child: const PpulseLogo(size: 76),
                   );
                 },
               ),
@@ -998,8 +980,8 @@ class _MicrosoftSSOButton extends StatelessWidget {
           ),
           elevation: 0,
           side: BorderSide(
-            color: Colors.white.withValues(alpha: 0.15),
-            width: 2,
+            color: Colors.black.withValues(alpha: 0.22),
+            width: 1.5,
           ),
         ),
         child: Row(

@@ -131,6 +131,7 @@ class _AdminEmailTemplatesScreenState extends State<AdminEmailTemplatesScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.pink.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.pink.withValues(alpha: 0.4), width: 1.2),
                         ),
                         child: const Icon(
                           Icons.email_outlined,

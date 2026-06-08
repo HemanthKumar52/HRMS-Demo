@@ -172,6 +172,7 @@ class _PermissionsOnboardingScreenState
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.2),
                 ),
                 child: const Icon(
                   Icons.shield_outlined,
@@ -294,6 +295,7 @@ class _PermissionTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.withValues(alpha: 0.4), width: 1.2),
             ),
             child: Icon(item.icon, color: color),
           ),

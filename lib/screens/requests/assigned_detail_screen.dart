@@ -277,6 +277,7 @@ class _AssignedDetailScreenState extends State<AssignedDetailScreen> {
                               decoration: BoxDecoration(
                                 color: AppColors.danger.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.danger.withValues(alpha: 0.4), width: 1.2),
                               ),
                               child: const Icon(
                                 Icons.info_outline_rounded,
