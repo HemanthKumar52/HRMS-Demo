@@ -49,9 +49,8 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
   void initState() {
     super.initState();
     _load(reset: true);
-    _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted && _offset == 0) _load(reset: true);
-    });
+    // No auto-refresh — the list updates only on manual refresh / pull-to-refresh
+    // so it doesn't keep reloading (and re-numbering) on its own.
   }
 
   @override
@@ -404,7 +403,7 @@ class _TimelineItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final action = item['action']?.toString() ?? '';
-    final actor = item['actor_name']?.toString() ?? '—';
+    final actor = (item['actor_name']?.toString() ?? '').trim();
     final target = item['target_name']?.toString() ?? '';
     final ts = item['created_at']?.toString() ?? '';
     String time = '';
@@ -482,15 +481,17 @@ class _TimelineItem extends StatelessWidget {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            actor,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w600,
+                          if (actor.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              actor,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          ],
                           if (target.isNotEmpty)
                             Text(
                               '→ $target',
@@ -580,27 +581,45 @@ class _AuditDetailPage extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     final action = item['action']?.toString() ?? '';
-    final actor = item['actor_name']?.toString() ?? '—';
-    final actorRole = item['actor_role']?.toString() ?? '';
-    final target = item['target_name']?.toString() ?? '—';
-    final targetType = item['target_type']?.toString() ?? '';
-    final ip = item['ip_address']?.toString() ?? '';
-    final ua = item['user_agent']?.toString() ?? '';
+    final actor = (item['actor_name']?.toString() ?? '').trim();
+    final target = (item['target_name']?.toString() ?? '').trim();
+    final targetType = (item['target_type']?.toString() ?? '').trim();
+    final ip = (item['ip_address']?.toString() ?? '').trim();
+    final ua = (item['user_agent']?.toString() ?? '').trim();
     final ts = item['created_at']?.toString() ?? '';
     final payload = item['payload'];
 
-    String prettyPayload = '';
-    if (payload != null) {
-      try {
-        if (payload is Map || payload is List) {
-          prettyPayload = const JsonEncoder.withIndent('  ').convert(payload);
-        } else {
-          prettyPayload = payload.toString();
-        }
-      } catch (_) {
-        prettyPayload = payload.toString();
-      }
+    final payloadMap = payload is Map
+        ? Map<String, dynamic>.from(payload)
+        : <String, dynamic>{};
+
+    // Role can live on the row or in the payload — prefer the row.
+    var actorRole = (item['actor_role']?.toString() ?? '').trim();
+    if (actorRole.isEmpty) {
+      actorRole = (payloadMap['role']?.toString() ?? '').trim();
     }
+
+    // Turn the remaining payload into clean rows — skip values already shown
+    // elsewhere (ip, role) and anything null/empty, instead of dumping JSON.
+    const skipKeys = {'ip', 'role'};
+    const niceLabels = {
+      'location_name': 'Location',
+      'device': 'Device',
+      'lat': 'Latitude',
+      'lng': 'Longitude',
+    };
+    String humanizeKey(String k) => k
+        .split('_')
+        .where((w) => w.isNotEmpty)
+        .map((w) => '${w[0].toUpperCase()}${w.substring(1)}')
+        .join(' ');
+    final extraRows = <_DetailRow>[];
+    payloadMap.forEach((k, v) {
+      if (skipKeys.contains(k) || v == null) return;
+      final s = v.toString().trim();
+      if (s.isEmpty || s == 'null') return;
+      extraRows.add(_DetailRow(label: niceLabels[k] ?? humanizeKey(k), value: s));
+    });
 
     String formattedTime = ts;
     try {
@@ -613,6 +632,10 @@ class _AuditDetailPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
         title: const Text(
           'Audit Detail',
           style: TextStyle(fontWeight: FontWeight.w800),
@@ -649,83 +672,53 @@ class _AuditDetailPage extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          _DetailSection(
-            label: 'Actor',
-            children: [
-              _DetailRow(label: 'Name', value: actor),
-              if (actorRole.isNotEmpty)
-                _DetailRow(label: 'Role', value: actorRole),
-            ],
-          ),
-
-          _DetailSection(
-            label: 'Target',
-            children: [
-              _DetailRow(label: 'Name', value: target),
-              if (targetType.isNotEmpty)
-                _DetailRow(label: 'Type', value: targetType),
-            ],
-          ),
-
-          _DetailSection(
-            label: 'Network',
-            children: [
-              if (ip.isNotEmpty) _DetailRow(label: 'IP Address', value: ip),
-              if (ua.isNotEmpty) _DetailRow(label: 'User Agent', value: ua),
-            ],
-          ),
-
-          if (prettyPayload.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Row(
+          // All info grouped in one clean card — no raw JSON, no duplicates.
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.04)
+                  : const Color(0xFFF5F5F3),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Payload',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.grey.shade500,
+                if (actor.isNotEmpty || actorRole.isNotEmpty)
+                  _DetailSection(
+                    label: 'Actor',
+                    children: [
+                      if (actor.isNotEmpty)
+                        _DetailRow(label: 'Name', value: actor),
+                      if (actorRole.isNotEmpty)
+                        _DetailRow(label: 'Role', value: actorRole),
+                    ],
                   ),
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: prettyPayload));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Payload copied'),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                  },
-                  child: const Icon(
-                    Icons.copy_rounded,
-                    size: 16,
-                    color: Colors.grey,
+                if (target.isNotEmpty || targetType.isNotEmpty)
+                  _DetailSection(
+                    label: 'Target',
+                    children: [
+                      if (target.isNotEmpty)
+                        _DetailRow(label: 'Name', value: target),
+                      if (targetType.isNotEmpty)
+                        _DetailRow(label: 'Type', value: targetType),
+                    ],
                   ),
-                ),
+                if (ip.isNotEmpty || ua.isNotEmpty)
+                  _DetailSection(
+                    label: 'Network',
+                    children: [
+                      if (ip.isNotEmpty)
+                        _DetailRow(label: 'IP Address', value: ip),
+                      if (ua.isNotEmpty)
+                        _DetailRow(label: 'User Agent', value: ua),
+                    ],
+                  ),
+                if (extraRows.isNotEmpty)
+                  _DetailSection(label: 'Details', children: extraRows),
               ],
             ),
-            const SizedBox(height: 6),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.04)
-                    : const Color(0xFFF5F5F3),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                prettyPayload,
-                style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 11,
-                  color: isDark ? Colors.white70 : Colors.black87,
-                ),
-              ),
-            ),
-          ],
+          ),
         ],
       ),
     );

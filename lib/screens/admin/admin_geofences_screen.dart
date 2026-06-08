@@ -459,7 +459,7 @@ class _GeofenceEditorState extends State<_GeofenceEditor> {
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('Save'),
+                  child: const Text('Submit'),
                 ),
               ),
             ],

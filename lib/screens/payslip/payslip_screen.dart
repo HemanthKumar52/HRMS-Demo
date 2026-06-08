@@ -30,6 +30,10 @@ class PayslipScreen extends StatefulWidget {
 class _PayslipScreenState extends State<PayslipScreen> {
   int _selectedMonthIndex = DateTime.now().month - 1;
   int _selectedYear = DateTime.now().year;
+  // Auto-select the latest month-with-data only ONCE (initial load). Otherwise
+  // every navigation to an empty month snapped the selection back, so the user
+  // could never view a previous month.
+  bool _didAutoSelectMonth = false;
 
   bool _isLoading = true;
   List<dynamic> _payslips = [];
@@ -85,13 +89,15 @@ class _PayslipScreenState extends State<PayslipScreen> {
                 .where((m) => m > 0)
                 .toList()
               ..sort();
-        if (months.isNotEmpty) {
+        if (months.isNotEmpty && !_didAutoSelectMonth) {
           final latestMonth = months.last;
-          // Only auto-select if current month has no data
+          // Only auto-select on the FIRST load, and only if the current month
+          // has no data — never override the user's manual month navigation.
           final currentHasData = months.contains(_selectedMonthIndex + 1);
           if (!currentHasData) {
             _selectedMonthIndex = latestMonth - 1;
           }
+          _didAutoSelectMonth = true;
         }
       }
 
@@ -177,8 +183,25 @@ class _PayslipScreenState extends State<PayslipScreen> {
     _loadPayslips();
   }
 
+  /// True when the selected month is the current calendar month or later —
+  /// i.e. the "next" month would be in the future (no payslip generated yet).
+  bool get _isAtOrAfterCurrentMonth {
+    final now = DateTime.now();
+    final sel = DateTime(_selectedYear, _selectedMonthIndex + 1);
+    final cur = DateTime(now.year, now.month);
+    return !sel.isBefore(cur);
+  }
+
   void _goToNextMonth() {
-    if (!_canGoForward) return;
+    // Future month: payslips aren't generated ahead of time — inform instead
+    // of silently doing nothing.
+    if (_isAtOrAfterCurrentMonth) {
+      _showFeedback(
+        'Payslip for next month is not generated yet.',
+        color: AppColors.warning,
+      );
+      return;
+    }
     setState(() {
       if (_selectedMonthIndex == 11) {
         _selectedMonthIndex = 0;
@@ -628,30 +651,20 @@ class _PayslipScreenState extends State<PayslipScreen> {
                                 isApplePlatform
                                     ? CupertinoButton(
                                         padding: EdgeInsets.zero,
-                                        onPressed: _canGoForward
-                                            ? () {
-                                                HapticFeedback.selectionClick();
-                                                _goToNextMonth();
-                                              }
-                                            : null,
-                                        child: Icon(
+                                        onPressed: () {
+                                          HapticFeedback.selectionClick();
+                                          _goToNextMonth();
+                                        },
+                                        child: const Icon(
                                           CupertinoIcons.chevron_right,
                                           size: 20,
-                                          color: _canGoForward
-                                              ? null
-                                              : Colors.grey.shade300,
                                         ),
                                       )
                                     : IconButton(
-                                        icon: Icon(
+                                        icon: const Icon(
                                           Icons.chevron_right_rounded,
-                                          color: _canGoForward
-                                              ? null
-                                              : Colors.grey.shade300,
                                         ),
-                                        onPressed: _canGoForward
-                                            ? _goToNextMonth
-                                            : null,
+                                        onPressed: _goToNextMonth,
                                       ),
                               ],
                             ),
@@ -714,6 +727,10 @@ class _PayslipScreenState extends State<PayslipScreen> {
                                   ],
                                 ),
                                 borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.25),
+                                  width: 1,
+                                ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: const Color(

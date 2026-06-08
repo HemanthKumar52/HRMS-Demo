@@ -8,7 +8,6 @@ import '../../services/notification_service.dart';
 import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
-import '../../widgets/employee_cc_field.dart';
 import '../../widgets/form_fields.dart';
 
 class RaiseTicketScreen extends StatefulWidget {
@@ -23,7 +22,6 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final List<Map<String, dynamic>> _ccUsers = [];
   late String _ticketType;
   late String _priority;
   late String _department;
@@ -94,7 +92,6 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    // _ccUsers is a plain list, no controller to dispose.
     super.dispose();
   }
 
@@ -109,7 +106,6 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
         'priority': _priority.toLowerCase(),
         'ticket_type': _ticketType,
         'department': _department,
-        'cc': _ccUsers.map((u) => u['user_id']).toList(),
       };
       if (_isEditing) {
         await ApiService.updateTicket(int.parse(_editId!), payload);
@@ -197,16 +193,6 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
                 items: _departments,
                 onChanged: (v) =>
                     setState(() => _department = v ?? _departments.first),
-              ),
-              formFieldGap,
-
-              EmployeeCcField(
-                selected: _ccUsers,
-                onChanged: (next) => setState(() {
-                  _ccUsers
-                    ..clear()
-                    ..addAll(next);
-                }),
               ),
               formFieldGap,
 

@@ -166,12 +166,24 @@ class PunchMetadataService {
         return null;
       }
 
-      return await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.medium,
-          timeLimit: Duration(seconds: 10),
-        ),
-      );
+      try {
+        return await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: Duration(seconds: 12),
+          ),
+        );
+      } catch (e) {
+        // A live GPS fix often times out indoors or on a cold start. Rather than
+        // send no location (which the backend rejects with LOCATION_REQUIRED and
+        // blocks check-in), fall back to the most recent cached fix. Permission
+        // is already granted and the service is on at this point, so a slightly
+        // older position is acceptable for the WFH zone check.
+        debugPrint('PUNCH_META: live fix failed ($e) — using last known');
+        final last = await Geolocator.getLastKnownPosition();
+        if (last != null) return last;
+        return null;
+      }
     } catch (e) {
       debugPrint('PUNCH_META: getCurrentPosition error - $e');
       return null;

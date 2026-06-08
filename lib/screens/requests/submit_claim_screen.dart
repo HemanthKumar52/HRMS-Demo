@@ -8,7 +8,6 @@ import '../../services/notification_service.dart';
 import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
-import '../../widgets/employee_cc_field.dart';
 import '../../widgets/form_fields.dart';
 import '../../widgets/neu_card.dart';
 
@@ -28,7 +27,6 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
   DateTime? _date;
   final List<XFile> _images = [];
   bool _isSubmitting = false;
-  final List<Map<String, dynamic>> _ccUsers = [];
   final ImagePicker _picker = ImagePicker();
 
   bool get _isEditing => widget.editData != null;
@@ -117,7 +115,6 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
         'amount': 0,
         'date': (_date ?? DateTime.now()).toIso8601String().split('T')[0],
         'description': _descriptionController.text,
-        'cc': _ccUsers.map((u) => u['user_id']).toList(),
       };
       if (_isEditing) {
         await ApiService.updateClaim(int.parse(_editId!), payload);
@@ -286,16 +283,6 @@ class _SubmitClaimScreenState extends State<SubmitClaimScreen> {
                     ),
                   ],
                 ),
-              ),
-              formSectionGap,
-
-              EmployeeCcField(
-                selected: _ccUsers,
-                onChanged: (next) => setState(() {
-                  _ccUsers
-                    ..clear()
-                    ..addAll(next);
-                }),
               ),
               formSectionGap,
 

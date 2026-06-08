@@ -50,9 +50,9 @@ class NeuDecoration {
       borderRadius: BorderRadius.circular(radius),
       border: Border.all(
         color: isDark
-            ? Colors.white.withValues(alpha: 0.06)
+            ? Colors.white.withValues(alpha: 0.12)
             : Colors.grey.withValues(alpha: 0.18),
-        width: 0.5,
+        width: 1,
       ),
       boxShadow: isDark
           ? [

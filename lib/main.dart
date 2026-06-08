@@ -6,8 +6,10 @@ import 'package:provider/provider.dart';
 
 import 'providers/app_provider.dart';
 import 'providers/theme_provider.dart';
+import 'screens/auth/login_screen.dart';
 import 'screens/requests/request_detail_screen.dart';
 import 'screens/splash/splash_screen.dart';
+import 'services/api_service.dart';
 import 'services/app_lock_service.dart';
 import 'services/live_activity_service.dart';
 import 'services/notification_service.dart';
@@ -28,6 +30,26 @@ void main() async {
     debugPrint('MAIN: LiveActivityService init failed: $e');
   }
   NotificationService.instance.navigatorKey = navigatorKey;
+  // When the session is definitively dead (refresh token missing or rejected),
+  // clear state and bounce to the login screen instead of stranding the user
+  // on a "session expired" error that never recovers.
+  ApiService.onAuthFailure = () async {
+    // Defer to after the current frame: this can fire from inside an HTTP
+    // response handler while a build/teardown is in progress, and calling
+    // logout() (notifyListeners) + navigation synchronously then can trip
+    // framework assertions (e.g. "_dependents.isEmpty"). Post-frame is safe.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = navigatorKey.currentContext;
+      if (ctx == null) return;
+      try {
+        ctx.read<AppProvider>().logout();
+      } catch (_) {}
+      navigatorKey.currentState?.pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    });
+  };
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

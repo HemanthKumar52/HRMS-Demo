@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:no_screenshot/no_screenshot.dart';
@@ -41,7 +42,9 @@ class _PayslipViewerScreenState extends State<PayslipViewerScreen> {
   @override
   void initState() {
     super.initState();
-    _noScreenshot.screenshotOff();
+    // Keep anti-screenshot protection only in release on real devices —
+    // FLAG_SECURE blanks the view on emulators (debug/demo).
+    if (!kDebugMode) _noScreenshot.screenshotOff();
     _loadPayslip();
   }
 
@@ -93,11 +96,14 @@ class _PayslipViewerScreenState extends State<PayslipViewerScreen> {
         return;
       }
 
-      // Try loading from mobile backend HTML endpoint first
+      // Load the self-contained mobile payslip HTML. This endpoint renders
+      // directly from the shared Payslip row and does NOT depend on the web's
+      // PayslipTemplate/Company seed data (which can be missing) or on proxying
+      // the web backend — so it works wherever the payslip data exists.
       final headers = await ApiService.getAuthHeaders();
       final baseUrl = ApiService.currentBaseUrl;
       final response = await ApiService.getRaw(
-        '$baseUrl/payslips/$_resolvedId/html',
+        '$baseUrl/payslips/$_resolvedId/mobile-html',
         headers: headers,
       );
 

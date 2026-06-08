@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
 import '../../providers/app_provider.dart';
+import '../../services/api_service.dart';
 import '../auth/login_screen.dart';
 import 'profile_screen.dart';
 import '../directory/directory_screen.dart';
@@ -161,7 +162,12 @@ class _ProfileSheet extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 20),
+
+              // Subscription plan tag (mirrors the web profile's "Growth · Active").
+              _SubscriptionCard(isDark: isDark),
+
+              const SizedBox(height: 16),
 
               // Menu items
               _MenuItem(
@@ -276,6 +282,145 @@ Widget _buildAvatar(AppProvider provider, ThemeData theme, double radius) {
       ),
     ),
   );
+}
+
+/// Shows the company's current billing plan + status, like the web profile.
+/// Silently renders nothing if there's no subscription or the call fails.
+class _SubscriptionCard extends StatelessWidget {
+  final bool isDark;
+  const _SubscriptionCard({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: ApiService.getSubscription(),
+      builder: (context, snap) {
+        final data = snap.data;
+        if (data == null || data['has_subscription'] != true) {
+          return const SizedBox.shrink();
+        }
+        final plan = (data['plan'] ?? '').toString();
+        final status = (data['status'] ?? '').toString();
+        final active = data['active'] == true;
+        if (plan.isEmpty) return const SizedBox.shrink();
+
+        final statusColor = active ? AppColors.success : Colors.orange;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDark
+                  ? [
+                      AppColors.primary.withValues(alpha: 0.10),
+                      Colors.white.withValues(alpha: 0.04),
+                    ]
+                  : [
+                      AppColors.primary.withValues(alpha: 0.06),
+                      Colors.white,
+                    ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: isDark ? 0.22 : 0.18),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.24),
+                      AppColors.primary.withValues(alpha: 0.10),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.28),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.workspace_premium_rounded,
+                  color: AppColors.primary,
+                  size: 23,
+                ),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'SUBSCRIPTION',
+                      style: TextStyle(
+                        fontSize: 10,
+                        letterSpacing: 0.6,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white54 : Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      plan,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (status.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    // Bordered pill, like the Comp Off tag on requests.
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: 0.45),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        status,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: statusColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _MenuItem extends StatelessWidget {

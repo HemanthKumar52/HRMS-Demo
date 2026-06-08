@@ -11,6 +11,13 @@ import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/native_ios_attendance_view.dart';
+import '../../animations/motion.dart';
+import '../requests/apply_leave_screen.dart';
+import '../requests/submit_claim_screen.dart';
+import '../requests/raise_ticket_screen.dart';
+import '../requests/shift_change_screen.dart';
+import '../requests/work_type_request_screen.dart';
+import '../requests/attendance_request_screen.dart';
 
 class EmployeeHome extends StatelessWidget {
   const EmployeeHome({super.key});
@@ -500,42 +507,63 @@ class EmployeeHome extends StatelessWidget {
                       icon: Icons.event_busy,
                       label: 'Leave',
                       color: AppColors.primary,
+                      index: 0,
+                      onTap: () => Navigator.push(
+                        context,
+                        Motion.pageRoute(const ApplyLeaveScreen()),
+                      ),
                     ),
                     _QuickAction(
                       icon: Icons.receipt,
                       label: 'Claims',
                       color: AppColors.success,
+                      index: 1,
+                      onTap: () => Navigator.push(
+                        context,
+                        Motion.pageRoute(const SubmitClaimScreen()),
+                      ),
                     ),
                     _QuickAction(
                       icon: Icons.confirmation_num,
                       label: 'Tickets',
                       color: AppColors.orange,
+                      index: 2,
+                      onTap: () => Navigator.push(
+                        context,
+                        Motion.pageRoute(const RaiseTicketScreen()),
+                      ),
                     ),
                     _QuickAction(
                       icon: Icons.swap_horiz,
                       label: 'Shift',
                       color: AppColors.secondary,
+                      index: 3,
+                      onTap: () => Navigator.push(
+                        context,
+                        Motion.pageRoute(const ShiftChangeScreen()),
+                      ),
                     ),
                     _QuickAction(
                       icon: Icons.work,
                       label: 'Work Type',
                       color: AppColors.pink,
+                      index: 4,
+                      onTap: () => Navigator.push(
+                        context,
+                        Motion.pageRoute(const WorkTypeRequestScreen()),
+                      ),
                     ),
                     _QuickAction(
                       icon: Icons.access_time,
                       label: 'Attendance',
                       color: AppColors.primaryDark,
+                      index: 5,
+                      onTap: () => Navigator.push(
+                        context,
+                        Motion.pageRoute(const AttendanceRequestScreen()),
+                      ),
                     ),
                   ],
-                )
-                .animate()
-                .fadeIn(duration: 420.ms, delay: 640.ms)
-                .slideY(
-                  begin: 0.12,
-                  end: 0,
-                  duration: 420.ms,
-                  delay: 640.ms,
-                  curve: Curves.easeOutCubic,
                 ),
             const SizedBox(height: 20),
 
@@ -1148,57 +1176,120 @@ class _ActivityItem extends StatelessWidget {
   }
 }
 
-class _QuickAction extends StatelessWidget {
+class _QuickAction extends StatefulWidget {
   final IconData icon;
   final String label;
   final Color color;
+  final int index;
+  final VoidCallback? onTap;
 
   const _QuickAction({
     required this.icon,
     required this.label,
     required this.color,
+    this.index = 0,
+    this.onTap,
   });
 
   @override
+  State<_QuickAction> createState() => _QuickActionState();
+}
+
+class _QuickActionState extends State<_QuickAction> {
+  bool _pressed = false;
+
+  void _setPressed(bool v) {
+    if (_pressed != v) setState(() => _pressed = v);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    // Stagger the entrance + continuous float by card position.
+    final entranceDelay = (widget.index * 90 + 600).ms;
+    final floatDelay = (widget.index * 160).ms;
+
+    final card = GestureDetector(
+      onTapDown: (_) => _setPressed(true),
+      onTapCancel: () => _setPressed(false),
+      onTapUp: (_) => _setPressed(false),
       onTap: () {
         HapticFeedback.lightImpact();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$label action opened'),
-            backgroundColor: color,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            duration: const Duration(seconds: 1),
-          ),
-        );
-      },
-      child: NeuCard(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
+        if (widget.onTap != null) {
+          widget.onTap!();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${widget.label} action opened'),
+              backgroundColor: widget.color,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: color, size: 22),
+              duration: const Duration(seconds: 1),
             ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-              textAlign: TextAlign.center,
-            ),
-          ],
+          );
+        }
+      },
+      child: AnimatedScale(
+        // Interactive press feedback.
+        scale: _pressed ? 0.93 : 1.0,
+        duration: const Duration(milliseconds: 130),
+        curve: Curves.easeOut,
+        child: NeuCard(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: widget.color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(widget.icon, color: widget.color, size: 22),
+                  )
+                  // Gentle, continuous floating motion on the icon.
+                  .animate(onPlay: (c) => c.repeat(reverse: true))
+                  .moveY(
+                    begin: 0,
+                    end: -4,
+                    duration: 1700.ms,
+                    delay: floatDelay,
+                    curve: Curves.easeInOut,
+                  ),
+              const SizedBox(height: 8),
+              Text(
+                widget.label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
+
+    // Staggered entrance: fade + slide-up + pop-in scale.
+    return card
+        .animate()
+        .fadeIn(duration: 380.ms, delay: entranceDelay)
+        .slideY(
+          begin: 0.18,
+          end: 0,
+          duration: 420.ms,
+          delay: entranceDelay,
+          curve: Curves.easeOutCubic,
+        )
+        .scaleXY(
+          begin: 0.85,
+          end: 1.0,
+          duration: 420.ms,
+          delay: entranceDelay,
+          curve: Curves.easeOutBack,
+        );
   }
 }
 

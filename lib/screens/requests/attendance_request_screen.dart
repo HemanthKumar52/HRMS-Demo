@@ -8,7 +8,6 @@ import '../../services/notification_service.dart';
 import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
-import '../../widgets/employee_cc_field.dart';
 import '../../widgets/form_fields.dart';
 
 class AttendanceRequestScreen extends StatefulWidget {
@@ -41,7 +40,6 @@ class _AttendanceRequestScreenState extends State<AttendanceRequestScreen> {
   String? _attachmentName;
   bool _attachmentEnabled = false;
   bool _isSubmitting = false;
-  final List<Map<String, dynamic>> _ccUsers = [];
 
   List<String> _shifts = [];
 
@@ -170,7 +168,6 @@ class _AttendanceRequestScreenState extends State<AttendanceRequestScreen> {
       if (inStr != null) body['requested_check_in'] = inStr;
       if (outStr != null) body['requested_check_out'] = outStr;
       if (_attachmentName != null) body['attachment_name'] = _attachmentName;
-      body['cc'] = _ccUsers.map((u) => u['user_id']).toList();
 
       if (_isEditing) {
         await ApiService.updateAttendanceRequest(int.parse(_editId!), body);
@@ -343,16 +340,6 @@ class _AttendanceRequestScreenState extends State<AttendanceRequestScreen> {
                   if (file != null) setState(() => _attachmentName = file.name);
                 },
                 onRemove: () => setState(() => _attachmentName = null),
-              ),
-              formSectionGap,
-
-              EmployeeCcField(
-                selected: _ccUsers,
-                onChanged: (next) => setState(() {
-                  _ccUsers
-                    ..clear()
-                    ..addAll(next);
-                }),
               ),
               formSectionGap,
 

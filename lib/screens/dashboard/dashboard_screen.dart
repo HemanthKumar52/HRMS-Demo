@@ -185,6 +185,7 @@ class _DartDashboard extends StatelessWidget {
                         context,
                         Motion.pageRoute(const AttendanceRequestScreen()),
                       ),
+                      index: 0,
                     ),
                     _QuickAction(
                       icon: isApplePlatform
@@ -196,6 +197,7 @@ class _DartDashboard extends StatelessWidget {
                         context,
                         Motion.pageRoute(const ApplyLeaveScreen()),
                       ),
+                      index: 1,
                     ),
                     _QuickAction(
                       icon: isApplePlatform
@@ -207,6 +209,7 @@ class _DartDashboard extends StatelessWidget {
                         context,
                         Motion.pageRoute(const RaiseTicketScreen()),
                       ),
+                      index: 2,
                     ),
                     _QuickAction(
                       icon: isApplePlatform
@@ -218,6 +221,7 @@ class _DartDashboard extends StatelessWidget {
                         context,
                         Motion.pageRoute(const WorkTypeRequestScreen()),
                       ),
+                      index: 3,
                     ),
                     _QuickAction(
                       icon: isApplePlatform
@@ -229,6 +233,7 @@ class _DartDashboard extends StatelessWidget {
                         context,
                         Motion.pageRoute(const ShiftChangeScreen()),
                       ),
+                      index: 4,
                     ),
                     _QuickAction(
                       icon: isApplePlatform
@@ -240,6 +245,7 @@ class _DartDashboard extends StatelessWidget {
                         context,
                         Motion.pageRoute(const SubmitClaimScreen()),
                       ),
+                      index: 5,
                     ),
                   ],
                 )
@@ -726,7 +732,19 @@ class _DartDashboard extends StatelessWidget {
                           time: 'Today',
                         ),
                       if (provider.recentActivity.isNotEmpty)
-                        ...provider.recentActivity.take(3).map((a) {
+                        ...provider.recentActivity
+                            .take(3)
+                            .toList()
+                            .asMap()
+                            .entries
+                            .map((entry) {
+                          final index = entry.key;
+                          final a = entry.value;
+                          // Divider only BETWEEN rows — not above the first one.
+                          final showDivider =
+                              index > 0 ||
+                              (provider.isPunchedIn &&
+                                  provider.punchInTime != null);
                           final status = a['status'] ?? '';
                           final statusColor = status == 'approved'
                               ? AppColors.success
@@ -735,12 +753,13 @@ class _DartDashboard extends StatelessWidget {
                               : AppColors.orange;
                           return Column(
                             children: [
-                              Divider(
-                                height: 20,
-                                color: isDark
-                                    ? Colors.white.withValues(alpha: 0.06)
-                                    : Colors.black.withValues(alpha: 0.06),
-                              ),
+                              if (showDivider)
+                                Divider(
+                                  height: 20,
+                                  color: isDark
+                                      ? Colors.white.withValues(alpha: 0.06)
+                                      : Colors.black.withValues(alpha: 0.06),
+                                ),
                               _ActivityItem(
                                 icon: status == 'approved'
                                     ? Icons.check_circle
@@ -972,9 +991,13 @@ class _TeamAttendanceCard extends StatelessWidget {
 
     return NeuCard(
       padding: const EdgeInsets.all(20),
-      child: SizedBox(
-        height: 320,
+      child: ConstrainedBox(
+        // Cap the height (so long team lists scroll) but let the card shrink
+        // to fit when there's little content — avoids a big empty gap when
+        // you have no direct reports.
+        constraints: const BoxConstraints(maxHeight: 320),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -1049,7 +1072,7 @@ class _TeamAttendanceCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            Expanded(
+            Flexible(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 child: Column(
@@ -2007,51 +2030,104 @@ class _ActivityItem extends StatelessWidget {
   }
 }
 
-class _QuickAction extends StatelessWidget {
+class _QuickAction extends StatefulWidget {
   final IconData icon;
   final String label;
   final Color color;
   final VoidCallback? onTap;
+  final int index;
   const _QuickAction({
     required this.icon,
     required this.label,
     required this.color,
     this.onTap,
+    this.index = 0,
   });
 
   @override
+  State<_QuickAction> createState() => _QuickActionState();
+}
+
+class _QuickActionState extends State<_QuickAction> {
+  bool _pressed = false;
+
+  void _set(bool v) {
+    if (_pressed != v) setState(() => _pressed = v);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return NeuCard(
-      onTap: onTap,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 20),
+    final entranceDelay = (widget.index * 90 + 500).ms;
+    final card = GestureDetector(
+      onTapDown: (_) => _set(true),
+      onTapCancel: () => _set(false),
+      onTapUp: (_) => _set(false),
+      onTap: () {
+        HapticFeedback.lightImpact();
+        widget.onTap?.call();
+      },
+      child: AnimatedScale(
+        scale: _pressed ? 0.93 : 1.0,
+        duration: const Duration(milliseconds: 130),
+        curve: Curves.easeOut,
+        child: NeuCard(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: widget.color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(widget.icon, color: widget.color, size: 20),
+                  )
+                  .animate(onPlay: (c) => c.repeat(reverse: true))
+                  .moveY(
+                    begin: 0,
+                    end: -4,
+                    duration: 1700.ms,
+                    delay: (widget.index * 160).ms,
+                    curve: Curves.easeInOut,
+                  ),
+              const SizedBox(height: 6),
+              Text(
+                widget.label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? AppColors.darkText
+                      : AppColors.lightText,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? AppColors.darkText
-                  : AppColors.lightText,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+        ),
       ),
     );
+
+    return card
+        .animate()
+        .fadeIn(duration: 380.ms, delay: entranceDelay)
+        .slideY(
+          begin: 0.18,
+          end: 0,
+          duration: 420.ms,
+          delay: entranceDelay,
+          curve: Curves.easeOutCubic,
+        )
+        .scaleXY(
+          begin: 0.85,
+          end: 1.0,
+          duration: 420.ms,
+          delay: entranceDelay,
+          curve: Curves.easeOutBack,
+        );
   }
 }
 

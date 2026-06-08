@@ -96,9 +96,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           onPressed: () => Navigator.pop(context),
                           child: Icon(
-                            CupertinoIcons.back,
+                            Icons.arrow_back_ios_new_rounded,
                             color: AdaptiveColors.primary(context),
-                            size: 22,
+                            size: 20,
                           ),
                         ),
                         Text(
@@ -120,64 +120,96 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         ),
       ),
       body: IndexedStack(index: _index, children: _screens),
-      bottomNavigationBar: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.black.withValues(alpha: 0.5)
-                  : Colors.white.withValues(alpha: 0.65),
-              border: Border(
-                top: BorderSide(
+      // Glassy floating nav with blue blob — matches the main app + Android.
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(35),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+              child: Container(
+                height: 68,
+                decoration: BoxDecoration(
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.08)
-                      : Colors.black.withValues(alpha: 0.06),
-                  width: 0.5,
+                      ? Colors.black.withValues(alpha: 0.42)
+                      : Colors.white.withValues(alpha: 0.62),
+                  borderRadius: BorderRadius.circular(35),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.10)
+                        : Colors.white.withValues(alpha: 0.75),
+                    width: 0.8,
+                  ),
                 ),
-              ),
-            ),
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 6, bottom: 2),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: List.generate(_labels.length, (i) {
                     final isActive = _index == i;
-                    return CupertinoButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () => _onTap(i),
-                      child: SizedBox(
-                        width: 70,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _cupertinoIcons[i],
-                              size: 22,
-                              color: isActive
-                                  ? AppColors.primary
-                                  : (isDark
-                                        ? Colors.white.withValues(alpha: 0.4)
-                                        : Colors.grey.shade500),
+                    final inactiveColor = isDark
+                        ? Colors.white.withValues(alpha: 0.55)
+                        : Colors.black.withValues(alpha: 0.45);
+                    final itemColor = isActive
+                        ? AppColors.primary
+                        : inactiveColor;
+                    return Expanded(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _onTap(i),
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 7,
+                          ),
+                          decoration: isActive
+                              ? ShapeDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      AppColors.primary.withValues(
+                                        alpha: 0.34,
+                                      ),
+                                      AppColors.primary.withValues(
+                                        alpha: 0.14,
+                                      ),
+                                    ],
+                                  ),
+                                  shape: const StadiumBorder(),
+                                  shadows: [
+                                    BoxShadow(
+                                      color: AppColors.primary.withValues(
+                                        alpha: 0.14,
+                                      ),
+                                      blurRadius: 8,
+                                      spreadRadius: -2,
+                                    ),
+                                  ],
+                                )
+                              : null,
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _cupertinoIcons[i],
+                                  color: itemColor,
+                                  size: 22,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _labels[i],
+                                  style: TextStyle(
+                                    color: itemColor,
+                                    fontSize: 11,
+                                    fontWeight: isActive
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _labels[i],
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: isActive
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
-                                color: isActive
-                                    ? AppColors.primary
-                                    : (isDark
-                                          ? Colors.white.withValues(alpha: 0.4)
-                                          : Colors.grey.shade500),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     );
@@ -198,7 +230,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -210,19 +242,99 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         ),
       ),
       body: IndexedStack(index: _index, children: _screens),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: _onTap,
-        backgroundColor: isDark
-            ? const Color(0xFF1E2030)
-            : const Color(0xFFE4E8EE),
-        indicatorColor: AppColors.primary.withValues(alpha: 0.12),
-        destinations: List.generate(
-          _labels.length,
-          (i) => NavigationDestination(
-            icon: Icon(_icons[i]),
-            selectedIcon: Icon(_icons[i], color: AppColors.primary),
-            label: _labels[i],
+      // Glassy floating nav — matches the main app's bottom bar.
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(35),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 35, sigmaY: 35),
+              child: Container(
+                height: 68,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.black.withValues(alpha: 0.42)
+                      : Colors.white.withValues(alpha: 0.62),
+                  borderRadius: BorderRadius.circular(35),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.10)
+                        : Colors.white.withValues(alpha: 0.75),
+                    width: 0.8,
+                  ),
+                ),
+                child: Row(
+                  children: List.generate(_labels.length, (i) {
+                    final isActive = _index == i;
+                    final inactiveColor = isDark
+                        ? Colors.white.withValues(alpha: 0.55)
+                        : Colors.black.withValues(alpha: 0.45);
+                    final itemColor = isActive
+                        ? AppColors.primary
+                        : inactiveColor;
+                    return Expanded(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _onTap(i),
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 7,
+                          ),
+                          decoration: isActive
+                              ? ShapeDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      AppColors.primary.withValues(
+                                        alpha: 0.34,
+                                      ),
+                                      AppColors.primary.withValues(
+                                        alpha: 0.14,
+                                      ),
+                                    ],
+                                  ),
+                                  shape: const StadiumBorder(),
+                                  shadows: [
+                                    BoxShadow(
+                                      color: AppColors.primary.withValues(
+                                        alpha: 0.14,
+                                      ),
+                                      blurRadius: 8,
+                                      spreadRadius: -2,
+                                    ),
+                                  ],
+                                )
+                              : null,
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(_icons[i], color: itemColor, size: 22),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _labels[i],
+                                  style: TextStyle(
+                                    color: itemColor,
+                                    fontSize: 11,
+                                    fontWeight: isActive
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ),
           ),
         ),
       ),

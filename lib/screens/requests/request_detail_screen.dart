@@ -100,6 +100,9 @@ IconData _typeIconFor(String type) {
   switch (type) {
     case 'Leave':
       return Icons.beach_access_rounded;
+    case 'Comp Off':
+    case 'Compensatory Leave':
+      return Icons.more_time_rounded;
     case 'Claims':
       return Icons.receipt_long_rounded;
     case 'Tickets':
@@ -289,10 +292,11 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
       if (approve) {
         await ApiService.acceptRequest(
           id,
+          type: type,
           comment: reason.isEmpty ? null : reason,
         );
       } else {
-        await ApiService.rejectRequest(id, reason: reason);
+        await ApiService.rejectRequest(id, type: type, reason: reason);
       }
       if (!mounted) return;
       setState(() {
@@ -532,7 +536,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                         const SizedBox(height: 12),
                       ],
                       _DetailRow(
-                        icon: Icons.schedule_send_rounded,
+                        icon: Icons.event_available_rounded,
                         label: 'Applied Date',
                         value: appliedDate,
                       ),

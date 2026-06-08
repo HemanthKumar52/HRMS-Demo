@@ -375,7 +375,7 @@ class _HolidayEditorState extends State<_HolidayEditor> {
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('Save'),
+                  child: const Text('Submit'),
                 ),
               ),
             ],

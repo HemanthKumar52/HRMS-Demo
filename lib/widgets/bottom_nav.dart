@@ -1,9 +1,12 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
+import 'grid_logo_icon.dart';
 
 class FloatingBottomNav extends StatelessWidget {
   const FloatingBottomNav({super.key});
@@ -26,49 +29,49 @@ class FloatingBottomNav extends StatelessWidget {
       left: 20,
       right: 20,
       child:
-          Container(
-                height: 70,
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF1E2030)
-                      : const Color(0xFFE4E8EE),
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: isDark
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.12),
-                            blurRadius: 24,
-                            offset: const Offset(0, 8),
-                          ),
-                        ]
-                      : [
-                          BoxShadow(
-                            color: const Color(
-                              0xFFBEC3CE,
-                            ).withValues(alpha: 0.6),
-                            offset: const Offset(6, 6),
-                            blurRadius: 15,
-                            spreadRadius: 1,
-                          ),
-                          const BoxShadow(
-                            color: Color(0xFFFDFFFF),
-                            offset: Offset(-6, -6),
-                            blurRadius: 15,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                ),
-                child: Row(
-                  children: List.generate(items.length, (index) {
-                    final isActive = provider.bottomNavIndex == index;
-                    return Expanded(
-                      child: _NavButton(
-                        item: items[index],
-                        isActive: isActive,
-                        onTap: () => provider.setBottomNavIndex(index),
+          ClipRRect(
+                borderRadius: BorderRadius.circular(35),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 35, sigmaY: 35),
+                  child: Container(
+                    height: 70,
+                    decoration: BoxDecoration(
+                      // Instagram-style frosted glass — dark translucent in
+                      // dark mode, white translucent in light mode.
+                      color: isDark
+                          ? Colors.black.withValues(alpha: 0.42)
+                          : Colors.white.withValues(alpha: 0.62),
+                      borderRadius: BorderRadius.circular(35),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.10)
+                            : Colors.white.withValues(alpha: 0.75),
+                        width: 0.8,
                       ),
-                    );
-                  }),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(
+                            alpha: isDark ? 0.35 : 0.12,
+                          ),
+                          blurRadius: 24,
+                          offset: const Offset(0, 8),
+                          spreadRadius: -4,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: List.generate(items.length, (index) {
+                        final isActive = provider.bottomNavIndex == index;
+                        return Expanded(
+                          child: _NavButton(
+                            item: items[index],
+                            isActive: isActive,
+                            onTap: () => provider.setBottomNavIndex(index),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
                 ),
               )
               .animate()
@@ -103,6 +106,8 @@ class _NavButtonState extends State<_NavButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _bounceController;
   late Animation<double> _bounceAnimation;
+  // Increments on each tap of the grid (Dashboard) item to flash its colors.
+  int _gridColorTrigger = 0;
 
   @override
   void initState() {
@@ -140,44 +145,64 @@ class _NavButtonState extends State<_NavButton>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Blue active, neutral inactive.
+    final inactiveColor = isDark
+        ? Colors.white.withValues(alpha: 0.55)
+        : Colors.black.withValues(alpha: 0.45);
+    final itemColor = widget.isActive ? AppColors.primary : inactiveColor;
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
+        if (widget.item.isGrid) {
+          setState(() => _gridColorTrigger++);
+        }
         widget.onTap();
       },
       behavior: HitTestBehavior.opaque,
       child: ScaleTransition(
         scale: _bounceAnimation,
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
           decoration: widget.isActive
-              ? BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(16),
+              ? ShapeDecoration(
+                  // Glassy blue blob — stadium (fully rounded) with soft glow.
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.34),
+                      AppColors.primary.withValues(alpha: 0.14),
+                    ],
+                  ),
+                  shape: const StadiumBorder(),
+                  shadows: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.14),
+                      blurRadius: 8,
+                      spreadRadius: -2,
+                    ),
+                  ],
                 )
               : null,
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  widget.item.icon,
-                  color: widget.isActive
-                      ? AppColors.primary
-                      : (Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white60
-                            : Colors.grey.shade700),
-                  size: 24,
-                ),
+                widget.item.isGrid
+                    // Plain monochrome grid normally; flashes 4 colors on tap.
+                    ? GridLogoIcon(
+                        size: 24,
+                        monoColor: itemColor,
+                        colorTrigger: _gridColorTrigger,
+                      )
+                    : Icon(widget.item.icon, color: itemColor, size: 24),
                 const SizedBox(height: 4),
                 Text(
                   widget.item.label,
                   style: TextStyle(
-                    color: widget.isActive
-                        ? AppColors.primary
-                        : (Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white60
-                              : Colors.grey.shade700),
+                    color: itemColor,
                     fontSize: 11,
                     fontWeight: widget.isActive
                         ? FontWeight.w700
@@ -196,5 +221,6 @@ class _NavButtonState extends State<_NavButton>
 class _NavItem {
   final IconData icon;
   final String label;
-  _NavItem(this.icon, this.label);
+  final bool isGrid;
+  _NavItem(this.icon, this.label, {this.isGrid = false});
 }

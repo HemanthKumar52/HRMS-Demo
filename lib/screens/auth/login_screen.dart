@@ -131,6 +131,8 @@ class _LoginScreenState extends State<LoginScreen>
         if (refreshToken != null) {
           await SecureTokenService.instance.setRefreshToken(refreshToken);
         }
+        // Re-arm the session-expired redirect for this fresh session.
+        ApiService.notifyLoggedIn();
         // Keep in SharedPreferences for backward compat (non-sensitive)
         await prefs.setString('auth_token', token);
         if (refreshToken != null) {

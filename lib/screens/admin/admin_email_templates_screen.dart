@@ -288,7 +288,7 @@ class _TemplateEditorState extends State<_TemplateEditor> {
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('Save'),
+                  child: const Text('Submit'),
                 ),
               ),
             ],

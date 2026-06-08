@@ -83,9 +83,12 @@ class AppProvider extends ChangeNotifier {
   /// outside the app is reflected automatically (timer + UI flip to "Synced from
   /// Biometric"). Safe to call multiple times — replaces any existing timer.
   void _startAttendancePolling({
-    Duration interval = const Duration(seconds: 30),
+    Duration interval = const Duration(seconds: 20),
   }) {
     _attendancePollTimer?.cancel();
+    // Refresh immediately so an external punch (web / biometric device) shows
+    // right away instead of after the first interval elapses.
+    if (_isLoggedIn) refreshAttendanceStatus();
     _attendancePollTimer = Timer.periodic(interval, (_) {
       if (_isLoggedIn) refreshAttendanceStatus();
     });
@@ -119,21 +122,23 @@ class AppProvider extends ChangeNotifier {
             final s = parts.length >= 3
                 ? (int.tryParse(parts[2].split('.').first) ?? 0)
                 : 0;
-            final nowUtc = DateTime.now().toUtc();
-            var utcStamp = DateTime.utc(
-              nowUtc.year,
-              nowUtc.month,
-              nowUtc.day,
+            // Backend returns punch_in in the company's local time (IST) — the
+            // same value web stores — so interpret it as device-local directly
+            // (no UTC conversion, which was double-shifting it by the offset).
+            final nowLocal = DateTime.now();
+            var stamp = DateTime(
+              nowLocal.year,
+              nowLocal.month,
+              nowLocal.day,
               h,
               m,
               s,
             );
-            // If the backend time is *after* the current UTC moment, the punch-in
-            // must have happened just before midnight UTC on the previous day.
-            if (utcStamp.isAfter(nowUtc)) {
-              utcStamp = utcStamp.subtract(const Duration(days: 1));
+            // Guard against a punch logged just before midnight rolling over.
+            if (stamp.isAfter(nowLocal)) {
+              stamp = stamp.subtract(const Duration(days: 1));
             }
-            _punchInTime = utcStamp.toLocal();
+            _punchInTime = stamp;
           }
         }
       } else {
@@ -212,26 +217,27 @@ class AppProvider extends ChangeNotifier {
         if (att['status'] == 'checked_in' || att['status'] == 'clocked_in') {
           _isPunchedIn = true;
           if (att['punch_in'] != null) {
-            // Backend time is UTC — convert to device-local. See refreshAttendanceStatus().
+            // Punch_in is in the company's local time (IST). Interpret as
+            // device-local directly. See refreshAttendanceStatus().
             final parts = att['punch_in'].toString().split(':');
             final h = int.tryParse(parts[0]) ?? 0;
             final m = parts.length >= 2 ? (int.tryParse(parts[1]) ?? 0) : 0;
             final s = parts.length >= 3
                 ? (int.tryParse(parts[2].split('.').first) ?? 0)
                 : 0;
-            final nowUtc = DateTime.now().toUtc();
-            var utcStamp = DateTime.utc(
-              nowUtc.year,
-              nowUtc.month,
-              nowUtc.day,
+            final nowLocal = DateTime.now();
+            var stamp = DateTime(
+              nowLocal.year,
+              nowLocal.month,
+              nowLocal.day,
               h,
               m,
               s,
             );
-            if (utcStamp.isAfter(nowUtc)) {
-              utcStamp = utcStamp.subtract(const Duration(days: 1));
+            if (stamp.isAfter(nowLocal)) {
+              stamp = stamp.subtract(const Duration(days: 1));
             }
-            _punchInTime = utcStamp.toLocal();
+            _punchInTime = stamp;
           }
         } else {
           _isPunchedIn = false;

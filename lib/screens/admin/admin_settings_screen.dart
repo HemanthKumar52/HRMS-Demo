@@ -3,8 +3,12 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
+import 'admin_backup_screen.dart';
 import 'admin_biometric_devices_screen.dart';
+import 'admin_csv_employees_screen.dart';
+import 'admin_email_templates_screen.dart';
 import 'admin_geofences_screen.dart';
+import 'admin_holidays_screen.dart';
 import 'admin_round3_screens.dart';
 import 'admin_round4_screens.dart';
 
@@ -38,6 +42,18 @@ class AdminSettingsScreen extends StatelessWidget {
                 title: 'Office Geofences',
                 onTap: () => _open(context, const AdminGeofencesScreen()),
               ),
+              _SettingsTile(
+                icon: Icons.event_available_outlined,
+                iconColor: AppColors.primary,
+                title: 'Holidays',
+                onTap: () => _open(context, const AdminHolidaysScreen()),
+              ),
+              _SettingsTile(
+                icon: Icons.mail_outline_rounded,
+                iconColor: AppColors.warning,
+                title: 'Email Templates',
+                onTap: () => _open(context, const AdminEmailTemplatesScreen()),
+              ),
             ],
           ),
 
@@ -66,6 +82,36 @@ class AdminSettingsScreen extends StatelessWidget {
                 iconColor: AppColors.secondary,
                 title: 'Face Enrollment',
                 onTap: () => _open(context, const AdminFaceEnrollmentsScreen()),
+              ),
+              _SettingsTile(
+                icon: Icons.fingerprint_rounded,
+                iconColor: AppColors.success,
+                title: 'Biometric Devices',
+                onTap: () =>
+                    _open(context, const AdminBiometricDevicesScreen()),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          // Data
+          _SectionHeader(label: 'DATA'),
+          _SettingsGroup(
+            isDark: isDark,
+            bgColor: bgColor,
+            children: [
+              _SettingsTile(
+                icon: Icons.file_upload_outlined,
+                iconColor: AppColors.primary,
+                title: 'Employee Import / Export',
+                onTap: () => _open(context, const AdminCsvEmployeesScreen()),
+              ),
+              _SettingsTile(
+                icon: Icons.backup_outlined,
+                iconColor: AppColors.secondary,
+                title: 'Backup',
+                onTap: () => _open(context, const AdminBackupScreen()),
               ),
             ],
           ),
@@ -183,12 +229,12 @@ class _SettingsTile extends StatelessWidget {
           ),
         ),
         if (!isLast)
-          Padding(
-            padding: const EdgeInsets.only(left: 62),
-            child: Divider(
-              height: 1,
-              color: Colors.grey.withValues(alpha: 0.15),
-            ),
+          Divider(
+            height: 1,
+            thickness: 1,
+            indent: 16,
+            endIndent: 16,
+            color: Colors.grey.withValues(alpha: 0.15),
           ),
       ],
     );

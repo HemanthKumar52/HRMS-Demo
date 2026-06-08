@@ -483,7 +483,7 @@ class _IpEditorState extends State<_IpEditor> {
           ),
           CupertinoDialogAction(
             onPressed: _submit,
-            child: const Text('Save'),
+            child: const Text('Submit'),
           ),
         ],
       );
@@ -503,7 +503,7 @@ class _IpEditorState extends State<_IpEditor> {
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
           ),
-          child: const Text('Save'),
+          child: const Text('Submit'),
         ),
       ],
     );

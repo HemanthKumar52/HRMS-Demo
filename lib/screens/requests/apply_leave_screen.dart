@@ -10,7 +10,6 @@ import '../../services/live_activity_service.dart';
 import '../../services/notification_service.dart';
 import '../../utils/platform_adaptive.dart';
 import '../../theme/adaptive_colors.dart';
-import '../../widgets/employee_cc_field.dart';
 import '../../widgets/form_fields.dart';
 
 class ApplyLeaveScreen extends StatefulWidget {
@@ -26,17 +25,19 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   String? _selectedLeaveType;
   DateTime? _startDate;
   DateTime? _endDate;
-  late String _startBreakdown;
-  late String _endBreakdown;
+  // Web parity: a single "Day Portion" selector (mapped to both the start and
+  // end breakdown the /v1 backend expects — no backend/DB change).
+  late String _dayPortion;
   final _descriptionController = TextEditingController();
   bool _isSubmitting = false;
   String? _attachmentName;
   bool _attachmentEnabled = false;
-  final List<Map<String, dynamic>> _ccUsers = [];
 
   List<String> _leaveTypes = [];
+  // Web parity: remaining balance per leave-type name (from /v1/leaves/balance).
+  final Map<String, num> _remainingByType = {};
 
-  final List<String> _breakdownOptions = [
+  final List<String> _dayPortionOptions = [
     'Full Day',
     'First Half',
     'Second Half',
@@ -45,12 +46,21 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   bool get _isEditing => widget.editData != null;
   String? get _editId => widget.editData?['id']?.toString();
 
+  /// Available leaves for the currently selected leave type (web shows this
+  /// read-only beside Leave Type). Defaults to 0 when unknown.
+  String get _availableLeaves {
+    final t = _selectedLeaveType;
+    if (t == null) return '0';
+    final v = _remainingByType[t];
+    return v == null ? '0' : (v % 1 == 0 ? v.toInt().toString() : v.toString());
+  }
+
   @override
   void initState() {
     super.initState();
-    _startBreakdown = _breakdownOptions.first;
-    _endBreakdown = _breakdownOptions.first;
+    _dayPortion = _dayPortionOptions.first;
     _loadLeaveTypes();
+    _loadLeaveBalances();
     _prefillFromEditData();
   }
 
@@ -68,19 +78,13 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
     if (md['end_date'] != null) {
       _endDate = DateTime.tryParse(md['end_date'].toString());
     }
+    // Prefill the single Day Portion from the stored start breakdown.
     if (md['start_breakdown'] != null) {
       final bd = md['start_breakdown'].toString().replaceAll('_', ' ');
-      final match = _breakdownOptions.where(
+      final match = _dayPortionOptions.where(
         (o) => o.toLowerCase() == bd.toLowerCase(),
       );
-      if (match.isNotEmpty) _startBreakdown = match.first;
-    }
-    if (md['end_breakdown'] != null) {
-      final bd = md['end_breakdown'].toString().replaceAll('_', ' ');
-      final match = _breakdownOptions.where(
-        (o) => o.toLowerCase() == bd.toLowerCase(),
-      );
-      if (match.isNotEmpty) _endBreakdown = match.first;
+      if (match.isNotEmpty) _dayPortion = match.first;
     }
   }
 
@@ -105,6 +109,29 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
     }
   }
 
+  /// Read-only: pull each leave type's remaining balance for the "Available
+  /// Leaves" field. Uses the existing GET /v1/leaves/balance — no backend change.
+  Future<void> _loadLeaveBalances() async {
+    try {
+      final data = await ApiService.getLeaveBalance();
+      final balances = (data['balances'] as List?) ?? [];
+      if (!mounted) return;
+      setState(() {
+        for (final b in balances) {
+          if (b is Map) {
+            final label = b['label']?.toString();
+            final remaining = b['remaining'];
+            if (label != null && remaining is num) {
+              _remainingByType[label] = remaining;
+            }
+          }
+        }
+      });
+    } catch (_) {
+      // Balance unavailable — field simply shows 0 (same as web with no balance).
+    }
+  }
+
   @override
   void dispose() {
     _descriptionController.dispose();
@@ -125,14 +152,16 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
     HapticFeedback.mediumImpact();
     setState(() => _isSubmitting = true);
     try {
+      // Map the single Day Portion to the start/end breakdown keys the /v1
+      // backend already accepts — identical contract, no backend change.
+      final portion = _dayPortion.toLowerCase().replaceAll(' ', '_');
       final payload = {
         'leave_type': _selectedLeaveType!,
         'start_date': _startDate!.toIso8601String().split('T')[0],
         'end_date': _endDate!.toIso8601String().split('T')[0],
-        'start_breakdown': _startBreakdown.toLowerCase().replaceAll(' ', '_'),
-        'end_breakdown': _endBreakdown.toLowerCase().replaceAll(' ', '_'),
+        'start_breakdown': portion,
+        'end_breakdown': portion,
         'description': _descriptionController.text,
-        'cc': _ccUsers.map((u) => u['user_id']).toList(),
       };
       if (_isEditing) {
         await ApiService.updateLeave(int.parse(_editId!), payload);
@@ -183,15 +212,40 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
     }
   }
 
+  /// Read-only "Available Leaves" box — matches the web's disabled field.
+  Widget _availableLeavesField() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.04)
+            : Colors.grey.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.grey.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Text(
+        _availableLeaves,
+        style: textTheme.bodyLarge?.copyWith(
+          color: isDark ? Colors.white70 : Colors.black54,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: adaptiveAppBar(
         context: context,
-        title: _isEditing ? 'Edit Leave Request' : 'Leave Request',
+        title: _isEditing ? 'Edit Leave Request' : 'Create Leave Request',
         showBackButton: true,
       ),
       body: SingleChildScrollView(
@@ -219,6 +273,12 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
               ),
               formFieldGap,
 
+              // Web parity: read-only Available Leaves for the selected type.
+              const FormLabel('Available Leaves'),
+              formLabelGap,
+              _availableLeavesField(),
+              formFieldGap,
+
               const FormLabel('Start Date', required: true),
               formLabelGap,
               FormDateField(
@@ -235,16 +295,17 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                   }
                 },
               ),
-              const SizedBox(height: 16),
+              formFieldGap,
 
-              const FormLabel('Start Date Breakdown'),
+              // Web parity: single "Day Portion" selector.
+              const FormLabel('Day Portion'),
               formLabelGap,
               FormDropdown(
-                value: _startBreakdown,
-                hint: 'Select breakdown',
-                items: _breakdownOptions,
+                value: _dayPortion,
+                hint: 'Select day portion',
+                items: _dayPortionOptions,
                 onChanged: (v) => setState(
-                  () => _startBreakdown = v ?? _breakdownOptions.first,
+                  () => _dayPortion = v ?? _dayPortionOptions.first,
                 ),
               ),
               formFieldGap,
@@ -262,36 +323,17 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                   if (picked != null) setState(() => _endDate = picked);
                 },
               ),
-              const SizedBox(height: 16),
-
-              const FormLabel('End Date Breakdown'),
-              formLabelGap,
-              FormDropdown(
-                value: _endBreakdown,
-                hint: 'Select breakdown',
-                items: _breakdownOptions,
-                onChanged: (v) => setState(
-                  () => _endBreakdown = v ?? _breakdownOptions.first,
-                ),
-              ),
               formFieldGap,
 
-              const FormLabel('Reason'),
+              const FormLabel('Reason for Leave', required: true),
               formLabelGap,
               FormInput(
                 controller: _descriptionController,
-                hint: 'Reason',
+                hint: 'Description',
                 maxLines: 4,
-              ),
-              formFieldGap,
-
-              EmployeeCcField(
-                selected: _ccUsers,
-                onChanged: (next) => setState(() {
-                  _ccUsers
-                    ..clear()
-                    ..addAll(next);
-                }),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Reason is required'
+                    : null,
               ),
               formFieldGap,
 

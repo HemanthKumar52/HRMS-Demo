@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
 import '../../widgets/neu_card.dart';
 import 'employee_detail_screen.dart';
+import '../dashboard/org_chart_screen.dart';
 
 class DirectoryScreen extends StatefulWidget {
   const DirectoryScreen({super.key});
@@ -112,6 +113,19 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         context: context,
         title: 'Directory',
         showBackButton: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.account_tree_rounded, size: 22),
+            tooltip: 'Organisation Chart',
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              Navigator.push(
+                context,
+                adaptivePageRoute(child: const OrgChartScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [

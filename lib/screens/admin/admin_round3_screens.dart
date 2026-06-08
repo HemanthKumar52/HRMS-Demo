@@ -1284,7 +1284,7 @@ class _WebhookEditorState extends State<_WebhookEditor> {
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('Save'),
+                  child: const Text('Submit'),
                 ),
               ),
             ],
@@ -1612,7 +1612,7 @@ class _AdminRetentionPoliciesScreenState
                 ),
                 CupertinoDialogAction(
                   onPressed: onSave(ctx),
-                  child: const Text('Save'),
+                  child: const Text('Submit'),
                 ),
               ],
             ),
@@ -1648,7 +1648,7 @@ class _AdminRetentionPoliciesScreenState
                 ),
                 TextButton(
                   onPressed: onSave(ctx),
-                  child: const Text('Save'),
+                  child: const Text('Submit'),
                 ),
               ],
             ),

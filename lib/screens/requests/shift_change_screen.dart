@@ -84,6 +84,10 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
       showErrorSnackbar(context, 'Please select requested date');
       return;
     }
+    if (_descriptionController.text.trim().isEmpty) {
+      showErrorSnackbar(context, 'Please enter a description');
+      return;
+    }
     HapticFeedback.mediumImpact();
     setState(() => _isSubmitting = true);
     try {
@@ -200,11 +204,11 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
               ),
               formFieldGap,
 
-              const FormLabel('Reason'),
+              const FormLabel('Description', required: true),
               formLabelGap,
               FormInput(
                 controller: _descriptionController,
-                hint: 'Reason',
+                hint: 'Description',
                 maxLines: 3,
               ),
               formFieldGap,
@@ -230,7 +234,7 @@ class _ShiftChangeScreenState extends State<ShiftChangeScreen> {
       children: [
         Expanded(
           child: Text(
-            'Make this as permanent',
+            'Permanent Request',
             style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
           ),
         ),

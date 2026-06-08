@@ -271,10 +271,11 @@ class _RequestsTabState extends State<_RequestsTab>
       if (approve) {
         await ApiService.acceptRequest(
           id,
+          type: type,
           comment: reason.isEmpty ? null : reason,
         );
       } else {
-        await ApiService.rejectRequest(id, reason: reason);
+        await ApiService.rejectRequest(id, type: type, reason: reason);
       }
       if (!mounted) return;
       _showSnack(

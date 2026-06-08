@@ -7,7 +7,6 @@ import '../../services/notification_service.dart';
 import '../../theme/adaptive_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
-import '../../widgets/employee_cc_field.dart';
 import '../../widgets/form_fields.dart';
 
 class WorkTypeRequestScreen extends StatefulWidget {
@@ -26,7 +25,6 @@ class _WorkTypeRequestScreenState extends State<WorkTypeRequestScreen> {
   DateTime? _requestedTill;
   bool _permanentRequest = false;
   bool _isSubmitting = false;
-  final List<Map<String, dynamic>> _ccUsers = [];
 
   List<String> _workTypes = [];
 
@@ -98,7 +96,6 @@ class _WorkTypeRequestScreenState extends State<WorkTypeRequestScreen> {
             ? null
             : _requestedTill?.toIso8601String().split('T')[0],
         'description': _descriptionController.text,
-        'cc': _ccUsers.map((u) => u['user_id']).toList(),
         'is_permanent': _permanentRequest,
       };
       if (_isEditing) {
@@ -227,16 +224,6 @@ class _WorkTypeRequestScreenState extends State<WorkTypeRequestScreen> {
                     activeTrackColor: AppColors.pink,
                   ),
                 ],
-              ),
-              formSectionGap,
-
-              EmployeeCcField(
-                selected: _ccUsers,
-                onChanged: (next) => setState(() {
-                  _ccUsers
-                    ..clear()
-                    ..addAll(next);
-                }),
               ),
               formSectionGap,
 

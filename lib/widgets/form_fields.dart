@@ -428,6 +428,9 @@ class FormInput extends StatelessWidget {
   final String hint;
   final int maxLines;
   final FormFieldValidator<String>? validator;
+  final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
+  final FocusNode? focusNode;
 
   const FormInput({
     super.key,
@@ -435,6 +438,9 @@ class FormInput extends StatelessWidget {
     required this.hint,
     this.maxLines = 1,
     this.validator,
+    this.keyboardType,
+    this.inputFormatters,
+    this.focusNode,
   });
 
   @override
@@ -455,6 +461,9 @@ class FormInput extends StatelessWidget {
         ),
         child: CupertinoTextField(
           controller: controller,
+          focusNode: focusNode,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           maxLines: maxLines,
           placeholder: hint,
           placeholderStyle: textTheme.bodyMedium?.copyWith(
@@ -471,6 +480,9 @@ class FormInput extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       child: TextFormField(
         controller: controller,
+        focusNode: focusNode,
+        keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
         maxLines: maxLines,
         decoration: InputDecoration(
           hintText: hint,
@@ -720,7 +732,7 @@ class FormActionButtons extends StatelessWidget {
                       ),
                     )
                   : const Text(
-                      'Save',
+                      'Submit',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
@@ -965,14 +977,21 @@ Future<TimeOfDay?> pickTime(BuildContext context, {TimeOfDay? initial}) {
   return showTimePicker(
     context: context,
     initialTime: initial ?? TimeOfDay.now(),
-    builder: (context, child) => Theme(
-      data: Theme.of(context).copyWith(
-        colorScheme: Theme.of(context).colorScheme.copyWith(
-          primary: AppColors.primary,
-          onPrimary: Colors.white,
+    // Force 12-hour AM/PM regardless of the device's 24-hour ("railways time")
+    // setting, per app requirement.
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(
+        context,
+      ).copyWith(alwaysUse24HourFormat: false),
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: Theme.of(context).colorScheme.copyWith(
+            primary: AppColors.primary,
+            onPrimary: Colors.white,
+          ),
         ),
+        child: child!,
       ),
-      child: child!,
     ),
   );
 }
@@ -1052,6 +1071,7 @@ Future<TimeOfDay?> _showCupertinoTimePicker(
           Expanded(
             child: CupertinoDatePicker(
               mode: CupertinoDatePickerMode.time,
+              use24hFormat: false,
               initialDateTime: selectedTime,
               onDateTimeChanged: (dt) {
                 HapticFeedback.selectionClick();

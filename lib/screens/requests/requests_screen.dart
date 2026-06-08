@@ -18,6 +18,8 @@ import '../../widgets/native_ios_views.dart';
 import '../../widgets/neu_card.dart';
 import '../../widgets/status_chip.dart';
 import 'apply_leave_screen.dart';
+import 'comp_off_screen.dart';
+import 'permission_request_screen.dart';
 import 'submit_claim_screen.dart';
 import 'raise_ticket_screen.dart';
 import 'shift_change_screen.dart';
@@ -55,6 +57,18 @@ class _RequestsScreenState extends State<RequestsScreen> {
       'title': 'Apply Leave',
       'icon': Icons.event_busy_rounded,
       'color': AppColors.primary,
+    },
+    {
+      'type': 'Comp Off',
+      'title': 'Comp Off Request',
+      'icon': Icons.more_time_rounded,
+      'color': AppColors.success,
+    },
+    {
+      'type': 'Permission',
+      'title': 'Permission Request',
+      'icon': Icons.schedule_rounded,
+      'color': AppColors.warning,
     },
     {
       'type': 'Claims',
@@ -113,6 +127,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
     switch (type) {
       case 'Leave':
         return Icons.event_busy;
+      case 'Comp Off':
+        return Icons.more_time;
+      case 'Permission':
+        return Icons.schedule;
       case 'Claims':
         return Icons.receipt;
       case 'Tickets':
@@ -134,6 +152,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
     switch (type) {
       case 'Leave':
         return AppColors.primary;
+      case 'Comp Off':
+        return AppColors.success;
+      case 'Permission':
+        return AppColors.warning;
       case 'Claims':
         return AppColors.success;
       case 'Tickets':
@@ -171,6 +193,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
     switch (type) {
       case 'Leave':
         return 'Leave Request';
+      case 'Comp Off':
+        return 'Comp Off Request';
+      case 'Permission':
+        return 'Permission Request';
       case 'Claims':
         return 'Claim Request';
       case 'Tickets':
@@ -294,6 +320,12 @@ class _RequestsScreenState extends State<RequestsScreen> {
     switch (type['type']) {
       case 'Leave':
         screen = const ApplyLeaveScreen();
+        break;
+      case 'Comp Off':
+        screen = const CompOffScreen();
+        break;
+      case 'Permission':
+        screen = const PermissionRequestScreen();
         break;
       case 'Claims':
         screen = const SubmitClaimScreen();
@@ -478,10 +510,18 @@ class _RequestsScreenState extends State<RequestsScreen> {
             padding: EdgeInsets.only(
               top: widgets.isEmpty ? 0 : 12,
               bottom: 8,
-              left: 4,
             ),
             child: Row(
               children: [
+                Expanded(
+                  child: Divider(
+                    height: 1,
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : Colors.black.withValues(alpha: 0.06),
+                  ),
+                ),
+                const SizedBox(width: 10),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
@@ -985,56 +1025,12 @@ class _RequestsScreenState extends State<RequestsScreen> {
             itemBuilder: (context, index) {
               if (index == filtered.length) return const SizedBox(height: 12);
               final type = filtered[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child:
-                    NeuCard(
-                          onTap: () => _onRequestTypeTap(type),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 42,
-                                height: 42,
-                                decoration: BoxDecoration(
-                                  color: (type['color'] as Color).withValues(
-                                    alpha: 0.12,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(
-                                  type['icon'] as IconData,
-                                  color: type['color'] as Color,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Text(
-                                  type['title'] as String,
-                                  style: textTheme.titleMedium,
-                                ),
-                              ),
-                              Icon(
-                                isApplePlatform
-                                    ? CupertinoIcons.chevron_right
-                                    : Icons.chevron_right_rounded,
-                                color: isDark
-                                    ? AppColors.darkSubtext
-                                    : AppColors.lightSubtext,
-                                size: 22,
-                              ),
-                            ],
-                          ),
-                        )
-                        .animate()
-                        .fadeIn(duration: 350.ms, delay: (index * 60).ms)
-                        .slideX(
-                          begin: 0.05,
-                          end: 0,
-                          duration: 350.ms,
-                          delay: (index * 60).ms,
-                          curve: Curves.easeOutCubic,
-                        ),
+              return _RequestTypeTile(
+                type: type,
+                index: index,
+                textTheme: textTheme,
+                isDark: isDark,
+                onTap: () => _onRequestTypeTap(type),
               );
             },
           ),
@@ -1212,6 +1208,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
     switch (type) {
       case 'Leave':
         return AppColors.primary;
+      case 'Comp Off':
+        return AppColors.success;
+      case 'Permission':
+        return AppColors.warning;
       case 'Claims':
         return AppColors.success;
       case 'Tickets':
@@ -1282,7 +1282,15 @@ class _RequestsScreenState extends State<RequestsScreen> {
                         color: request['color'] as Color,
                         size: 20,
                       ),
-                    ),
+                    )
+                        .animate(onPlay: (c) => c.repeat(reverse: true))
+                        .moveY(
+                          begin: 0,
+                          end: -3,
+                          duration: 1700.ms,
+                          delay: (index * 160).ms,
+                          curve: Curves.easeInOut,
+                        ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -1442,5 +1450,117 @@ class _RequestsScreenState extends State<RequestsScreen> {
         ],
       ),
     );
+  }
+}
+
+/// Animated request-type tile (Requests "+" tab) — matches the dashboard
+/// Quick Actions: staggered fade/slide/pop entrance, a gentle continuous
+/// float on the icon, and a press-scale tap feedback.
+class _RequestTypeTile extends StatefulWidget {
+  final Map<String, dynamic> type;
+  final int index;
+  final TextTheme textTheme;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _RequestTypeTile({
+    required this.type,
+    required this.index,
+    required this.textTheme,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  State<_RequestTypeTile> createState() => _RequestTypeTileState();
+}
+
+class _RequestTypeTileState extends State<_RequestTypeTile> {
+  bool _pressed = false;
+
+  void _set(bool v) {
+    if (_pressed != v) setState(() => _pressed = v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.type['color'] as Color;
+    final delay = (widget.index * 80 + 120).ms;
+
+    final tile = Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GestureDetector(
+        onTapDown: (_) => _set(true),
+        onTapCancel: () => _set(false),
+        onTapUp: (_) => _set(false),
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _pressed ? 0.97 : 1.0,
+          duration: const Duration(milliseconds: 130),
+          curve: Curves.easeOut,
+          child: NeuCard(
+            child: Row(
+              children: [
+                Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        widget.type['icon'] as IconData,
+                        color: color,
+                        size: 20,
+                      ),
+                    )
+                    .animate(onPlay: (c) => c.repeat(reverse: true))
+                    .moveY(
+                      begin: 0,
+                      end: -3,
+                      duration: 1700.ms,
+                      delay: (widget.index * 160).ms,
+                      curve: Curves.easeInOut,
+                    ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    widget.type['title'] as String,
+                    style: widget.textTheme.titleMedium,
+                  ),
+                ),
+                Icon(
+                  isApplePlatform
+                      ? CupertinoIcons.chevron_right
+                      : Icons.chevron_right_rounded,
+                  color: widget.isDark
+                      ? AppColors.darkSubtext
+                      : AppColors.lightSubtext,
+                  size: 22,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return tile
+        .animate()
+        .fadeIn(duration: 360.ms, delay: delay)
+        .slideX(
+          begin: 0.06,
+          end: 0,
+          duration: 360.ms,
+          delay: delay,
+          curve: Curves.easeOutCubic,
+        )
+        .scaleXY(
+          begin: 0.92,
+          end: 1.0,
+          duration: 380.ms,
+          delay: delay,
+          curve: Curves.easeOutBack,
+        );
   }
 }

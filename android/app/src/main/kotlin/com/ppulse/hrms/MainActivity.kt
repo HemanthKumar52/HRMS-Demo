@@ -1,13 +1,29 @@
 package com.ppulse.hrms
 
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.provider.Settings
+import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.ppulse.hrms/settings"
+
+    private val isDebuggable: Boolean
+        get() = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+
+    // In debug/demo builds the no_screenshot plugin can leave FLAG_SECURE set,
+    // which blanks the screen on emulators and blocks screen recording. The
+    // plugin applies the flag after the engine attaches, so clear it whenever
+    // the window regains focus. Release builds are untouched (protection stays).
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (isDebuggable && hasFocus) {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

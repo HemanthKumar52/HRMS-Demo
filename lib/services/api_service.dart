@@ -204,24 +204,43 @@ class ApiService {
     return _handleResponse(response);
   }
 
-  static bool _isRefreshing = false;
+  /// Single in-flight refresh shared by all concurrent 401s. When the access
+  /// token expires, many requests fail at once; the old bool guard made every
+  /// concurrent caller except the first give up and surface "session expired".
+  /// Here they all await the SAME refresh and then retry, so one silent refresh
+  /// recovers the whole burst.
+  static Future<bool>? _refreshInFlight;
 
-  static Future<bool> _tryRefreshToken() async {
-    if (_isRefreshing) return false;
-    _isRefreshing = true;
+  /// Hook invoked when the session is definitively dead (no refresh token, or
+  /// the refresh token itself was rejected). Wired in main.dart to clear state
+  /// and bounce the user to the login screen instead of stranding them on a
+  /// dead "session expired" error.
+  static Future<void> Function()? onAuthFailure;
+  static bool _authFailureHandled = false;
+
+  /// Call after a successful login so a future expiry can redirect again.
+  static void notifyLoggedIn() => _authFailureHandled = false;
+
+  static Future<bool> _tryRefreshToken() {
+    return _refreshInFlight ??= _doRefresh().whenComplete(() {
+      _refreshInFlight = null;
+    });
+  }
+
+  static Future<bool> _doRefresh() async {
     try {
       final secure = SecureTokenService.instance;
-      final refreshToken = await secure.getRefreshToken();
-      if (refreshToken == null) {
+      var token = await secure.getRefreshToken();
+      if (token == null) {
         // Fallback: migrate from SharedPreferences
         final prefs = await SharedPreferences.getInstance();
-        final oldToken = prefs.getString('refresh_token');
-        if (oldToken == null) return false;
-        await secure.setRefreshToken(oldToken);
-        // Continue with oldToken
+        token = prefs.getString('refresh_token');
+        if (token != null) await secure.setRefreshToken(token);
       }
-      final token = await secure.getRefreshToken();
-      if (token == null) return false;
+      if (token == null) {
+        await _handleAuthFailure();
+        return false;
+      }
 
       final response = await http.post(
         Uri.parse('$baseUrl/auth/refresh'),
@@ -234,18 +253,36 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        // Store new tokens in secure storage (rotation: old refresh invalidated)
+        final prefs = await SharedPreferences.getInstance();
+        // Store new tokens (rotation: old refresh invalidated server-side).
         await secure.setAccessToken(data['access_token']);
+        await prefs.setString('auth_token', data['access_token']);
         if (data['refresh_token'] != null) {
           await secure.setRefreshToken(data['refresh_token']);
+          await prefs.setString('refresh_token', data['refresh_token']);
         }
+        _authFailureHandled = false; // session is alive again
         return true;
       }
-    } catch (_) {
-    } finally {
-      _isRefreshing = false;
-    }
+
+      // Refresh token expired / rejected → the session is truly over.
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        await _handleAuthFailure();
+      }
+    } catch (_) {}
     return false;
+  }
+
+  /// Fire the session-expired hook exactly once per dead session.
+  static Future<void> _handleAuthFailure() async {
+    if (_authFailureHandled) return;
+    _authFailureHandled = true;
+    final cb = onAuthFailure;
+    if (cb != null) {
+      try {
+        await cb();
+      } catch (_) {}
+    }
   }
 
   static dynamic _handleResponse(http.Response response) {
@@ -512,6 +549,26 @@ class ApiService {
   }
 
   // ═══════════════════════════════════════════════════════
+  // COMP OFF (Compensatory Leave)
+  // ═══════════════════════════════════════════════════════
+
+  static Future<Map<String, dynamic>> submitCompOff(
+    Map<String, dynamic> data,
+  ) async {
+    return await post('/comp-off', data);
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // PERMISSION (hourly permission request)
+  // ═══════════════════════════════════════════════════════
+
+  static Future<Map<String, dynamic>> submitPermission(
+    Map<String, dynamic> data,
+  ) async {
+    return await post('/permissions', data);
+  }
+
+  // ═══════════════════════════════════════════════════════
   // TICKETS
   // ═══════════════════════════════════════════════════════
 
@@ -553,6 +610,56 @@ class ApiService {
   static Future<List<dynamic>> getShifts() async {
     final response = await get('/shifts');
     return response['shifts'] ?? [];
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // TIMESHEET (Simple Timesheet — shared simple_timesheet_* tables)
+  // ═══════════════════════════════════════════════════════
+
+  static Future<List<dynamic>> getTimesheetProjects() async {
+    final response = await get('/timesheet/projects');
+    return response['items'] ?? [];
+  }
+
+  static Future<List<dynamic>> getTimesheetTasks({int? projectId}) async {
+    final ep = projectId != null
+        ? '/timesheet/tasks?project_id=$projectId'
+        : '/timesheet/tasks';
+    final response = await get(ep);
+    return response['items'] ?? [];
+  }
+
+  /// Returns the week period + its entries. [weekStart] = YYYY-MM-DD Monday.
+  static Future<Map<String, dynamic>> getTimesheetCurrent({
+    String? weekStart,
+  }) async {
+    final ep = weekStart != null
+        ? '/timesheet/current?week_start=$weekStart'
+        : '/timesheet/current';
+    final response = await get(ep);
+    return Map<String, dynamic>.from(response as Map);
+  }
+
+  static Future<Map<String, dynamic>> createTimesheetEntry(
+    Map<String, dynamic> data,
+  ) async {
+    return Map<String, dynamic>.from(await post('/timesheet/entries', data));
+  }
+
+  static Future<Map<String, dynamic>> updateTimesheetEntry(
+    Map<String, dynamic> data,
+  ) async {
+    return Map<String, dynamic>.from(await patch('/timesheet/entries', data));
+  }
+
+  static Future<dynamic> deleteTimesheetEntry(int id) async {
+    return await delete('/timesheet/entries?id=$id');
+  }
+
+  static Future<Map<String, dynamic>> submitTimesheet(int periodId) async {
+    return Map<String, dynamic>.from(
+      await post('/timesheet/submit', {'period_id': periodId}),
+    );
   }
 
   // ═══════════════════════════════════════════════════════
@@ -626,26 +733,32 @@ class ApiService {
 
   static Future<Map<String, dynamic>> acceptRequest(
     int id, {
+    String? type,
     String? comment,
   }) async {
-    final body = (comment != null && comment.isNotEmpty)
-        ? {'comment': comment}
-        : <String, dynamic>{};
+    final body = <String, dynamic>{
+      if (comment != null && comment.isNotEmpty) 'comment': comment,
+      if (type != null && type.isNotEmpty) 'type': type,
+    };
     return await put('/requests/$id/accept', body);
   }
 
   static Future<Map<String, dynamic>> rejectRequest(
     int id, {
+    String? type,
     String? reason,
   }) async {
-    return await put(
-      '/requests/$id/reject',
-      reason != null ? {'rejection_reason': reason} : {},
-    );
+    return await put('/requests/$id/reject', {
+      if (reason != null) 'rejection_reason': reason,
+      if (type != null && type.isNotEmpty) 'type': type,
+    });
   }
 
-  static Future<void> cancelRequest(int id) async {
-    await delete('/requests/$id/cancel');
+  static Future<void> cancelRequest(int id, {String? type}) async {
+    final q = (type != null && type.isNotEmpty)
+        ? '?type=${Uri.encodeQueryComponent(type)}'
+        : '';
+    await delete('/requests/$id/cancel$q');
   }
 
   // ═══════════════════════════════════════════════════════
@@ -840,10 +953,12 @@ class ApiService {
   /// Download payslip PDF — tries direct web first (for binary),
   /// then falls back to mobile backend proxy.
   static Future<http.Response> getPayslipPdf(int id) async {
-    // Use mobile backend's PDF proxy (it fetches from web app internally)
+    // Self-contained mobile PDF (rendered server-side via WeasyPrint). The older
+    // /payslips/<id>/pdf route proxied to a web backend that isn't reachable here
+    // and 503'd; /mobile-pdf builds the PDF locally from the shared DB.
     final headers = await _getHeaders();
     return await http.get(
-      Uri.parse('$baseUrl/payslips/$id/pdf'),
+      Uri.parse('$baseUrl/payslips/$id/mobile-pdf'),
       headers: headers,
     );
   }
@@ -877,6 +992,12 @@ class ApiService {
 
   static Future<Map<String, dynamic>> getDashboardSummary() async {
     return await get('/dashboard/summary');
+  }
+
+  /// Current company subscription plan + status (e.g. {plan:'Growth', status:'Active'}).
+  static Future<Map<String, dynamic>> getSubscription() async {
+    final data = await get('/subscription');
+    return Map<String, dynamic>.from(data as Map);
   }
 
   static Future<Map<String, dynamic>> getDashboardAnnouncements() async {

@@ -45,6 +45,11 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // In debug/demo, ensure the app is never FLAG_SECURE. The no_screenshot
+    // plugin persists its last state, so a prior release-style session can
+    // leave the whole app secure (blank on emulators / screen recordings).
+    // Release builds keep protection (applied per-screen, e.g. payslip).
+    if (kDebugMode) _noScreenshot.screenshotOn();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppProvider>().fetchDashboardData();
     });
@@ -66,6 +71,9 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
       context.read<AppProvider>().fetchDashboardData();
+      // Pick up any punch made outside the app (web / biometric device) as soon
+      // as the user returns, instead of waiting for the next poll tick.
+      context.read<AppProvider>().refreshAttendanceStatus();
       _checkDeviceSecurityOnResume();
     }
     if (state == AppLifecycleState.inactive && mounted) {
@@ -94,8 +102,11 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   }
 
   void _syncScreenshotProtection(int tabIndex) {
+    // FLAG_SECURE blanks the screen on emulators (no secure display path),
+    // which makes the Payslip tab look empty in debug/demo. Keep the
+    // anti-screenshot protection only in release builds on real devices.
     if (tabIndex == 3 && _previousTabIndex != 3) {
-      _noScreenshot.screenshotOff();
+      if (!kDebugMode) _noScreenshot.screenshotOff();
     } else if (tabIndex != 3 && _previousTabIndex == 3) {
       _noScreenshot.screenshotOn();
     }
@@ -343,24 +354,28 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           ),
           if (provider.unreadNotifications > 0)
             Positioned(
-              top: -4,
+              top: -5,
               right: -6,
               child: Container(
-                padding: const EdgeInsets.all(3),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
                 decoration: BoxDecoration(
                   color: AppColors.danger,
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: AdaptiveColors.background(context),
-                    width: 1.5,
+                    width: 2,
                   ),
                 ),
-                child: Text(
-                  '${provider.unreadNotifications > 9 ? '9+' : provider.unreadNotifications}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 8,
-                    fontWeight: FontWeight.w700,
+                child: Center(
+                  child: Text(
+                    '${provider.unreadNotifications > 99 ? '99+' : provider.unreadNotifications}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      height: 1.1,
+                    ),
                   ),
                 ),
               ),
@@ -457,6 +472,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
                 ),
           child: Stack(
             alignment: Alignment.center,
+            clipBehavior: Clip.none,
             children: [
               Icon(
                 Icons.notifications_outlined,
@@ -464,32 +480,38 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
               ),
               if (provider.unreadNotifications > 0)
                 Positioned(
-                  top: 6,
-                  right: 6,
+                  top: -3,
+                  right: -3,
                   child: Container(
-                    padding: const EdgeInsets.all(2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
                     constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
+                      minWidth: 18,
+                      minHeight: 18,
                     ),
                     decoration: BoxDecoration(
                       color: AppColors.danger,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(6),
                       border: Border.all(
                         color: isDark
                             ? const Color(0xFF1A1B2E)
                             : const Color(0xFFE4E8EE),
-                        width: 1.5,
+                        width: 2,
                       ),
                     ),
-                    child: Text(
-                      '${provider.unreadNotifications > 9 ? '9+' : provider.unreadNotifications}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
+                    child: Center(
+                      child: Text(
+                        '${provider.unreadNotifications > 99 ? '99+' : provider.unreadNotifications}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          height: 1.1,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),

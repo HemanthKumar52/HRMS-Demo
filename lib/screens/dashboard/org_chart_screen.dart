@@ -28,10 +28,9 @@ class OrgChartScreen extends StatefulWidget {
 
 class _OrgChartScreenState extends State<OrgChartScreen> {
   bool _isLoading = true;
-  List<_OrgNode> _allRoots = [];
-  _OrgNode? _viewRoot; // Currently displayed root
+  List<_OrgNode> _roots = [];
   int? _loggedInUserId;
-  final List<_OrgNode> _navStack = []; // Breadcrumb for back navigation
+  final Set<int> _expanded = <int>{};
 
   @override
   void initState() {
@@ -46,16 +45,35 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
       if (!mounted) return;
       final roots = list.map((e) => _OrgNode.fromJson(e)).toList();
 
-      // Find logged-in user
+      // Highlight the logged-in user.
       final userName = context.read<AppProvider>().userName;
-      _OrgNode? loggedIn;
-      _findNode(roots, userName, (node) => loggedIn = node);
+      _OrgNode? me;
+      void find(List<_OrgNode> ns) {
+        for (final n in ns) {
+          if (n.name == userName) me = n;
+          find(n.children);
+        }
+      }
+
+      find(roots);
+
+      // Expand everything by default so the whole tree is visible.
+      final expanded = <int>{};
+      void collect(List<_OrgNode> ns) {
+        for (final n in ns) {
+          if (n.children.isNotEmpty) expanded.add(n.id);
+          collect(n.children);
+        }
+      }
+
+      collect(roots);
 
       setState(() {
-        _allRoots = roots;
-        // Always start from root, highlight logged-in user
-        _viewRoot = roots.isNotEmpty ? roots.first : null;
-        _loggedInUserId = loggedIn?.id;
+        _roots = roots;
+        _loggedInUserId = me?.id;
+        _expanded
+          ..clear()
+          ..addAll(expanded);
         _isLoading = false;
       });
     } catch (_) {
@@ -64,55 +82,64 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
     }
   }
 
-  void _findNode(
-    List<_OrgNode> nodes,
-    String name,
-    void Function(_OrgNode) onFound,
-  ) {
-    for (final n in nodes) {
-      if (n.name == name) {
-        onFound(n);
-        return;
+  void _toggle(int id) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      if (_expanded.contains(id)) {
+        _expanded.remove(id);
+      } else {
+        _expanded.add(id);
       }
-      _findNode(n.children, name, onFound);
-    }
+    });
   }
 
-  _OrgNode? _findParentOf(_OrgNode target, List<_OrgNode> nodes) {
-    for (final n in nodes) {
-      for (final c in n.children) {
-        if (c.id == target.id) return n;
+  Set<int> _allParentIds() {
+    final ids = <int>{};
+    void walk(List<_OrgNode> ns) {
+      for (final n in ns) {
+        if (n.children.isNotEmpty) ids.add(n.id);
+        walk(n.children);
       }
-      final result = _findParentOf(target, n.children);
-      if (result != null) return result;
     }
-    return null;
+
+    walk(_roots);
+    return ids;
   }
 
-  void _drillInto(_OrgNode node) {
-    if (node.children.isEmpty) return;
+  void _expandAll() {
     HapticFeedback.selectionClick();
+    setState(() => _expanded
+      ..clear()
+      ..addAll(_allParentIds()));
+  }
+
+  void _collapseAll() {
+    HapticFeedback.selectionClick();
+    // Keep the root(s) open so something is always visible.
     setState(() {
-      _navStack.add(_viewRoot!);
-      _viewRoot = node;
+      _expanded
+        ..clear()
+        ..addAll(_roots.where((r) => r.children.isNotEmpty).map((r) => r.id));
     });
   }
 
-  void _goBack() {
-    if (_navStack.isEmpty) return;
-    HapticFeedback.selectionClick();
-    setState(() {
-      _viewRoot = _navStack.removeLast();
-    });
-  }
+  // Flatten the tree into the currently-visible rows.
+  List<_FlatRow> _visibleRows() {
+    final out = <_FlatRow>[];
+    void walk(_OrgNode node, int depth, List<bool> ancestorHasNext) {
+      out.add(_FlatRow(node, depth, List<bool>.from(ancestorHasNext)));
+      if (_expanded.contains(node.id)) {
+        for (var i = 0; i < node.children.length; i++) {
+          final isLast = i == node.children.length - 1;
+          walk(node.children[i], depth + 1, [...ancestorHasNext, !isLast]);
+        }
+      }
+    }
 
-  void _goToRoot() {
-    if (_allRoots.isEmpty) return;
-    HapticFeedback.selectionClick();
-    setState(() {
-      _navStack.clear();
-      _viewRoot = _allRoots.first;
-    });
+    for (final r in _roots) {
+      walk(r, 0, const []);
+    }
+    return out;
   }
 
   Color _avatarColor(int id) => _avatarColors[id % _avatarColors.length];
@@ -121,9 +148,8 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final lineColor = isDark
-        ? Colors.white.withValues(alpha: 0.15)
-        : const Color(0xFFD1D5DB);
+    final rows = _visibleRows();
+    final allExpanded = _expanded.length >= _allParentIds().length;
 
     return Scaffold(
       backgroundColor: isDark
@@ -134,456 +160,277 @@ class _OrgChartScreenState extends State<OrgChartScreen> {
         title: 'Organisation Chart',
         showBackButton: true,
         actions: [
-          if (_navStack.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.home_outlined, size: 22),
-              tooltip: 'Go to root',
-              onPressed: _goToRoot,
+          IconButton(
+            icon: Icon(
+              allExpanded ? Icons.unfold_less_rounded : Icons.unfold_more_rounded,
+              size: 22,
             ),
+            tooltip: allExpanded ? 'Collapse all' : 'Expand all',
+            onPressed: allExpanded ? _collapseAll : _expandAll,
+          ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _viewRoot == null
+          : rows.isEmpty
           ? const Center(child: Text('No org chart data'))
-          : Column(
+          : ListView.builder(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 40),
+              itemCount: rows.length,
+              itemBuilder: (context, i) =>
+                  _buildRow(rows[i], isDark, theme),
+            ),
+    );
+  }
+
+  Widget _buildRow(_FlatRow row, bool isDark, ThemeData theme) {
+    final node = row.node;
+    final depth = row.depth;
+    final isMe = node.id == _loggedInUserId;
+    final hasChildren = node.children.isNotEmpty;
+    final expanded = _expanded.contains(node.id);
+    final color = _avatarColor(node.id);
+
+    final lineColor = isDark
+        ? Colors.white.withValues(alpha: 0.12)
+        : Colors.black.withValues(alpha: 0.10);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: hasChildren ? () => _toggle(node.id) : null,
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Breadcrumb bar
-                if (_navStack.isNotEmpty)
-                  _BreadcrumbBar(
-                    stack: _navStack,
-                    current: _viewRoot!,
-                    isDark: isDark,
-                    onTap: (index) {
-                      HapticFeedback.selectionClick();
-                      setState(() {
-                        _viewRoot = _navStack[index];
-                        _navStack.removeRange(index, _navStack.length);
-                      });
-                    },
-                    onBack: _goBack,
+                // Indentation guide lines for each ancestor level.
+                for (var d = 0; d < depth; d++)
+                  SizedBox(
+                    width: 22,
+                    child: Center(
+                      child: Container(
+                        width: 1.5,
+                        // Hide the line for the last child's trailing levels
+                        // so the tree doesn't show dangling verticals.
+                        color: (d == depth - 1 || row.ancestorHasNext[d])
+                            ? lineColor
+                            : Colors.transparent,
+                      ),
+                    ),
                   ),
 
-                // Main content
+                // The person card.
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 80),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(8, 10, 12, 10),
+                    decoration: BoxDecoration(
+                      color: isMe
+                          ? const Color(0xFF06B6D4).withValues(
+                              alpha: isDark ? 0.12 : 0.08,
+                            )
+                          : (isDark ? AppColors.darkCard : Colors.white),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isMe
+                            ? const Color(0xFF06B6D4)
+                            : (isDark
+                                  ? Colors.white.withValues(alpha: 0.07)
+                                  : Colors.grey.withValues(alpha: 0.14)),
+                        width: isMe ? 1.4 : 1,
+                      ),
+                    ),
+                    child: Row(
                       children: [
-                        // ── Parent card (who this person reports to) ──
-                        if (_navStack.isNotEmpty) ...[
-                          _buildReportsToLabel(isDark),
-                          const SizedBox(height: 8),
-                          _OrgPersonCard(
-                            node: _navStack.last,
-                            isDark: isDark,
-                            isMe: _navStack.last.id == _loggedInUserId,
-                            isRoot: false,
-                            avatarColor: _avatarColor(_navStack.last.id),
-                            onTap: () => _goBack(),
-                          ),
-                          const SizedBox(height: 4),
-                          // Connector line down
-                          Padding(
-                            padding: const EdgeInsets.only(left: 28),
-                            child: Container(
-                              width: 2,
-                              height: 20,
-                              color: lineColor,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                        ],
+                        // Expand / collapse chevron (or a dot for leaves).
+                        SizedBox(
+                          width: 24,
+                          child: hasChildren
+                              ? AnimatedRotation(
+                                  turns: expanded ? 0.25 : 0,
+                                  duration: const Duration(milliseconds: 180),
+                                  child: Icon(
+                                    Icons.chevron_right_rounded,
+                                    size: 22,
+                                    color: isDark
+                                        ? Colors.white60
+                                        : Colors.grey.shade600,
+                                  ),
+                                )
+                              : Center(
+                                  child: Container(
+                                    width: 5,
+                                    height: 5,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: isDark
+                                          ? Colors.white24
+                                          : Colors.grey.shade400,
+                                    ),
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(width: 4),
 
-                        // ── Current focused person ──
-                        _OrgPersonCard(
-                          node: _viewRoot!,
-                          isDark: isDark,
-                          isMe: _viewRoot!.id == _loggedInUserId,
-                          isRoot: true,
-                          avatarColor: _avatarColor(_viewRoot!.id),
-                          onTap: null,
+                        // Avatar.
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: color.withValues(alpha: 0.16),
+                          backgroundImage: node.avatarUrl.isNotEmpty
+                              ? NetworkImage(node.avatarUrl)
+                              : null,
+                          child: node.avatarUrl.isEmpty
+                              ? Text(
+                                  node.initials,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: color,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 12),
+
+                        // Name + designation + department.
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      node.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: isDark
+                                            ? Colors.white
+                                            : Colors.black87,
+                                      ),
+                                    ),
+                                  ),
+                                  if (isMe) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 1,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF06B6D4,
+                                        ).withValues(alpha: 0.18),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'You',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF06B6D4),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              if (node.designation.isNotEmpty ||
+                                  node.department.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    [
+                                      if (node.designation.isNotEmpty)
+                                        node.designation,
+                                      if (node.department.isNotEmpty)
+                                        node.department,
+                                    ].join('  ·  '),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isDark
+                                          ? Colors.white54
+                                          : Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
 
-                        // ── Direct reports with L-connectors ──
-                        if (_viewRoot!.children.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          _buildChildrenList(
-                            _viewRoot!.children,
-                            isDark,
-                            lineColor,
-                          ),
-                        ] else
-                          Padding(
-                            padding: const EdgeInsets.only(left: 44, top: 20),
-                            child: Text(
-                              'No direct reports',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: isDark ? Colors.white38 : Colors.grey,
-                              ),
+                        // Direct-report count badge.
+                        if (hasChildren) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.08)
+                                  : Colors.grey.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.people_alt_rounded,
+                                  size: 12,
+                                  color: isDark
+                                      ? Colors.white60
+                                      : Colors.grey.shade600,
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '${node.children.length}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark
+                                        ? Colors.white70
+                                        : Colors.grey.shade700,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                        ],
                       ],
                     ),
                   ),
                 ),
               ],
             ),
-    );
-  }
-
-  Widget _buildReportsToLabel(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: Text(
-        'Reports to',
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: isDark ? Colors.white38 : Colors.grey.shade500,
-          letterSpacing: 0.3,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChildrenList(
-    List<_OrgNode> children,
-    bool isDark,
-    Color lineColor,
-  ) {
-    return CustomPaint(
-      painter: _LConnectorPainter(
-        itemCount: children.length,
-        lineColor: lineColor,
-        itemHeight: 76, // card height + spacing
-        startOffset: 0,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.only(left: 28),
-        child: Column(
-          children: [
-            for (int i = 0; i < children.length; i++)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Row(
-                  children: [
-                    // Horizontal connector stub
-                    Container(
-                      width: 24,
-                      height: 2,
-                      color: lineColor,
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: _OrgPersonCard(
-                        node: children[i],
-                        isDark: isDark,
-                        isMe: children[i].id == _loggedInUserId,
-                        isRoot: false,
-                        avatarColor: _avatarColor(children[i].id),
-                        onTap: children[i].children.isNotEmpty
-                            ? () => _drillInto(children[i])
-                            : null,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-// ── L-shaped connector painter ──
-
-class _LConnectorPainter extends CustomPainter {
-  final int itemCount;
-  final Color lineColor;
-  final double itemHeight;
-  final double startOffset;
-
-  _LConnectorPainter({
-    required this.itemCount,
-    required this.lineColor,
-    required this.itemHeight,
-    required this.startOffset,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (itemCount == 0) return;
-
-    final paint = Paint()
-      ..color = lineColor
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-
-    // Vertical line from top to last item
-    const x = 0.0;
-    final lastItemY =
-        startOffset + (itemCount - 1) * itemHeight + itemHeight / 2;
-
-    canvas.drawLine(
-      Offset(x, startOffset),
-      Offset(x, lastItemY),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _LConnectorPainter old) =>
-      old.itemCount != itemCount || old.lineColor != lineColor;
-}
-
-// ── Breadcrumb bar ──
-
-class _BreadcrumbBar extends StatelessWidget {
-  final List<_OrgNode> stack;
-  final _OrgNode current;
-  final bool isDark;
-  final void Function(int) onTap;
-  final VoidCallback onBack;
-
-  const _BreadcrumbBar({
-    required this.stack,
-    required this.current,
-    required this.isDark,
-    required this.onTap,
-    required this.onBack,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.04)
-            : Colors.grey.withValues(alpha: 0.06),
-        border: Border(
-          bottom: BorderSide(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : Colors.grey.withValues(alpha: 0.12),
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: onBack,
-            child: Icon(
-              Icons.arrow_back_ios_rounded,
-              size: 16,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (int i = 0; i < stack.length; i++) ...[
-                    GestureDetector(
-                      onTap: () => onTap(i),
-                      child: Text(
-                        stack[i].name.split(' ').first,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Icon(
-                        Icons.chevron_right_rounded,
-                        size: 14,
-                        color: isDark ? Colors.white24 : Colors.grey.shade400,
-                      ),
-                    ),
-                  ],
-                  Text(
-                    current.name.split(' ').first,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Person Card (Frappe-style) ──
-
-class _OrgPersonCard extends StatelessWidget {
+// ── Flattened visible row ──
+class _FlatRow {
   final _OrgNode node;
-  final bool isDark;
-  final bool isMe;
-  final bool isRoot;
-  final Color avatarColor;
-  final VoidCallback? onTap;
+  final int depth;
 
-  const _OrgPersonCard({
-    required this.node,
-    required this.isDark,
-    required this.isMe,
-    required this.isRoot,
-    required this.avatarColor,
-    this.onTap,
-  });
+  /// For each ancestor depth, whether that ancestor has a following sibling
+  /// (used to decide whether to draw the vertical guide line).
+  final List<bool> ancestorHasNext;
 
-  @override
-  Widget build(BuildContext context) {
-    // Highlight colors
-    final Color borderColor;
-    final Color bgColor;
-
-    if (isMe) {
-      // Logged-in user — teal/green highlight
-      borderColor = const Color(0xFF06B6D4);
-      bgColor = isDark
-          ? const Color(0xFF06B6D4).withValues(alpha: 0.08)
-          : const Color(0xFF06B6D4).withValues(alpha: 0.04);
-    } else if (isRoot) {
-      // Current view root — primary blue highlight
-      borderColor = AppColors.primary;
-      bgColor = isDark
-          ? AppColors.primary.withValues(alpha: 0.08)
-          : AppColors.primary.withValues(alpha: 0.04);
-    } else {
-      borderColor = isDark
-          ? Colors.white.withValues(alpha: 0.08)
-          : Colors.grey.withValues(alpha: 0.15);
-      bgColor = isDark ? AppColors.darkCard : Colors.white;
-    }
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.fromLTRB(10, 10, 14, 10),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: borderColor,
-            width: (isMe || isRoot) ? 1.5 : 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.05),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Avatar
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: avatarColor.withValues(alpha: 0.15),
-              backgroundImage: node.avatarUrl.isNotEmpty
-                  ? NetworkImage(node.avatarUrl)
-                  : null,
-              child: node.avatarUrl.isEmpty
-                  ? Text(
-                      node.initials,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: avatarColor,
-                      ),
-                    )
-                  : null,
-            ),
-            const SizedBox(width: 12),
-
-            // Name + designation
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    node.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                  if (node.designation.isNotEmpty)
-                    Text(
-                      node.designation,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? Colors.white54 : Colors.grey.shade600,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-
-            // Report count + drill arrow
-            if (node.totalReports > 0)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '${node.totalReports}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white38 : Colors.grey.shade500,
-                    ),
-                  ),
-                  const SizedBox(width: 2),
-                  Icon(
-                    Icons.subdirectory_arrow_right_rounded,
-                    size: 14,
-                    color: isDark ? Colors.white38 : Colors.grey.shade500,
-                  ),
-                ],
-              ),
-
-            if (onTap != null && node.children.isNotEmpty) ...[
-              const SizedBox(width: 4),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 20,
-                color: isDark ? Colors.white38 : Colors.grey.shade400,
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
+  _FlatRow(this.node, this.depth, this.ancestorHasNext);
 }
 
 // ── Data Model ──
-
 class _OrgNode {
   final int id;
   final String name;
@@ -619,16 +466,10 @@ class _OrgNode {
   }
 
   String get initials {
-    final parts = name.split(' ');
-    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    return name.isNotEmpty ? name[0].toUpperCase() : '?';
-  }
-
-  int get totalReports {
-    int count = children.length;
-    for (final c in children) {
-      count += c.totalReports;
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 2 && parts[0].isNotEmpty && parts[1].isNotEmpty) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
-    return count;
+    return name.isNotEmpty ? name[0].toUpperCase() : '?';
   }
 }
