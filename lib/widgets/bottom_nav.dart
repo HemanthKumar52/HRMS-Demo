@@ -44,9 +44,9 @@ class FloatingBottomNav extends StatelessWidget {
                       borderRadius: BorderRadius.circular(35),
                       border: Border.all(
                         color: isDark
-                            ? Colors.white.withValues(alpha: 0.10)
-                            : Colors.white.withValues(alpha: 0.75),
-                        width: 0.8,
+                            ? Colors.white.withValues(alpha: 0.18)
+                            : Colors.white.withValues(alpha: 0.85),
+                        width: 1.2,
                       ),
                       boxShadow: [
                         BoxShadow(
@@ -176,7 +176,12 @@ class _NavButtonState extends State<_NavButton>
                       AppColors.primary.withValues(alpha: 0.26),
                     ],
                   ),
-                  shape: const StadiumBorder(),
+                  shape: StadiumBorder(
+                    side: BorderSide(
+                      color: AppColors.primary.withValues(alpha: 0.6),
+                      width: 1.3,
+                    ),
+                  ),
                   shadows: [
                     BoxShadow(
                       color: AppColors.primary.withValues(alpha: 0.14),

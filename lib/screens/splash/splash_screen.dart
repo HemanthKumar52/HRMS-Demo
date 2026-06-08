@@ -175,10 +175,10 @@ class _SplashScreenState extends State<SplashScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // pPULSE brand mark (head + shoulders), matching the web.
+                      // pPULSE brand mark (head + shoulders), exact official logo.
                       SizedBox(
-                        width: 96,
-                        height: 96,
+                        width: 112,
+                        height: 104,
                         child: CustomPaint(painter: _PpulseLogoPainter()),
                       ),
                       const SizedBox(height: 24),
@@ -242,33 +242,36 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-/// pPULSE logo — head circle + shoulders, with the brand's vertical gradient
-/// (#6C3BAA → #C8B1E4). Recreated from the web's ppulse-icon.svg (32×32 box).
+/// pPULSE logo — exact official mark from pPULSE_logo.svg (645×600 viewBox):
+/// a head circle + a wide rounded "shoulders" body, brand gradient
+/// (#6C3BAA → #C8B1E4).
 class _PpulseLogoPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final s = size.width / 32.0;
+    final s = size.width / 644.488; // uniform scale from the 644.488-wide art
     final paint = Paint()
       ..isAntiAlias = true
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [Color(0xFF6C3BAA), Color(0xFFC8B1E4)],
-      ).createShader(Rect.fromLTWH(0, 2 * s, size.width, 28 * s));
+      ).createShader(Rect.fromLTWH(0, 0, size.width, 600 * s));
 
-    // Head
-    canvas.drawCircle(Offset(16 * s, 7 * s), 5 * s, paint);
+    // Head (circle, from the rotated rect: center 319.374,162.953 r 162.953)
+    canvas.drawCircle(Offset(319.374 * s, 162.953 * s), 162.953 * s, paint);
 
-    // Shoulders / body
+    // Shoulders / body (exact path from the SVG)
     final body = Path()
-      ..moveTo(5 * s, 26 * s)
-      ..cubicTo(5 * s, 23 * s, 6 * s, 21 * s, 8 * s, 19 * s)
-      ..cubicTo(10 * s, 17 * s, 13 * s, 15.5 * s, 16 * s, 15.5 * s)
-      ..cubicTo(19 * s, 15.5 * s, 22 * s, 17 * s, 24 * s, 19 * s)
-      ..cubicTo(26 * s, 21 * s, 27 * s, 23 * s, 27 * s, 26 * s)
-      ..cubicTo(27 * s, 27.5 * s, 26 * s, 28.5 * s, 24 * s, 28.5 * s)
-      ..lineTo(8 * s, 28.5 * s)
-      ..cubicTo(6 * s, 28.5 * s, 5 * s, 27.5 * s, 5 * s, 26 * s)
+      ..moveTo(644.488 * s, 329.585 * s)
+      ..cubicTo(
+          644.488 * s, 478.931 * s, 523.419 * s, 600 * s, 374.074 * s, 600 * s)
+      ..lineTo(270.415 * s, 600 * s)
+      ..cubicTo(121.069 * s, 600 * s, 0, 478.931 * s, 0, 329.585 * s)
+      ..cubicTo(0, 284.781 * s, 36.3205 * s, 248.461 * s, 81.1243 * s,
+          248.461 * s)
+      ..lineTo(563.364 * s, 248.461 * s)
+      ..cubicTo(608.168 * s, 248.461 * s, 644.488 * s, 284.781 * s, 644.488 * s,
+          329.585 * s)
       ..close();
     canvas.drawPath(body, paint);
   }
