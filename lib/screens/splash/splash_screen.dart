@@ -175,33 +175,13 @@ class _SplashScreenState extends State<SplashScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Color(0xFF9B6DFF), Color(0xFF6B3FA0)],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(
-                                0xFF9B6DFF,
-                              ).withValues(alpha: 0.5),
-                              blurRadius: 40,
-                              spreadRadius: 8,
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.person,
-                          color: Colors.white,
-                          size: 48,
-                        ),
+                      // pPULSE brand mark (head + shoulders), matching the web.
+                      SizedBox(
+                        width: 96,
+                        height: 96,
+                        child: CustomPaint(painter: _PpulseLogoPainter()),
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 24),
                       RichText(
                         text: const TextSpan(
                           children: [
@@ -230,9 +210,24 @@ class _SplashScreenState extends State<SplashScreen>
                       Text(
                         'HRMS, as it should be...',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.5),
+                          color: Colors.white.withValues(alpha: 0.6),
                           fontSize: 15,
-                          letterSpacing: 0.5,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 44),
+                        child: Text(
+                          'Experience intelligent HR management with '
+                          'AI-powered insights and automation',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.38),
+                            fontSize: 13,
+                            height: 1.45,
+                          ),
                         ),
                       ),
                     ],
@@ -245,4 +240,39 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
   }
+}
+
+/// pPULSE logo — head circle + shoulders, with the brand's vertical gradient
+/// (#6C3BAA → #C8B1E4). Recreated from the web's ppulse-icon.svg (32×32 box).
+class _PpulseLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = size.width / 32.0;
+    final paint = Paint()
+      ..isAntiAlias = true
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFF6C3BAA), Color(0xFFC8B1E4)],
+      ).createShader(Rect.fromLTWH(0, 2 * s, size.width, 28 * s));
+
+    // Head
+    canvas.drawCircle(Offset(16 * s, 7 * s), 5 * s, paint);
+
+    // Shoulders / body
+    final body = Path()
+      ..moveTo(5 * s, 26 * s)
+      ..cubicTo(5 * s, 23 * s, 6 * s, 21 * s, 8 * s, 19 * s)
+      ..cubicTo(10 * s, 17 * s, 13 * s, 15.5 * s, 16 * s, 15.5 * s)
+      ..cubicTo(19 * s, 15.5 * s, 22 * s, 17 * s, 24 * s, 19 * s)
+      ..cubicTo(26 * s, 21 * s, 27 * s, 23 * s, 27 * s, 26 * s)
+      ..cubicTo(27 * s, 27.5 * s, 26 * s, 28.5 * s, 24 * s, 28.5 * s)
+      ..lineTo(8 * s, 28.5 * s)
+      ..cubicTo(6 * s, 28.5 * s, 5 * s, 27.5 * s, 5 * s, 26 * s)
+      ..close();
+    canvas.drawPath(body, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

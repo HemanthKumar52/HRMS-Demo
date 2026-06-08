@@ -172,8 +172,8 @@ class _NavButtonState extends State<_NavButton>
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AppColors.primary.withValues(alpha: 0.34),
-                      AppColors.primary.withValues(alpha: 0.14),
+                      AppColors.primary.withValues(alpha: 0.50),
+                      AppColors.primary.withValues(alpha: 0.26),
                     ],
                   ),
                   shape: const StadiumBorder(),

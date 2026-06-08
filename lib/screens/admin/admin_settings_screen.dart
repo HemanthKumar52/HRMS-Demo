@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
 import '../../utils/platform_adaptive.dart';
-import 'admin_backup_screen.dart';
-import 'admin_biometric_devices_screen.dart';
 import 'admin_csv_employees_screen.dart';
-import 'admin_email_templates_screen.dart';
 import 'admin_geofences_screen.dart';
 import 'admin_holidays_screen.dart';
 import 'admin_round3_screens.dart';
@@ -48,12 +45,6 @@ class AdminSettingsScreen extends StatelessWidget {
                 title: 'Holidays',
                 onTap: () => _open(context, const AdminHolidaysScreen()),
               ),
-              _SettingsTile(
-                icon: Icons.mail_outline_rounded,
-                iconColor: AppColors.warning,
-                title: 'Email Templates',
-                onTap: () => _open(context, const AdminEmailTemplatesScreen()),
-              ),
             ],
           ),
 
@@ -83,13 +74,6 @@ class AdminSettingsScreen extends StatelessWidget {
                 title: 'Face Enrollment',
                 onTap: () => _open(context, const AdminFaceEnrollmentsScreen()),
               ),
-              _SettingsTile(
-                icon: Icons.fingerprint_rounded,
-                iconColor: AppColors.success,
-                title: 'Biometric Devices',
-                onTap: () =>
-                    _open(context, const AdminBiometricDevicesScreen()),
-              ),
             ],
           ),
 
@@ -106,12 +90,6 @@ class AdminSettingsScreen extends StatelessWidget {
                 iconColor: AppColors.primary,
                 title: 'Employee Import / Export',
                 onTap: () => _open(context, const AdminCsvEmployeesScreen()),
-              ),
-              _SettingsTile(
-                icon: Icons.backup_outlined,
-                iconColor: AppColors.secondary,
-                title: 'Backup',
-                onTap: () => _open(context, const AdminBackupScreen()),
               ),
             ],
           ),
